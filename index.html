@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistem Penilaian — SD Muhammadiyah 01 Kukusan</title>
+<meta name="description" content="Sistem Penilaian & Laporan Hasil Belajar SD Muhammadiyah 01 Kukusan — Kurikulum Merdeka">
+<meta name="robots" content="noindex, nofollow">
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+/* ── Reset & Root ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green-deep:   #0f3226;
+  --green-dark:   #1e4d3b;
+  --green-mid:    #2d7055;
+  --green-light:  #4aa07a;
+  --green-pale:   #e5f2ec;
+  --green-ghost:  #f0f7f3;
+  --gold:         #c9882a;
+  --gold-light:   #f5c97a;
+  --cream:        #faf8f4;
+  --ink:          #1c1b18;
+  --ink-mid:      #4a4840;
+  --ink-muted:    #7d7a72;
+  --white:        #ffffff;
+  --shadow-card:  0 24px 64px rgba(15,50,38,.18), 0 4px 16px rgba(15,50,38,.10);
+  --shadow-btn:   0 4px 20px rgba(30,77,59,.35);
+  --radius-card:  20px;
+  --radius-btn:   12px;
+}
+
+html { font-size: 15px; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--green-deep);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Background pattern ──────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(45,112,85,.30) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 85% 80%, rgba(74,160,122,.18) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 60% 10%, rgba(201,136,42,.10) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* subtle grid */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Card ────────────────────────────────────────────── */
+.card {
+  position: relative;
+  z-index: 1;
+  background: var(--cream);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  animation: cardIn .7s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes cardIn {
+  from { opacity:0; transform: translateY(32px) scale(.97); }
+  to   { opacity:1; transform: translateY(0)    scale(1);   }
+}
+
+/* ── Card Header ─────────────────────────────────────── */
+.card-header {
+  background: linear-gradient(160deg, var(--green-dark) 0%, var(--green-deep) 100%);
+  padding: 36px 36px 32px;
+  text-align: center;
+  position: relative;
+}
+
+.card-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 24px;
+  background: var(--cream);
+  border-radius: 20px 20px 0 0;
+}
+
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  animation: fadeUp .6s .15s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(12px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.logo-badge {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  box-shadow: 0 4px 16px rgba(201,136,42,.4);
+  flex-shrink: 0;
+}
+
+.school-name {
+  text-align: left;
+}
+
+.school-name .abbr {
+  font-family: 'Amiri', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1.1;
+}
+
+.school-name .full {
+  font-size: 10px;
+  color: rgba(255,255,255,.55);
+  font-weight: 400;
+  letter-spacing: .5px;
+  margin-top: 2px;
+}
+
+.card-tagline {
+  color: rgba(255,255,255,.75);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  animation: fadeUp .6s .25s cubic-bezier(.22,1,.36,1) both;
+}
+
+.card-title {
+  font-family: 'Amiri', serif;
+  font-size: 26px;
+  color: var(--white);
+  font-weight: 700;
+  line-height: 1.25;
+  animation: fadeUp .6s .30s cubic-bezier(.22,1,.36,1) both;
+}
+
+.card-subtitle {
+  font-size: 11.5px;
+  color: rgba(255,255,255,.5);
+  margin-top: 6px;
+  font-weight: 300;
+  animation: fadeUp .6s .35s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* ── Bismillah strip ─────────────────────────────────── */
+.bismillah {
+  background: rgba(201,136,42,.12);
+  border: 1px solid rgba(201,136,42,.25);
+  border-radius: 10px;
+  margin: 0 36px;
+  padding: 10px 16px;
+  text-align: center;
+  margin-top: 8px;
+  animation: fadeUp .6s .40s cubic-bezier(.22,1,.36,1) both;
+}
+
+.bismillah .arabic {
+  font-family: 'Amiri', serif;
+  font-size: 18px;
+  color: var(--gold);
+  direction: rtl;
+  line-height: 1.6;
+}
+
+/* ── Card Body ───────────────────────────────────────── */
+.card-body {
+  padding: 28px 36px 36px;
+}
+
+/* ── Info chips ──────────────────────────────────────── */
+.info-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  animation: fadeUp .6s .45s cubic-bezier(.22,1,.36,1) both;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--green-ghost);
+  border: 1px solid rgba(30,77,59,.12);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--green-dark);
+  font-weight: 500;
+}
+
+.chip .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green-light);
+  flex-shrink: 0;
+}
+
+/* ── Login section ───────────────────────────────────── */
+.login-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 12px;
+  animation: fadeUp .6s .50s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* Google Sign-In button override */
+.g-signin-wrap {
+  animation: fadeUp .6s .55s cubic-bezier(.22,1,.36,1) both;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--green-dark);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-btn);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s ease;
+  box-shadow: var(--shadow-btn);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-google::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.btn-google:hover {
+  background: var(--green-mid);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(30,77,59,.45);
+}
+
+.btn-google:active {
+  transform: translateY(0);
+}
+
+.btn-google svg {
+  width: 20px; height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Divider ─────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  animation: fadeUp .6s .60s cubic-bezier(.22,1,.36,1) both;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(30,77,59,.12);
+}
+
+.divider span {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* ── Access note ─────────────────────────────────────── */
+.access-note {
+  background: var(--green-ghost);
+  border: 1px solid rgba(30,77,59,.12);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  animation: fadeUp .6s .65s cubic-bezier(.22,1,.36,1) both;
+}
+
+.access-note .icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.access-note p {
+  font-size: 11.5px;
+  color: var(--ink-mid);
+  line-height: 1.6;
+}
+
+.access-note strong {
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+/* ── Status message ──────────────────────────────────── */
+.status-msg {
+  display: none;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  animation: fadeUp .3s ease;
+}
+
+.status-msg.error {
+  display: flex;
+  gap: 8px;
+  background: #fdecea;
+  border: 1px solid #f5c6c2;
+  color: #8b1a1a;
+}
+
+.status-msg.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--green-ghost);
+  border: 1px solid rgba(30,77,59,.15);
+  color: var(--green-dark);
+}
+
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(30,77,59,.2);
+  border-top-color: var(--green-dark);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+.card-footer {
+  border-top: 1px solid rgba(30,77,59,.08);
+  padding: 14px 36px;
+  text-align: center;
+  animation: fadeUp .6s .70s cubic-bezier(.22,1,.36,1) both;
+}
+
+.card-footer p {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.card-footer a {
+  color: var(--green-mid);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.card-footer a:hover { text-decoration: underline; }
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  .card-header { padding: 28px 24px 24px; }
+  .card-body   { padding: 24px 24px 28px; }
+  .bismillah   { margin: 0 24px; }
+  .card-footer { padding: 14px 24px; }
+  .card-title  { font-size: 22px; }
+  .logo-badge  { width: 48px; height: 48px; font-size: 22px; }
+}
+
+/* ── Floating orbs (decorative) ──────────────────────── */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+  opacity: .5;
+}
+
+.orb-1 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(74,160,122,.4), transparent);
+  top: -80px; left: -80px;
+  animation: drift1 8s ease-in-out infinite alternate;
+}
+
+.orb-2 {
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, rgba(201,136,42,.25), transparent);
+  bottom: -60px; right: -60px;
+  animation: drift2 10s ease-in-out infinite alternate;
+}
+
+@keyframes drift1 {
+  to { transform: translate(30px, 20px); }
+}
+@keyframes drift2 {
+  to { transform: translate(-20px, -30px); }
+}
+</style>
+</head>
+<body>
+
+<!-- Decorative orbs -->
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="card">
+
+  <!-- Header -->
+  <div class="card-header">
+    <div class="logo-wrap">
+      <div class="logo-badge">🏫</div>
+      <div class="school-name">
+        <div class="abbr">SDM 01 Kukusan</div>
+        <div class="full">SD Muhammadiyah 01 Kukusan · Depok</div>
+      </div>
+    </div>
+    <div class="card-tagline">Kurikulum Merdeka</div>
+    <div class="card-title">Sistem Penilaian<br>& Rapor Digital</div>
+    <div class="card-subtitle">Laporan Hasil Belajar Peserta Didik</div>
+  </div>
+
+  <!-- Bismillah -->
+  <div class="bismillah">
+    <div class="arabic">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم</div>
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+
+    <!-- Chips -->
+    <div class="info-chips">
+      <div class="chip"><span class="dot"></span> Fase A – C</div>
+      <div class="chip"><span class="dot"></span> 14 Kelas</div>
+      <div class="chip"><span class="dot"></span> Tahun Ajaran 2025–2026</div>
+    </div>
+
+    <!-- Login -->
+    <div class="login-label">Masuk ke Aplikasi</div>
+
+    <div class="g-signin-wrap">
+      <button class="btn-google" id="btnLogin" onclick="handleLogin()">
+        <!-- Google icon -->
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Masuk dengan Akun Google
+      </button>
+    </div>
+
+    <!-- Status message -->
+    <div class="status-msg loading" id="statusLoading">
+      <div class="spinner"></div>
+      <span>Sedang memverifikasi akun Anda…</span>
+    </div>
+
+    <div class="status-msg error" id="statusError">
+      <span>⛔</span>
+      <span id="errorText">Akun Anda belum terdaftar. Hubungi administrator sekolah.</span>
+    </div>
+
+    <div class="divider"><span>Informasi Akses</span></div>
+
+    <div class="access-note">
+      <div class="icon">🔒</div>
+      <p>
+        Aplikasi ini hanya dapat diakses oleh
+        <strong>admin</strong> dan <strong>guru yang telah didaftarkan</strong>
+        oleh administrator. Login menggunakan akun Google sekolah Anda.
+        Hubungi Wakasek Kurikulum jika belum memiliki akses.
+      </p>
+    </div>
+
+  </div><!-- end card-body -->
+
+  <!-- Footer -->
+  <div class="card-footer">
+    <p>
+      SD Muhammadiyah 01 Kukusan &nbsp;·&nbsp;
+      Jl. KH. Ahmad Dahlan II No. 11, Kukusan, Beji, Depok<br>
+      Sistem Penilaian Kurikulum Merdeka &copy; 2025–2026
+    </p>
+  </div>
+
+</div><!-- end card -->
+
+<script>
+/* ─────────────────────────────────────────────────────
+   KONFIGURASI
+   Ganti SPREADSHEET_ID dengan ID Google Sheets sekolah
+───────────────────────────────────────────────────── */
+const CONFIG = {
+  CLIENT_ID:      '137247296524-a55lkift7fn0m7o0ikrv90kqtncvicjh.apps.googleusercontent.com',
+  SPREADSHEET_ID: 'GANTI_DENGAN_ID_SPREADSHEET_ANDA',
+  SCOPES:         'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
+  REDIRECT: {
+    admin:      './dashboard/admin.html',
+    guru_kelas: './dashboard/guru-kelas.html',
+    guru_mapel: './dashboard/guru-mapel.html',
+  }
+};
+
+/* ─────────────────────────────────────────────────────
+   GOOGLE IDENTITY SERVICES — TOKEN CLIENT
+───────────────────────────────────────────────────── */
+let tokenClient;
+
+window.onload = () => {
+  // Cek apakah sudah pernah login (session storage)
+  const savedUser = sessionStorage.getItem('sdm01_user');
+  if (savedUser) {
+    const user = JSON.parse(savedUser);
+    redirectByRole(user.role);
+    return;
+  }
+
+  // Inisialisasi Google Identity
+  google.accounts.id.initialize({
+    client_id: CONFIG.CLIENT_ID,
+    callback:  handleCredentialResponse,
+    auto_select: false,
+  });
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.CLIENT_ID,
+    scope:     CONFIG.SCOPES,
+    callback:  onTokenReceived,
+  });
+};
+
+/* ─────────────────────────────────────────────────────
+   HANDLE TOMBOL LOGIN
+───────────────────────────────────────────────────── */
+function handleLogin() {
+  showLoading(false);
+  hideError();
+
+  google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      // Jika One Tap tidak muncul, minta token langsung
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    }
+  });
+}
+
+/* ─────────────────────────────────────────────────────
+   CALLBACK — CREDENTIAL (One Tap / Sign In)
+───────────────────────────────────────────────────── */
+async function handleCredentialResponse(response) {
+  showLoading(true);
+  try {
+    const payload = parseJwt(response.credential);
+    const email   = payload.email;
+    const nama    = payload.name;
+    await cekAkses(email, nama, response.credential);
+  } catch (e) {
+    showError('Terjadi kesalahan saat login. Coba lagi.');
+    showLoading(false);
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   CALLBACK — TOKEN (OAuth2)
+───────────────────────────────────────────────────── */
+async function onTokenReceived(tokenResponse) {
+  if (tokenResponse.error) {
+    showError('Login dibatalkan. Silakan coba lagi.');
+    showLoading(false);
+    return;
+  }
+  showLoading(true);
+  try {
+    // Ambil info profil dari Google
+    const res  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+    });
+    const info = await res.json();
+    sessionStorage.setItem('sdm01_token', tokenResponse.access_token);
+    await cekAkses(info.email, info.name, null, tokenResponse.access_token);
+  } catch (e) {
+    showError('Gagal mengambil info akun. Coba lagi.');
+    showLoading(false);
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   CEK AKSES KE GOOGLE SHEETS
+   Membaca tab USERS dan memverifikasi email
+───────────────────────────────────────────────────── */
+async function cekAkses(email, nama, credential, accessToken) {
+  try {
+    const token = accessToken || sessionStorage.getItem('sdm01_token');
+    if (!token) {
+      showError('Sesi tidak valid. Silakan login ulang.');
+      showLoading(false);
+      return;
+    }
+
+    // Baca sheet USERS kolom A:G
+    const range  = encodeURIComponent('USERS!A:G');
+    const url    = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${range}`;
+    const resp   = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Sheets API error: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    const rows = data.values || [];
+
+    // Cari email di kolom B (index 1), mulai baris ke-2 (skip header)
+    const userRow = rows.slice(1).find(r =>
+      r[1] && r[1].trim().toLowerCase() === email.trim().toLowerCase()
+    );
+
+    if (!userRow) {
+      showError(`Akun ${email} belum terdaftar. Hubungi administrator sekolah.`);
+      showLoading(false);
+      return;
+    }
+
+    const status = (userRow[6] || '').toLowerCase();
+    if (status !== 'aktif') {
+      showError(`Akun Anda (${email}) sedang dinonaktifkan. Hubungi administrator.`);
+      showLoading(false);
+      return;
+    }
+
+    // Simpan data user ke session
+    const userData = {
+      id_user:    userRow[0] || '',
+      email:      userRow[1] || email,
+      nama:       userRow[2] || nama,
+      role:       userRow[3] || '',
+      kelas:      userRow[4] || '',
+      mapel:      userRow[5] || '',
+      status:     userRow[6] || '',
+      loginTime:  new Date().toISOString(),
+    };
+
+    sessionStorage.setItem('sdm01_user',  JSON.stringify(userData));
+    sessionStorage.setItem('sdm01_token', token);
+
+    // Catat sync log (fire and forget)
+    catatSyncLog(userData, token);
+
+    // Redirect berdasarkan role
+    redirectByRole(userData.role);
+
+  } catch (err) {
+    console.error('cekAkses error:', err);
+    if (err.message.includes('Sheets API')) {
+      showError('Tidak dapat terhubung ke database. Pastikan koneksi internet aktif.');
+    } else {
+      showError('Terjadi kesalahan sistem. Coba lagi dalam beberapa saat.');
+    }
+    showLoading(false);
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   REDIRECT BERDASARKAN ROLE
+───────────────────────────────────────────────────── */
+function redirectByRole(role) {
+  const dest = CONFIG.REDIRECT[role];
+  if (dest) {
+    window.location.href = dest;
+  } else {
+    showError(`Role "${role}" tidak dikenali. Hubungi administrator.`);
+    showLoading(false);
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   CATAT SYNC LOG
+───────────────────────────────────────────────────── */
+async function catatSyncLog(user, token) {
+  try {
+    const now     = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const logId   = `LOG-${Date.now()}`;
+    const values  = [[logId, user.id_user, user.nama, user.kelas, now, 'LOGIN']];
+    const url     = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/SYNC_LOG!A:F:append?valueInputOption=USER_ENTERED`;
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values }),
+    });
+  } catch (_) { /* silent fail — log tidak kritis */ }
+}
+
+/* ─────────────────────────────────────────────────────
+   HELPER — Parse JWT tanpa library
+───────────────────────────────────────────────────── */
+function parseJwt(token) {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(base64));
+}
+
+/* ─────────────────────────────────────────────────────
+   HELPER — UI state
+───────────────────────────────────────────────────── */
+function showLoading(show) {
+  document.getElementById('statusLoading').style.display = show ? 'flex' : 'none';
+  document.getElementById('btnLogin').disabled = show;
+  document.getElementById('btnLogin').style.opacity = show ? '.6' : '1';
+}
+
+function showError(msg) {
+  const el = document.getElementById('statusError');
+  document.getElementById('errorText').textContent = msg;
+  el.style.display = 'flex';
+}
+
+function hideError() {
+  document.getElementById('statusError').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
