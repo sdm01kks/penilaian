@@ -38,19 +38,25 @@
   --radius-btn:   12px;
 }
 
-html { font-size: 15px; scroll-behavior: smooth; }
+html {
+  font-size: 15px;
+  scroll-behavior: smooth;
+  height: 100%;
+}
 
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
   background: var(--green-deep);
   color: var(--ink);
-  min-height: 100vh;
+  min-height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ── Background pattern ──────────────────────────────── */
@@ -79,6 +85,8 @@ body::after {
   z-index: 0;
 }
 
+/* Orbs — fixed so they stay as background while scrolling */
+
 /* ── Card ────────────────────────────────────────────── */
 .card {
   position: relative;
@@ -87,9 +95,24 @@ body::after {
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   width: 100%;
-  max-width: 440px;
-  overflow: hidden;
+  max-width: 480px;
+  overflow: visible;
   animation: cardIn .7s cubic-bezier(.22,1,.36,1) both;
+  /* ensure card inner content clips properly */
+  isolation: isolate;
+}
+
+/* inner clip for rounded corners */
+.card > * {
+  overflow: hidden;
+}
+.card-header {
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  overflow: hidden;
+}
+.card-footer {
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  overflow: hidden;
 }
 
 @keyframes cardIn {
@@ -425,13 +448,51 @@ body::after {
 .card-footer a:hover { text-decoration: underline; }
 
 /* ── Responsive ──────────────────────────────────────── */
+
+/* Tablet landscape & small desktop (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .card { max-width: 520px; }
+  .card-header { padding: 40px 44px 36px; }
+  .card-body   { padding: 32px 44px 40px; }
+  .bismillah   { margin: 0 44px; }
+  .card-footer { padding: 16px 44px; }
+  .card-title  { font-size: 28px; }
+  .logo-badge  { width: 72px; height: 72px; }
+}
+
+/* Tablet portrait (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .card { max-width: 90%; }
+  .card-header { padding: 32px 32px 28px; }
+  .card-body   { padding: 28px 32px 32px; }
+  .bismillah   { margin: 0 32px; }
+  .card-footer { padding: 14px 32px; }
+}
+
+/* Mobile (max 480px) */
 @media (max-width: 480px) {
-  .card-header { padding: 28px 24px 24px; }
-  .card-body   { padding: 24px 24px 28px; }
-  .bismillah   { margin: 0 24px; }
-  .card-footer { padding: 14px 24px; }
-  .card-title  { font-size: 22px; }
-  .logo-badge  { width: 48px; height: 48px; font-size: 22px; }
+  body { padding: 16px 12px; justify-content: flex-start; padding-top: 24px; }
+  .card { max-width: 100%; border-radius: 16px; }
+  .card-header { padding: 24px 20px 20px; border-radius: 16px 16px 0 0; }
+  .card-body   { padding: 20px 20px 24px; }
+  .bismillah   { margin: 0 20px; }
+  .card-footer { padding: 12px 20px; border-radius: 0 0 16px 16px; }
+  .card-title  { font-size: 20px; }
+  .card-subtitle { font-size: 11px; }
+  .logo-badge  { width: 52px; height: 52px; }
+  .school-name .abbr { font-size: 15px; }
+  .logo-wrap   { gap: 12px; margin-bottom: 14px; }
+  .info-chips  { gap: 6px; }
+  .chip        { font-size: 10px; padding: 3px 8px; }
+  .btn-google  { padding: 13px 16px; font-size: 13px; }
+}
+
+/* Very small mobile (max 360px) */
+@media (max-width: 360px) {
+  .card-title  { font-size: 18px; }
+  .logo-badge  { width: 44px; height: 44px; }
+  .school-name .abbr { font-size: 13px; }
+  .info-chips  { flex-direction: column; gap: 4px; }
 }
 
 /* ── Floating orbs (decorative) ──────────────────────── */
@@ -456,6 +517,11 @@ body::after {
   background: radial-gradient(circle, rgba(201,136,42,.25), transparent);
   bottom: -60px; right: -60px;
   animation: drift2 10s ease-in-out infinite alternate;
+}
+
+@media (max-width: 480px) {
+  .orb-1 { width: 180px; height: 180px; top: -40px; left: -40px; }
+  .orb-2 { width: 160px; height: 160px; bottom: -30px; right: -30px; }
 }
 
 @keyframes drift1 {
