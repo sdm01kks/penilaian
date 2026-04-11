@@ -598,6 +598,10 @@ function renderTabel(users) {
             ? `<button class="btn btn-warning btn-sm" onclick="toggleStatus('${u.id}','nonaktif','${u.nama}')">⏸ Nonaktifkan</button>`
             : `<button class="btn btn-secondary btn-sm" onclick="toggleStatus('${u.id}','aktif','${u.nama}')">▶️ Aktifkan</button>`
           }
+          <button class="btn btn-danger btn-sm" onclick="hapusUser('${u.id}','${u.nama}')"
+            ${u.id === currentUser?.id_user ? 'disabled title="Tidak bisa menghapus akun sendiri"' : ''}>
+            🗑️ Hapus
+          </button>
         </td>
       </tr>
     `;
@@ -886,6 +890,26 @@ function showAlert(type, title, text) {
   if (type === 'success') setTimeout(() => area.innerHTML='', 6000);
   area.scrollIntoView({behavior:'smooth'});
 }
+
+  /* ── Hapus Permanen ──────────────────────────────────── */
+  async function hapusUser(id, nama) {
+    const me = AUTH.getUser();
+    if (id === me?.id_user) {
+      showAlert('error','Tidak Bisa','Anda tidak dapat menghapus akun sendiri.'); return;
+    }
+    if (!confirm(`Hapus PERMANEN akun "${nama}"?\n\nAkun ini tidak akan bisa login lagi.`)) return;
+    showLoading('Menghapus akun…');
+    try {
+      const rows = await SHEETS.read('USERS!A:I');
+      const idx  = rows.findIndex(r => r[0] === id);
+      if (idx < 0) throw new Error('User tidak ditemukan.');
+      await SHEETS.write('USERS!A'+(idx+1)+':I'+(idx+1), [['','','','','','','','','']]);
+      showAlert('success','✅ Berhasil', `Akun ${nama} berhasil dihapus.`);
+      await muatData(); filterRole(roleFilter);
+    } catch(e) {
+      showAlert('error','⛔ Gagal', e.message);
+    } finally { hideLoading(); }
+  }
 
 function showLoading(msg) {
   document.getElementById('loadingText').textContent = msg||'Memuat…';

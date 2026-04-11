@@ -3,273 +3,125 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Profil Sekolah — SDM01KKS</title>
+<title>Ekstrakurikuler — SDM01KKS</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 15px; scroll-behavior: smooth; }
-
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:15px; scroll-behavior:smooth; }
 :root {
-  --green-deep:  #0f3226;
-  --green-dark:  #1e4d3b;
-  --green-mid:   #2d7055;
-  --green-light: #4aa07a;
-  --green-pale:  #e5f2ec;
-  --green-ghost: #f0f7f3;
-  --gold:        #c9882a;
-  --gold-light:  #f5c97a;
-  --white:       #ffffff;
-  --ink:         #1c1b18;
-  --ink-mid:     #4a4840;
-  --ink-muted:   #7d7a72;
-  --red:         #c0392b;
-  --red-light:   #fdecea;
-  --yellow:      #f39c12;
-  --yellow-light:#fef9e7;
-  --blue:        #2980b9;
-  --blue-light:  #ebf5fb;
-  --sidebar-w:   260px;
-  --topbar-h:    64px;
-  --radius:      12px;
-  --shadow:      0 2px 16px rgba(15,50,38,.10);
-  --shadow-card: 0 4px 24px rgba(15,50,38,.08);
-  --border:      rgba(30,77,59,.10);
+  --green-deep:#0f3226; --green-dark:#1e4d3b; --green-mid:#2d7055;
+  --green-light:#4aa07a; --green-pale:#e5f2ec; --green-ghost:#f0f7f3;
+  --gold:#c9882a; --white:#ffffff; --ink:#1c1b18;
+  --ink-mid:#4a4840; --ink-muted:#7d7a72;
+  --red:#c0392b; --red-light:#fdecea;
+  --yellow:#f39c12; --yellow-light:#fef9e7;
+  --blue:#2980b9; --blue-light:#ebf5fb;
+  --sidebar-w:260px; --topbar-h:64px; --radius:12px;
+  --shadow:0 2px 16px rgba(15,50,38,.10);
+  --shadow-card:0 4px 24px rgba(15,50,38,.08);
+  --border:rgba(30,77,59,.10);
 }
-
-body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color: var(--ink); min-height: 100vh; overflow-x: hidden; }
-
-/* Topbar */
-.topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); background: var(--green-dark); display: flex; align-items: center; padding: 0 20px; gap: 14px; z-index: 200; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
-.topbar-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
-.topbar-logo img { width: 38px; height: 38px; border-radius: 8px; background: #fff; padding: 2px; object-fit: contain; }
-.brand-name { font-family: 'Amiri', serif; font-size: 14px; font-weight: 700; color: #fff; line-height: 1.1; }
-.brand-sub  { font-size: 10px; color: rgba(255,255,255,.55); }
-.topbar-divider { width: 1px; height: 28px; background: rgba(255,255,255,.18); flex-shrink: 0; }
-.topbar-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.85); flex: 1; }
-.topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--green-mid); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; border: 2px solid rgba(255,255,255,.25); }
-.user-name { font-size: 12px; font-weight: 600; color: #fff; }
-.user-role { font-size: 10px; color: rgba(255,255,255,.55); }
-.btn-logout { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: rgba(255,255,255,.75); font-size: 11.5px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all .2s; }
-.btn-logout:hover { background: rgba(255,255,255,.12); color: #fff; }
-
-/* Sidebar */
-.sidebar { position: fixed; top: var(--topbar-h); left: 0; width: var(--sidebar-w); height: calc(100vh - var(--topbar-h)); background: var(--white); border-right: 1px solid var(--border); overflow-y: auto; z-index: 100; padding: 20px 0 40px; transition: transform .3s ease; }
-.sidebar-section-label { font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-muted); padding: 14px 20px 6px; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: 13px; font-weight: 500; color: var(--ink-mid); text-decoration: none; cursor: pointer; transition: all .15s; border-left: 3px solid transparent; }
-.nav-item:hover { background: var(--green-ghost); color: var(--green-dark); border-left-color: var(--green-light); }
-.nav-item.active { background: var(--green-pale); color: var(--green-dark); font-weight: 600; border-left-color: var(--green-dark); }
-.nav-icon { font-size: 16px; flex-shrink: 0; width: 22px; text-align: center; }
-
-/* Main */
-.main { margin-left: var(--sidebar-w); margin-top: var(--topbar-h); padding: 28px 28px 60px; min-height: calc(100vh - var(--topbar-h)); }
-
-/* Page header */
-.page-header { margin-bottom: 24px; animation: fadeUp .4s ease both; }
-.page-header h1 { font-family: 'Amiri', serif; font-size: 26px; color: var(--green-deep); font-weight: 700; }
-.page-header p { font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
-
-/* Alert */
-.alert { border-radius: var(--radius); padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
-.alert.warning { background: var(--yellow-light); border: 1px solid rgba(243,156,18,.25); }
-.alert.error   { background: var(--red-light);    border: 1px solid rgba(192,57,43,.2); }
-.alert.success { background: var(--green-pale);   border: 1px solid rgba(30,77,59,.15); }
-.alert-icon { font-size: 20px; flex-shrink: 0; }
-.alert-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
-.alert-text  { font-size: 12px; color: var(--ink-mid); line-height: 1.6; }
-
-/* Form card */
-.form-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  border: 1px solid var(--border);
-  margin-bottom: 20px;
-  overflow: hidden;
-  animation: fadeUp .4s ease both;
-}
-.form-card-header {
-  background: var(--green-pale);
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.form-card-header h2 {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--green-deep);
-}
-.form-card-header .header-icon { font-size: 18px; }
-.form-card-body { padding: 20px; }
-
-/* Form grid */
-.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.form-grid-1 { grid-template-columns: 1fr; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group.full { grid-column: 1 / -1; }
-
-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-mid);
-  letter-spacing: .3px;
-}
-label .required { color: var(--red); margin-left: 2px; }
-label .hint { font-weight: 400; color: var(--ink-muted); margin-left: 4px; }
-
-input[type="text"],
-input[type="number"],
-textarea,
-select {
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: var(--ink);
-  background: var(--white);
-  outline: none;
-  transition: border-color .2s, box-shadow .2s;
-  width: 100%;
-}
-input:focus, textarea:focus, select:focus {
-  border-color: var(--green-light);
-  box-shadow: 0 0 0 3px rgba(74,160,122,.12);
-}
-input:disabled, select:disabled {
-  background: var(--green-ghost);
-  color: var(--ink-muted);
-  cursor: not-allowed;
-}
-textarea { resize: vertical; min-height: 72px; }
-
-.input-note {
-  font-size: 11px;
-  color: var(--ink-muted);
-  margin-top: 2px;
-  line-height: 1.5;
-}
-
-/* Radio group */
-.radio-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.radio-option {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink-mid);
-  transition: all .2s;
-  user-select: none;
-}
-.radio-option:hover { border-color: var(--green-light); color: var(--green-dark); background: var(--green-ghost); }
-.radio-option.selected { border-color: var(--green-dark); background: var(--green-pale); color: var(--green-dark); }
-.radio-option input { display: none; }
-
-/* DPL checkboxes */
-.dpl-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-.dpl-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--ink-mid);
-  transition: all .2s;
-  user-select: none;
-}
-.dpl-option:hover { border-color: var(--green-light); background: var(--green-ghost); }
-.dpl-option.selected { border-color: var(--green-dark); background: var(--green-pale); color: var(--green-dark); }
-.dpl-option input { accent-color: var(--green-dark); width: 15px; height: 15px; }
-.dpl-count { font-size: 11px; color: var(--ink-muted); margin-top: 6px; }
-.dpl-count.ok { color: var(--green-mid); font-weight: 600; }
-.dpl-count.warn { color: var(--red); font-weight: 600; }
-
-/* Divider */
-.form-divider { height: 1px; background: var(--border); margin: 4px 0 16px; }
-
-/* Kelas table */
-.kelas-table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.kelas-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.kelas-table th { background: var(--green-pale); color: var(--green-dark); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--border); }
-.kelas-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--ink-mid); vertical-align: middle; }
-.kelas-table tr:last-child td { border-bottom: none; }
-.kelas-table tr:nth-child(even) td { background: var(--green-ghost); }
-.kelas-name-display { font-weight: 700; color: var(--ink); font-size: 14px; }
-
-/* Buttons */
-.btn-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  background: var(--green-ghost);
-}
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 20px; border-radius: 8px;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; font-family: inherit;
-  transition: all .2s; border: none; text-decoration: none;
-}
-.btn-primary   { background: var(--green-dark); color: #fff; }
-.btn-primary:hover   { background: var(--green-mid); }
-.btn-secondary { background: var(--white); color: var(--green-dark); border: 1px solid var(--border); }
-.btn-secondary:hover { background: var(--green-ghost); }
-.btn:disabled  { opacity: .6; cursor: not-allowed; }
-.save-status { font-size: 12px; color: var(--ink-muted); margin-left: auto; }
-.save-status.ok   { color: var(--green-mid); font-weight: 600; }
-.save-status.err  { color: var(--red); font-weight: 600; }
-
-/* Loading overlay */
-.loading-overlay { position: fixed; inset: 0; background: rgba(15,50,38,.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 999; }
-.loading-overlay.hidden { display: none; }
-.spinner-lg { width: 44px; height: 44px; border: 4px solid rgba(255,255,255,.2); border-top-color: var(--green-light); border-radius: 50%; animation: spin .8s linear infinite; }
-.loading-overlay p { color: rgba(255,255,255,.8); font-size: 14px; }
-
-/* Sidebar toggle mobile */
-.sidebar-toggle { display: none; background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; padding: 4px; }
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
-
-@keyframes spin   { to { transform: rotate(360deg); } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.2); }
-  .sidebar-overlay.open { display: block; }
-  .sidebar-toggle { display: block; }
-  .main { margin-left: 0; padding: 20px 16px 60px; }
-  .brand-sub, .user-info { display: none; }
-  .form-grid { grid-template-columns: 1fr; }
-  .dpl-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 480px) {
-  .page-header h1 { font-size: 20px; }
-  .radio-group { flex-direction: column; }
+body { font-family:'Plus Jakarta Sans',sans-serif; background:#f4f6f4; color:var(--ink); min-height:100vh; overflow-x:hidden; }
+.topbar { position:fixed; top:0; left:0; right:0; height:var(--topbar-h); background:var(--green-dark); display:flex; align-items:center; padding:0 20px; gap:14px; z-index:200; box-shadow:0 2px 12px rgba(0,0,0,.18); }
+.topbar-logo { display:flex; align-items:center; gap:10px; text-decoration:none; flex-shrink:0; }
+.topbar-logo img { width:38px; height:38px; border-radius:8px; background:#fff; padding:2px; object-fit:contain; }
+.brand-name { font-family:'Amiri',serif; font-size:14px; font-weight:700; color:#fff; line-height:1.1; }
+.brand-sub  { font-size:10px; color:rgba(255,255,255,.55); }
+.topbar-divider { width:1px; height:28px; background:rgba(255,255,255,.18); flex-shrink:0; }
+.topbar-title { font-size:13px; font-weight:600; color:rgba(255,255,255,.85); flex:1; }
+.topbar-right { display:flex; align-items:center; gap:10px; margin-left:auto; }
+.user-avatar { width:34px; height:34px; border-radius:50%; background:var(--green-mid); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; border:2px solid rgba(255,255,255,.25); }
+.user-name { font-size:12px; font-weight:600; color:#fff; }
+.user-role { font-size:10px; color:rgba(255,255,255,.55); }
+.btn-logout { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,.25); background:transparent; color:rgba(255,255,255,.75); font-size:11.5px; font-weight:500; cursor:pointer; font-family:inherit; transition:all .2s; }
+.btn-logout:hover { background:rgba(255,255,255,.12); color:#fff; }
+.sidebar { position:fixed; top:var(--topbar-h); left:0; width:var(--sidebar-w); height:calc(100vh - var(--topbar-h)); background:var(--white); border-right:1px solid var(--border); overflow-y:auto; z-index:100; padding:20px 0 40px; transition:transform .3s ease; }
+.sidebar-section-label { font-size:9.5px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--ink-muted); padding:14px 20px 6px; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:9px 20px; font-size:13px; font-weight:500; color:var(--ink-mid); text-decoration:none; cursor:pointer; transition:all .15s; border-left:3px solid transparent; }
+.nav-item:hover { background:var(--green-ghost); color:var(--green-dark); border-left-color:var(--green-light); }
+.nav-item.active { background:var(--green-pale); color:var(--green-dark); font-weight:600; border-left-color:var(--green-dark); }
+.nav-icon { font-size:16px; flex-shrink:0; width:22px; text-align:center; }
+.main { margin-left:var(--sidebar-w); margin-top:var(--topbar-h); padding:28px 28px 60px; }
+.page-header { margin-bottom:24px; animation:fadeUp .4s ease both; }
+.page-header h1 { font-family:'Amiri',serif; font-size:26px; color:var(--green-deep); font-weight:700; }
+.page-header p { font-size:13px; color:var(--ink-muted); margin-top:4px; line-height:1.6; }
+.alert { border-radius:var(--radius); padding:14px 16px; display:flex; gap:12px; align-items:flex-start; margin-bottom:20px; }
+.alert.info { background:var(--blue-light); border:1px solid rgba(41,128,185,.2); }
+.alert.success { background:var(--green-pale); border:1px solid rgba(30,77,59,.15); }
+.alert.error { background:var(--red-light); border:1px solid rgba(192,57,43,.2); }
+.alert-icon { font-size:18px; flex-shrink:0; }
+.alert-title { font-size:13px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.alert-text { font-size:12px; color:var(--ink-mid); line-height:1.6; }
+.section-title { font-size:13px; font-weight:700; color:var(--green-deep); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow-card); border:1px solid var(--border); overflow:hidden; margin-bottom:20px; animation:fadeUp .4s .05s ease both; }
+.card-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:var(--green-ghost); }
+.card-header h2 { font-size:14px; font-weight:700; color:var(--green-deep); }
+.table-wrap { overflow-x:auto; }
+.data-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.data-table th { background:var(--green-pale); color:var(--green-dark); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); }
+.data-table td { padding:10px 14px; border-bottom:1px solid var(--border); color:var(--ink-mid); vertical-align:middle; }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:nth-child(even) td { background:var(--green-ghost); }
+.data-table tr:hover td { background:var(--green-pale); }
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+.badge.kok { background:var(--green-pale); color:var(--green-dark); }
+.badge.eks { background:var(--blue-light); color:var(--blue); }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; transition:all .2s; border:none; text-decoration:none; white-space:nowrap; }
+.btn-primary { background:var(--green-dark); color:#fff; }
+.btn-primary:hover { background:var(--green-mid); }
+.btn-secondary { background:var(--white); color:var(--green-dark); border:1px solid var(--border); }
+.btn-secondary:hover { background:var(--green-ghost); }
+.btn-danger { background:var(--white); color:var(--red); border:1px solid rgba(192,57,43,.2); }
+.btn-danger:hover { background:var(--red-light); }
+.btn-sm { padding:5px 10px; font-size:11.5px; }
+.btn:disabled { opacity:.6; cursor:not-allowed; }
+.empty-state { padding:40px 24px; text-align:center; }
+.empty-state .icon { font-size:40px; margin-bottom:10px; }
+.empty-state h3 { font-size:14px; font-weight:700; color:var(--ink-mid); margin-bottom:6px; }
+.empty-state p { font-size:12px; color:var(--ink-muted); line-height:1.6; margin-bottom:14px; }
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(15,50,38,.6); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .25s; }
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal { background:var(--white); border-radius:16px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,.25); transform:translateY(20px); transition:transform .25s; }
+.modal-overlay.open .modal { transform:translateY(0); }
+.modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-header h3 { font-family:'Amiri',serif; font-size:20px; font-weight:700; color:var(--green-deep); }
+.modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--ink-muted); padding:2px 6px; border-radius:6px; transition:all .15s; }
+.modal-close:hover { background:var(--red-light); color:var(--red); }
+.modal-body { padding:22px; }
+.modal-footer { padding:14px 22px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; background:var(--green-ghost); border-radius:0 0 16px 16px; }
+.form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+label { font-size:12px; font-weight:600; color:var(--ink-mid); }
+label .req { color:var(--red); margin-left:2px; }
+input[type="text"], select { padding:8px 11px; border:1px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--ink); background:var(--white); outline:none; transition:border-color .2s; width:100%; }
+input:focus, select:focus { border-color:var(--green-light); box-shadow:0 0 0 3px rgba(74,160,122,.12); }
+.input-note { font-size:11px; color:var(--ink-muted); line-height:1.5; }
+.jenis-tabs { display:flex; gap:8px; margin-bottom:20px; }
+.jenis-tab { flex:1; padding:10px; border:2px solid var(--border); border-radius:10px; cursor:pointer; text-align:center; transition:all .2s; user-select:none; }
+.jenis-tab:hover { border-color:var(--green-light); background:var(--green-ghost); }
+.jenis-tab.selected { border-color:var(--green-dark); background:var(--green-pale); }
+.jenis-tab .jt-icon { font-size:22px; }
+.jenis-tab .jt-nama { font-size:12px; font-weight:700; color:var(--ink); margin-top:4px; }
+.jenis-tab .jt-desc { font-size:10.5px; color:var(--ink-muted); line-height:1.4; margin-top:2px; }
+.loading-overlay { position:fixed; inset:0; background:rgba(15,50,38,.85); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; z-index:999; }
+.loading-overlay.hidden { display:none; }
+.spinner-lg { width:44px; height:44px; border:4px solid rgba(255,255,255,.2); border-top-color:var(--green-light); border-radius:50%; animation:spin .8s linear infinite; }
+.loading-overlay p { color:rgba(255,255,255,.8); font-size:14px; }
+.sidebar-toggle { display:none; background:none; border:none; color:#fff; font-size:22px; cursor:pointer; padding:4px; }
+.sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:99; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@media (max-width:768px) {
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.open { transform:translateX(0); box-shadow:4px 0 24px rgba(0,0,0,.2); }
+  .sidebar-overlay.open { display:block; }
+  .sidebar-toggle { display:block; }
+  .main { margin-left:0; padding:20px 16px 60px; }
+  .brand-sub,.user-info { display:none; }
 }
 </style>
 </head>
@@ -277,9 +129,49 @@ textarea { resize: vertical; min-height: 72px; }
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner-lg"></div>
-  <p id="loadingText">Memuat konfigurasi…</p>
+  <p id="loadingText">Memuat data ekskul…</p>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Tambah Kegiatan</h3>
+      <button class="modal-close" onclick="tutupModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nama Kegiatan <span class="req">*</span></label>
+        <input type="text" id="f_nama" placeholder="Contoh: Basket, Menari, English Club">
+      </div>
+      <div class="form-group">
+        <label>Jenis Kegiatan <span class="req">*</span></label>
+        <div class="jenis-tabs">
+          <div class="jenis-tab" id="jt-kok" onclick="pilihJenis('kokurikuler')">
+            <div class="jt-icon">🏫</div>
+            <div class="jt-nama">Kokurikuler</div>
+            <div class="jt-desc">Wajib semua siswa (HW, Tapak Suci)</div>
+          </div>
+          <div class="jenis-tab" id="jt-eks" onclick="pilihJenis('ekstrakurikuler')">
+            <div class="jt-icon">🏆</div>
+            <div class="jt-nama">Ekstrakurikuler</div>
+            <div class="jt-desc">Pilihan siswa (Basket, Menari, dll)</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Keterangan</label>
+        <input type="text" id="f_ket" placeholder="Contoh: Baru tahun ini, Wajib kelas 4-6">
+        <span class="input-note">Opsional — informasi tambahan tentang kegiatan ini</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal()">Batal</button>
+      <button class="btn btn-primary" id="btnSimpan" onclick="simpan()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
 
 <!-- Topbar -->
 <header class="topbar">
@@ -292,7 +184,7 @@ textarea { resize: vertical; min-height: 72px; }
     </div>
   </a>
   <div class="topbar-divider"></div>
-  <div class="topbar-title">Setup — Profil Sekolah & Konfigurasi</div>
+  <div class="topbar-title">Setup — Ekstrakurikuler</div>
   <div class="topbar-right">
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="user-avatar" id="userAvatar">A</div>
@@ -305,292 +197,74 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 </header>
 
-<!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Dashboard</div>
-  <a class="nav-item" href="../dashboard/admin.html">
-    <span class="nav-icon">🏠</span> Dashboard Admin
-  </a>
+  <a class="nav-item" href="../dashboard/admin.html"><span class="nav-icon">🏠</span> Dashboard Admin</a>
   <div class="sidebar-section-label">Setup Sekolah</div>
-  <a class="nav-item active" href="profil-sekolah.html">
-    <span class="nav-icon">🏫</span> Profil & Konfigurasi
-  </a>
-  <a class="nav-item" href="data-siswa.html">
-    <span class="nav-icon">👦</span> Data Siswa
-  </a>
-  <a class="nav-item" href="kelola-guru.html">
-    <span class="nav-icon">👩‍🏫</span> Kelola Guru
-  </a>
+  <a class="nav-item" href="profil-sekolah.html"><span class="nav-icon">🏫</span> Profil & Konfigurasi</a>
+  <a class="nav-item" href="data-siswa.html"><span class="nav-icon">👦</span> Data Siswa</a>
+  <a class="nav-item" href="kelola-guru.html"><span class="nav-icon">👩‍🏫</span> Kelola Guru</a>
   <div class="sidebar-section-label">Kurikulum</div>
-  <a class="nav-item" href="mapel-tp.html">
-    <span class="nav-icon">📚</span> Mapel & TP/KKTP
-  </a>
-  <a class="nav-item" href="kokurikuler.html">
-    <span class="nav-icon">🌱</span> Kokurikuler & DPL
-  </a>
-  <a class="nav-item" href="ekskul.html">
-    <span class="nav-icon">🏆</span> Ekstrakurikuler
-  </a>
+  <a class="nav-item" href="mapel-tp.html"><span class="nav-icon">📚</span> Mapel & TP/KKTP</a>
+  <a class="nav-item" href="kokurikuler.html"><span class="nav-icon">🌱</span> Kokurikuler & DPL</a>
+  <a class="nav-item active" href="ekskul.html"><span class="nav-icon">🏆</span> Ekstrakurikuler</a>
 </nav>
 
-<!-- Main -->
 <main class="main">
-
   <div class="page-header">
-    <h1>Profil Sekolah & Konfigurasi</h1>
-    <p>Kelola identitas sekolah, kepala sekolah, dan pengaturan semester aktif. Hanya admin yang dapat mengubah data ini.</p>
+    <h1>Kelola Ekstrakurikuler</h1>
+    <p>Daftarkan semua kegiatan kokurikuler wajib dan ekstrakurikuler pilihan di sekolah.
+       Data ini digunakan guru kelas saat mengisi capaian ekskul per siswa di rapor.</p>
   </div>
 
   <div id="alertArea"></div>
 
-  <!-- ── SEKSI 1: Identitas Sekolah ── -->
-  <div class="form-card">
-    <div class="form-card-header">
-      <span class="header-icon">🏫</span>
-      <h2>A. Identitas Sekolah</h2>
-    </div>
-    <div class="form-card-body">
-      <div class="form-grid">
-        <div class="form-group full">
-          <label>Nama Sekolah <span class="required">*</span></label>
-          <input type="text" id="nama_sekolah" placeholder="SD Muhammadiyah 01 Kukusan">
-        </div>
-        <div class="form-group">
-          <label>NPSN <span class="required">*</span></label>
-          <input type="text" id="npsn" placeholder="Nomor Pokok Sekolah Nasional">
-        </div>
-        <div class="form-group">
-          <label>Telepon / Email Sekolah</label>
-          <input type="text" id="telp_sekolah" placeholder="021-xxxxxxx / email@sekolah.sch.id">
-        </div>
-        <div class="form-group full">
-          <label>Alamat Lengkap <span class="required">*</span></label>
-          <textarea id="alamat_sekolah" placeholder="Jl. KH. Ahmad Dahlan II No. 11 RT 006/005 Kel. Kukusan Kec. Beji, Kota Depok"></textarea>
-        </div>
+  <div class="alert info" style="animation:fadeUp .4s ease both;">
+    <div class="alert-icon">💡</div>
+    <div>
+      <div class="alert-title">Dua Jenis Kegiatan</div>
+      <div class="alert-text">
+        <strong>Kokurikuler</strong> (Hizbul Wathan, Tapak Suci) — wajib diikuti semua siswa, muncul otomatis di rapor semua siswa.<br>
+        <strong>Ekstrakurikuler</strong> (Basket, Menari, dll) — pilihan siswa, hanya muncul di rapor siswa yang ikut.
       </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="simpanSeksi('identitas')">
-        💾 Simpan Identitas Sekolah
-      </button>
-      <span class="save-status" id="status-identitas"></span>
     </div>
   </div>
 
-  <!-- ── SEKSI 2: Kepala Sekolah ── -->
-  <div class="form-card" style="animation-delay:.05s">
-    <div class="form-card-header">
-      <span class="header-icon">👤</span>
-      <h2>B. Kepala Sekolah</h2>
+  <!-- Kokurikuler -->
+  <div class="section-title">Kegiatan Kokurikuler (Wajib)</div>
+  <div class="card">
+    <div class="card-header">
+      <h2 id="titleKok">Kokurikuler — 0 kegiatan</h2>
+      <button class="btn btn-primary btn-sm" onclick="bukaTambah('kokurikuler')">➕ Tambah Kokurikuler</button>
     </div>
-    <div class="form-card-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Nama Kepala Sekolah <span class="required">*</span>
-            <span class="hint">(dengan gelar)</span>
-          </label>
-          <input type="text" id="nama_kepsek" placeholder="Mudzakkir Walad, S.Pd">
-        </div>
-        <div class="form-group">
-          <label>NBM Kepala Sekolah <span class="required">*</span>
-            <span class="hint">(Nomor Baku Muhammadiyah)</span>
-          </label>
-          <input type="text" id="nbm_kepsek" placeholder="1167327">
-        </div>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="simpanSeksi('kepsek')">
-        💾 Simpan Data Kepala Sekolah
-      </button>
-      <span class="save-status" id="status-kepsek"></span>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>#</th><th>Nama Kegiatan</th><th>Jenis</th><th>Keterangan</th><th>Aksi</th>
+        </tr></thead>
+        <tbody id="tbodyKok">
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-muted);">⏳ Memuat…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- ── SEKSI 3: Konfigurasi Semester ── -->
-  <div class="form-card" style="animation-delay:.10s">
-    <div class="form-card-header">
-      <span class="header-icon">📅</span>
-      <h2>C. Konfigurasi Semester Aktif</h2>
+  <!-- Ekstrakurikuler -->
+  <div class="section-title">Kegiatan Ekstrakurikuler (Pilihan)</div>
+  <div class="card">
+    <div class="card-header">
+      <h2 id="titleEks">Ekstrakurikuler — 0 kegiatan</h2>
+      <button class="btn btn-primary btn-sm" onclick="bukaTambah('ekstrakurikuler')">➕ Tambah Ekstrakurikuler</button>
     </div>
-    <div class="form-card-body">
-      <div class="form-grid">
-
-        <div class="form-group">
-          <label>Tahun Pelajaran <span class="required">*</span></label>
-          <input type="text" id="tahun_pelajaran" placeholder="2025-2026"
-            pattern="\d{4}-\d{4}">
-          <span class="input-note">Format: YYYY-YYYY, contoh: 2025-2026</span>
-        </div>
-
-        <div class="form-group">
-          <label>Semester Aktif <span class="required">*</span></label>
-          <div class="radio-group" id="semesterGroup">
-            <label class="radio-option" onclick="pilihSemester('I')">
-              <input type="radio" name="semester" value="I">
-              📖 Semester I (Ganjil)
-            </label>
-            <label class="radio-option" onclick="pilihSemester('II')">
-              <input type="radio" name="semester" value="II">
-              📗 Semester II (Genap)
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Seni Budaya — Semester I (Ganjil)</label>
-          <div class="radio-group" id="seniGanjilGroup">
-            <label class="radio-option" onclick="pilihSeni('ganjil','Seni Musik')">
-              <input type="radio" name="seni_ganjil" value="Seni Musik">
-              🎵 Seni Musik
-            </label>
-            <label class="radio-option" onclick="pilihSeni('ganjil','Seni Rupa')">
-              <input type="radio" name="seni_ganjil" value="Seni Rupa">
-              🎨 Seni Rupa
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Seni Budaya — Semester II (Genap)</label>
-          <div class="radio-group" id="seniGenapGroup">
-            <label class="radio-option" onclick="pilihSeni('genap','Seni Musik')">
-              <input type="radio" name="seni_genap" value="Seni Musik">
-              🎵 Seni Musik
-            </label>
-            <label class="radio-option" onclick="pilihSeni('genap','Seni Rupa')">
-              <input type="radio" name="seni_genap" value="Seni Rupa">
-              🎨 Seni Rupa
-            </label>
-          </div>
-          <span class="input-note">💡 Pastikan Seni Musik & Seni Rupa mengisi semester yang berbeda.</span>
-        </div>
-
-        <div class="form-group">
-          <label>Tanggal Penerimaan Rapor</label>
-          <input type="text" id="tgl_rapor" placeholder="22 Desember 2025">
-          <span class="input-note">Tanggal yang tercetak di rapor</span>
-        </div>
-
-        <div class="form-group">
-          <label>Kota Penerbitan Rapor</label>
-          <input type="text" id="kota_rapor" placeholder="Depok">
-        </div>
-
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="simpanSeksi('semester')">
-        💾 Simpan Konfigurasi Semester
-      </button>
-      <span class="save-status" id="status-semester"></span>
-    </div>
-  </div>
-
-  <!-- ── SEKSI 4: DPL Semester Ini ── -->
-  <div class="form-card" style="animation-delay:.15s">
-    <div class="form-card-header">
-      <span class="header-icon">🌱</span>
-      <h2>D. Dimensi Profil Lulusan (DPL) — Semester Ini</h2>
-    </div>
-    <div class="form-card-body">
-      <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px;line-height:1.6;">
-        Pilih minimal <strong>3 dari 8 DPL</strong> yang akan diukur dan dilaporkan
-        dalam rapor semester ini. Pilihan ini berlaku untuk semua kelas.
-      </p>
-      <div class="dpl-grid" id="dplGrid">
-        <!-- diisi JS -->
-      </div>
-      <div class="dpl-count" id="dplCount">0 DPL dipilih (minimal 3)</div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="simpanSeksi('dpl')">
-        💾 Simpan Pilihan DPL
-      </button>
-      <span class="save-status" id="status-dpl"></span>
-    </div>
-  </div>
-
-  <!-- ── SEKSI 5: Manajemen Kelas ── -->
-  <div class="form-card" style="animation-delay:.20s">
-    <div class="form-card-header">
-      <span class="header-icon">🏫</span>
-      <h2>E. Manajemen Kelas</h2>
-    </div>
-    <div class="form-card-body">
-      <p style="font-size:13px;color:var(--ink-mid);margin-bottom:14px;line-height:1.6;">
-        Kelola daftar kelas resmi sekolah. Format nama harus seragam — sistem menggunakan
-        data ini sebagai acuan di seluruh aplikasi (data siswa, kelola guru, penilaian).
-        <strong>Kelas tidak dapat dihapus jika sudah ada siswa atau guru yang terdaftar.</strong>
-      </p>
-
-      <!-- Form tambah/edit kelas inline -->
-      <div id="formKelasWrap" style="display:none;background:var(--green-ghost);border:1px solid var(--border);
-        border-radius:10px;padding:16px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--green-deep);margin-bottom:12px;" id="formKelasTitle">
-          Tambah Kelas Baru
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label>Nama Kelas <span class="required">*</span>
-              <span class="hint">(contoh: 1A, 2B, 3C)</span>
-            </label>
-            <input type="text" id="fk_nama" placeholder="Contoh: 1A"
-              style="text-transform:uppercase;" maxlength="4">
-          </div>
-          <div class="form-group">
-            <label>Tingkat <span class="required">*</span></label>
-            <select id="fk_tingkat" onchange="autoFase()">
-              <option value="">-- Pilih --</option>
-              <option value="1">Kelas 1</option>
-              <option value="2">Kelas 2</option>
-              <option value="3">Kelas 3</option>
-              <option value="4">Kelas 4</option>
-              <option value="5">Kelas 5</option>
-              <option value="6">Kelas 6</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Fase (otomatis)</label>
-            <input type="text" id="fk_fase" disabled placeholder="Otomatis">
-            <span class="input-note">1-2=A, 3-4=B, 5-6=C</span>
-          </div>
-        </div>
-        <div class="form-group" style="margin-top:8px;">
-          <label>Keterangan</label>
-          <input type="text" id="fk_ket" placeholder="Opsional">
-        </div>
-        <div style="display:flex;gap:8px;margin-top:12px;">
-          <button class="btn btn-primary btn-sm" onclick="simpanKelas()">💾 Simpan Kelas</button>
-          <button class="btn btn-secondary btn-sm" onclick="tutupFormKelas()">Batal</button>
-          <span class="save-status" id="status-kelas"></span>
-        </div>
-      </div>
-
-      <!-- Tabel kelas -->
-      <div class="kelas-table-wrap">
-        <table class="kelas-table">
-          <thead>
-            <tr>
-              <th>Nama Kelas</th>
-              <th>Tingkat</th>
-              <th>Fase</th>
-              <th>Siswa</th>
-              <th>Wali Kelas</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyKelas">
-            <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--ink-muted);">⏳ Memuat…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="bukaFormKelas()">➕ Tambah Kelas Baru</button>
-      <span style="font-size:11.5px;color:var(--ink-muted);">
-        Total: <strong id="totalKelas">—</strong> kelas terdaftar
-      </span>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>#</th><th>Nama Kegiatan</th><th>Jenis</th><th>Keterangan</th><th>Aksi</th>
+        </tr></thead>
+        <tbody id="tbodyEks">
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-muted);">⏳ Memuat…</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -599,309 +273,173 @@ textarea { resize: vertical; min-height: 72px; }
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
-/* ── State ───────────────────────────────────────────── */
-let config       = {};
-let semesterVal  = '';
-let seniGanjil   = '';
-let seniGenap    = '';
-let dplDipilih   = [];
+let allEkskul = [];
+let editId    = null;
+let jenisVal  = '';
 
-const DPL_LIST = [
-  { id: 'DPL1', nama: 'Keimanan dan Ketakwaan',  icon: '🕌' },
-  { id: 'DPL2', nama: 'Kewargaan',               icon: '🇮🇩' },
-  { id: 'DPL3', nama: 'Penalaran Kritis',         icon: '🧠' },
-  { id: 'DPL4', nama: 'Kreativitas',              icon: '🎨' },
-  { id: 'DPL5', nama: 'Kolaborasi',               icon: '🤝' },
-  { id: 'DPL6', nama: 'Kemandirian',              icon: '⭐' },
-  { id: 'DPL7', nama: 'Kesehatan',                icon: '💪' },
-  { id: 'DPL8', nama: 'Komunikasi',               icon: '💬' },
-];
-
-/* ── Init ────────────────────────────────────────────── */
 window.addEventListener('load', async () => {
   AUTH.init();
   const user = AUTH.requireLogin('admin');
   if (!user) return;
-
-  document.getElementById('userName').textContent  = user.nama;
+  document.getElementById('userName').textContent   = user.nama;
   document.getElementById('userAvatar').textContent = user.nama?.charAt(0)?.toUpperCase() || 'A';
 
-  renderDPLGrid();
-  showLoading('Memuat konfigurasi…');
+  showLoading('Memuat data ekskul…');
   try {
-    await muatSemuaData();
+    await muatData();
     hideLoading();
   } catch(e) {
-    console.error(e);
-    showAlert('error', '⛔ Gagal memuat data', e.message);
+    showAlert('error','⛔ Gagal memuat', e.message);
     hideLoading();
   }
 });
 
-/* ── Muat Data ───────────────────────────────────────── */
-async function muatSemuaData() {
-  [config] = await Promise.all([
-    SHEETS.getConfig(),
-  ]);
-
-  // Isi form identitas
-  setValue('nama_sekolah', config['nama_sekolah']);
-  setValue('npsn',         config['npsn']);
-  setValue('alamat_sekolah', config['alamat_sekolah']);
-  setValue('telp_sekolah', config['telp_sekolah']);
-
-  // Isi kepala sekolah
-  setValue('nama_kepsek',  config['nama_kepsek']);
-  setValue('nbm_kepsek',   config['nbm_kepsek']);
-
-  // Isi semester
-  setValue('tahun_pelajaran', config['tahun_pelajaran']);
-  setValue('tgl_rapor',    config['tgl_rapor']);
-  setValue('kota_rapor',   config['kota_rapor'] || 'Depok');
-
-  if (config['semester_aktif']) pilihSemester(config['semester_aktif']);
-  if (config['seni_semester_ganjil']) pilihSeni('ganjil', config['seni_semester_ganjil']);
-  if (config['seni_semester_genap'])  pilihSeni('genap',  config['seni_semester_genap']);
-
-  // DPL
-  const dplStr = config['dpl_semester_ini'] || '';
-  dplDipilih   = dplStr.split(',').map(s => s.trim()).filter(Boolean);
-  updateDPLUI();
-
-  // Kelas
-  await muatKelas();
+async function muatData() {
+  allEkskul = await SHEETS.getEkskul();
+  renderTabel();
 }
 
-let allKelasData = [];
-  let allSiswaData = [];
-  let allUsersData = [];
-  let editKelasId  = null;
+function renderTabel() {
+  const kok = allEkskul.filter(e => e.jenis === 'kokurikuler');
+  const eks = allEkskul.filter(e => e.jenis === 'ekstrakurikuler');
 
-  async function muatKelas() {
-    [allKelasData, allSiswaData, allUsersData] = await Promise.all([
-      SHEETS.getKelas(),
-      SHEETS.getSiswa(),
-      SHEETS.getUsers(),
-    ]);
-    renderKelasTable();
-  }
+  document.getElementById('titleKok').textContent = `Kokurikuler — ${kok.length} kegiatan`;
+  document.getElementById('titleEks').textContent = `Ekstrakurikuler — ${eks.length} kegiatan`;
 
-  function renderKelasTable() {
-    const tbody = document.getElementById('tbodyKelas');
-    document.getElementById('totalKelas').textContent = allKelasData.length;
-    if (!allKelasData.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--ink-muted);">Belum ada kelas. Klik "+ Tambah Kelas Baru" di bawah.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = allKelasData.map(k => {
-      const jmlSiswa = allSiswaData.filter(s => s.kelas === k.nama).length;
-      const wali     = allUsersData.find(u => u.role === 'guru_kelas' && u.kelas === k.nama && u.status === 'aktif');
-      const bsHapus  = jmlSiswa === 0 && !wali;
-      return `<tr>
-        <td><span class="kelas-name-display">${k.nama}</span></td>
-        <td>Kelas ${k.tingkat}</td>
-        <td>Fase ${k.fase}</td>
-        <td style="font-size:12px;">${jmlSiswa > 0 ? jmlSiswa + ' siswa' : '<span style="color:var(--ink-muted);">Kosong</span>'}</td>
-        <td style="font-size:12px;">${wali ? wali.nama : '<span style="color:var(--ink-muted);">Belum ada</span>'}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-secondary btn-sm" onclick="editKelas('${k.id}')">✏️ Edit</button>
-          <button class="btn btn-danger btn-sm"
-            ${!bsHapus ? 'disabled title="Hapus siswa & guru dulu"' : 'onclick="hapusKelas(\''+k.id+'\',\''+k.nama+'\')'}">
-            🗑️
-          </button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
-
-  function bukaFormKelas() {
-    editKelasId = null;
-    document.getElementById('formKelasTitle').textContent = 'Tambah Kelas Baru';
-    document.getElementById('fk_nama').value    = '';
-    document.getElementById('fk_tingkat').value = '';
-    document.getElementById('fk_fase').value    = '';
-    document.getElementById('fk_ket').value     = '';
-    document.getElementById('fk_nama').disabled = false;
-    document.getElementById('formKelasWrap').style.display = 'block';
-    document.getElementById('fk_nama').focus();
-  }
-
-  function editKelas(id) {
-    const k = allKelasData.find(k => k.id === id);
-    if (!k) return;
-    editKelasId = id;
-    document.getElementById('formKelasTitle').textContent = 'Edit Kelas ' + k.nama;
-    document.getElementById('fk_nama').value    = k.nama;
-    document.getElementById('fk_tingkat').value = k.tingkat;
-    document.getElementById('fk_fase').value    = 'Fase ' + k.fase;
-    document.getElementById('fk_ket').value     = k.keterangan || '';
-    document.getElementById('fk_nama').disabled = true;
-    document.getElementById('formKelasWrap').style.display = 'block';
-    document.getElementById('formKelasWrap').scrollIntoView({behavior:'smooth'});
-  }
-
-  function tutupFormKelas() {
-    document.getElementById('formKelasWrap').style.display = 'none';
-    editKelasId = null;
-  }
-
-  function autoFase() {
-    const t = parseInt(document.getElementById('fk_tingkat').value);
-    document.getElementById('fk_fase').value = isNaN(t) ? '' : 'Fase ' + (t<=2?'A':t<=4?'B':'C');
-  }
-
-  async function simpanKelas() {
-    const nama    = document.getElementById('fk_nama').value.trim().toUpperCase();
-    const tingkat = document.getElementById('fk_tingkat').value;
-    const ket     = document.getElementById('fk_ket').value.trim();
-    const fase    = tingkat ? (parseInt(tingkat)<=2?'A':parseInt(tingkat)<=4?'B':'C') : '';
-    if (!nama)    { setStatus('kelas', false, '⛔ Nama kelas wajib.'); return; }
-    if (!tingkat) { setStatus('kelas', false, '⛔ Pilih tingkat.'); return; }
-    const dup = allKelasData.find(k => k.nama===nama && k.id!==editKelasId);
-    if (dup) { setStatus('kelas', false, '⛔ Kelas '+nama+' sudah ada.'); return; }
-
-    showLoading('Menyimpan kelas…');
-    try {
-      if (editKelasId) {
-        const rows = await SHEETS.read('KELAS!A:E');
-        const idx  = rows.findIndex(r => r[0] === editKelasId);
-        if (idx < 0) throw new Error('Kelas tidak ditemukan.');
-        await SHEETS.write('KELAS!A'+(idx+1)+':E'+(idx+1), [[rows[idx][0], rows[idx][1], tingkat, fase, ket]]);
-        setStatus('kelas', true, '✅ Kelas '+nama+' diperbarui');
-      } else {
-        const id = 'KLS'+String(allKelasData.length+1).padStart(2,'0');
-        await SHEETS.append('KELAS', [[id, nama, tingkat, fase, ket]]);
-        setStatus('kelas', true, '✅ Kelas '+nama+' ditambahkan');
-      }
-      tutupFormKelas();
-      await muatKelas();
-    } catch(e) {
-      setStatus('kelas', false, '⛔ '+e.message);
-    } finally { hideLoading(); }
-  }
-
-  async function hapusKelas(id, nama) {
-    if (!confirm('Hapus kelas '+nama+'?')) return;
-    showLoading('Menghapus…');
-    try {
-      if (allSiswaData.some(s=>s.kelas===nama)) throw new Error('Masih ada siswa di kelas '+nama+'.');
-      if (allUsersData.some(u=>u.kelas===nama&&u.status==='aktif')) throw new Error('Masih ada guru di kelas '+nama+'.');
-      const rows = await SHEETS.read('KELAS!A:E');
-      const idx  = rows.findIndex(r => r[0] === id);
-      if (idx < 0) throw new Error('Kelas tidak ditemukan.');
-      await SHEETS.write('KELAS!A'+(idx+1)+':E'+(idx+1), [['','','','','']]);
-      await muatKelas();
-      setStatus('kelas', true, '✅ Kelas '+nama+' dihapus');
-    } catch(e) {
-      showAlert('error','Tidak Bisa Hapus', e.message);
-    } finally { hideLoading(); }
-  } catch(e) {
-    console.error(e);
-    setStatus(seksi, false, '⛔ ' + e.message);
-    showAlert('error', 'Gagal menyimpan', e.message);
-  } finally {
-    btn.disabled    = false;
-    btn.textContent = '💾 Simpan ' + {
-      identitas: 'Identitas Sekolah',
-      kepsek:    'Data Kepala Sekolah',
-      semester:  'Konfigurasi Semester',
-      dpl:       'Pilihan DPL',
-    }[seksi];
-  }
+  renderGrup('tbodyKok', kok);
+  renderGrup('tbodyEks', eks);
 }
 
-/* ── Simpan batch ke CONFIG sheet ───────────────────── */
-async function simpanBatch(obj) {
-  // Baca CONFIG dulu untuk tahu posisi baris
-  const rows = await SHEETS.read('CONFIG!A:B');
-
-  // Untuk setiap key, cari atau tambah baris
-  for (const [key, val] of Object.entries(obj)) {
-    const idx = rows.findIndex((r, i) => i > 0 && r[0] === key);
-    if (idx > 0) {
-      // Update kolom B baris yang ada
-      await SHEETS.write(`CONFIG!B${idx + 1}`, [[val]]);
-    } else {
-      // Tambah baris baru
-      await SHEETS.append('CONFIG', [[key, val]]);
-      rows.push([key, val]); // update local copy
-    }
+function renderGrup(tbodyId, data) {
+  const tbody = document.getElementById(tbodyId);
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="5">
+      <div class="empty-state">
+        <div class="icon">🏆</div>
+        <h3>Belum ada kegiatan</h3>
+        <p>Klik tombol ➕ di atas untuk menambahkan kegiatan.</p>
+      </div>
+    </td></tr>`;
+    return;
   }
-}
-
-/* ── UI Helpers ──────────────────────────────────────── */
-function pilihSemester(val) {
-  semesterVal = val;
-  document.querySelectorAll('#semesterGroup .radio-option').forEach(el => {
-    el.classList.toggle('selected', el.querySelector('input').value === val);
-  });
-}
-
-function pilihSeni(tipe, val) {
-  if (tipe === 'ganjil') seniGanjil = val;
-  else                   seniGenap  = val;
-
-  const grpId = tipe === 'ganjil' ? 'seniGanjilGroup' : 'seniGenapGroup';
-  document.querySelectorAll(`#${grpId} .radio-option`).forEach(el => {
-    el.classList.toggle('selected', el.querySelector('input').value === val);
-  });
-}
-
-function renderDPLGrid() {
-  const grid = document.getElementById('dplGrid');
-  grid.innerHTML = DPL_LIST.map(d => `
-    <label class="dpl-option" id="dpl-opt-${d.id}" onclick="toggleDPL('${d.id}')">
-      <input type="checkbox" value="${d.id}">
-      <span>${d.icon}</span>
-      <span>${d.nama}</span>
-    </label>
+  tbody.innerHTML = data.map((e,i) => `
+    <tr>
+      <td style="color:var(--ink-muted);font-size:12px;">${i+1}</td>
+      <td><strong>${e.nama}</strong></td>
+      <td><span class="badge ${e.jenis==='kokurikuler'?'kok':'eks'}">${e.jenis==='kokurikuler'?'🏫 Kokurikuler':'🏆 Ekstrakurikuler'}</span></td>
+      <td style="font-size:12px;color:var(--ink-muted);">${e.keterangan||'—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" onclick="bukaEdit('${e.id}')">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="hapus('${e.id}','${e.nama}')">🗑️ Hapus</button>
+      </td>
+    </tr>
   `).join('');
 }
 
-function toggleDPL(id) {
-  const idx = dplDipilih.indexOf(id);
-  if (idx > -1) dplDipilih.splice(idx, 1);
-  else          dplDipilih.push(id);
-  updateDPLUI();
+function bukaTambah(jenis) {
+  editId = null;
+  document.getElementById('modalTitle').textContent = 'Tambah Kegiatan';
+  document.getElementById('f_nama').value = '';
+  document.getElementById('f_ket').value  = '';
+  pilihJenis(jenis);
+  bukaModal();
 }
 
-function updateDPLUI() {
-  DPL_LIST.forEach(d => {
-    const el  = document.getElementById('dpl-opt-' + d.id);
-    const chk = el?.querySelector('input');
-    const sel = dplDipilih.includes(d.id);
-    el?.classList.toggle('selected', sel);
-    if (chk) chk.checked = sel;
-  });
-
-  const count = dplDipilih.length;
-  const el    = document.getElementById('dplCount');
-  el.textContent = `${count} DPL dipilih (${count < 3 ? 'minimal 3' : 'sudah cukup ✅'})`;
-  el.className   = 'dpl-count ' + (count >= 3 ? 'ok' : 'warn');
+function bukaEdit(id) {
+  const e = allEkskul.find(e => e.id === id);
+  if (!e) return;
+  editId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Kegiatan';
+  document.getElementById('f_nama').value = e.nama || '';
+  document.getElementById('f_ket').value  = e.keterangan || '';
+  pilihJenis(e.jenis || 'ekstrakurikuler');
+  bukaModal();
 }
 
-function getValue(id) {
-  return (document.getElementById(id)?.value || '').trim();
+function pilihJenis(j) {
+  jenisVal = j;
+  document.getElementById('jt-kok').classList.toggle('selected', j === 'kokurikuler');
+  document.getElementById('jt-eks').classList.toggle('selected', j === 'ekstrakurikuler');
 }
-function setValue(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.value = val || '';
+
+function bukaModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('f_nama').focus(), 100);
 }
-function setStatus(seksi, ok, msg) {
-  const el = document.getElementById('status-' + seksi);
-  if (!el) return;
-  el.textContent = msg;
-  el.className   = 'save-status ' + (ok ? 'ok' : 'err');
-  if (ok) setTimeout(() => { el.textContent = ''; }, 4000);
+
+function tutupModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editId = null; jenisVal = '';
 }
+
+async function simpan() {
+  const nama = document.getElementById('f_nama').value.trim();
+  const ket  = document.getElementById('f_ket').value.trim();
+  if (!nama)     { showAlert('error','Validasi','Nama kegiatan wajib diisi.'); return; }
+  if (!jenisVal) { showAlert('error','Validasi','Pilih jenis kegiatan.'); return; }
+
+  const btn = document.getElementById('btnSimpan');
+  btn.disabled = true; btn.textContent = '⏳ Menyimpan…';
+
+  try {
+    if (editId) {
+      const rows = await SHEETS.read('EKSKUL!A:D');
+      const idx  = rows.findIndex(r => r[0] === editId);
+      if (idx < 0) throw new Error('Data tidak ditemukan.');
+      await SHEETS.write(`EKSKUL!A${idx+1}:D${idx+1}`, [[editId, nama, jenisVal, ket]]);
+      showAlert('success','✅ Berhasil', `${nama} berhasil diperbarui.`);
+    } else {
+      const id = await SHEETS._generateId('EKSKUL','EK');
+      await SHEETS.append('EKSKUL', [[id, nama, jenisVal, ket]]);
+      showAlert('success','✅ Berhasil', `${nama} berhasil ditambahkan.`);
+    }
+    tutupModal();
+    await muatData();
+  } catch(e) {
+    showAlert('error','⛔ Gagal', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Simpan';
+  }
+}
+
+async function hapus(id, nama) {
+  if (!confirm(`Hapus kegiatan "${nama}"?\n\nPastikan tidak ada data capaian siswa yang menggunakan kegiatan ini.`)) return;
+  showLoading('Menghapus…');
+  try {
+    const rows = await SHEETS.read('EKSKUL!A:D');
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx < 0) throw new Error('Data tidak ditemukan.');
+    await SHEETS.write(`EKSKUL!A${idx+1}:D${idx+1}`, [['','','','']]);
+    showAlert('success','✅ Berhasil', `${nama} berhasil dihapus.`);
+    await muatData();
+  } catch(e) {
+    showAlert('error','⛔ Gagal', e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+// Expose _generateId for use in simpan (it's internal in SHEETS module)
+// We need to expose it - actually let's just generate ID manually here
+SHEETS._generateId = async function(sheet, prefix) {
+  try {
+    const rows  = await SHEETS.read(sheet + '!A:A');
+    const count = rows.slice(2).filter(r => r[0] && !r[0].startsWith('id_')).length;
+    return prefix + String(count + 1).padStart(3,'0');
+  } catch(_) {
+    return prefix + Date.now().toString(36);
+  }
+};
 
 function showAlert(type, title, text) {
-  document.getElementById('alertArea').innerHTML = `
-    <div class="alert ${type}">
-      <div class="alert-icon">${type==='success'?'✅':type==='warning'?'⚠️':'⛔'}</div>
-      <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
-    </div>`;
-  setTimeout(() => { document.getElementById('alertArea').innerHTML = ''; }, 6000);
+  const area = document.getElementById('alertArea');
+  area.innerHTML = `<div class="alert ${type}">
+    <div class="alert-icon">${type==='success'?'✅':'⛔'}</div>
+    <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
+  </div>`;
+  if (type === 'success') setTimeout(() => area.innerHTML='', 5000);
 }
 
 function showLoading(msg) {
@@ -915,6 +453,9 @@ function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) tutupModal();
+});
 </script>
 </body>
 </html>
