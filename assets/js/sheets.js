@@ -180,7 +180,7 @@ const SHEETS = (() => {
   async function getConfig() {
     const rows   = await read('CONFIG!A:B');
     const config = {};
-    rows.slice(1).forEach(r => {
+    rows.slice(2).forEach(r => {
       if (r[0]) config[r[0]] = r[1] || '';
     });
     return config;
@@ -210,8 +210,8 @@ const SHEETS = (() => {
    */
   async function getKelas() {
     const rows = await read('KELAS!A:E');
-    return rows.slice(1)
-      .filter(r => r[0] && r[1])
+    return rows.slice(2)
+      .filter(r => r[0] && r[1] && r[0] !== 'id_kelas')
       .map(r => ({
         id:         r[0] || '',
         nama:       r[1] || '',
@@ -228,7 +228,7 @@ const SHEETS = (() => {
    */
   async function getSiswa(kelas = null) {
     const rows = await read('SISWA!A:L');
-    let siswa  = rows.slice(1).filter(r => r[0] && r[1]);
+    let siswa  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_siswa');
 
     if (kelas) {
       siswa = siswa.filter(r => (r[4] || '') === kelas);
@@ -280,7 +280,7 @@ const SHEETS = (() => {
    */
   async function getUsers(role = null) {
     const rows = await read('USERS!A:I');
-    let users  = rows.slice(1).filter(r => r[0] && r[1]);
+    let users  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_user');
 
     if (role) users = users.filter(r => (r[3] || '') === role);
 
@@ -323,8 +323,8 @@ const SHEETS = (() => {
    */
   async function getMapel() {
     const rows = await read('MAPEL!A:F');
-    return rows.slice(1)
-      .filter(r => r[0] && r[1])
+    return rows.slice(2)
+      .filter(r => r[0] && r[1] && r[0] !== 'id_mapel')
       .map(r => ({
         id:           r[0] || '',
         nama:         r[1] || '',
@@ -341,7 +341,7 @@ const SHEETS = (() => {
    */
   async function getTPKKTP({ id_mapel, kelas, fase } = {}) {
     const rows = await read('TP_KKTP!A:V');
-    let data   = rows.slice(1).filter(r => r[0] && r[1]);
+    let data   = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_tp');
 
     if (id_mapel) data = data.filter(r => r[1] === id_mapel);
     if (kelas)    data = data.filter(r => r[3] === kelas);
@@ -372,8 +372,8 @@ const SHEETS = (() => {
    */
   async function getDPL() {
     const rows = await read('DPL!A:N');
-    return rows.slice(1)
-      .filter(r => r[0] && r[1])
+    return rows.slice(2)
+      .filter(r => r[0] && r[1] && r[0] !== 'id_dpl')
       .map(r => ({
         id:    r[0] || '',
         nama:  r[1] || '',
@@ -391,7 +391,7 @@ const SHEETS = (() => {
    */
   async function getNilai({ id_siswa, id_mapel, kelas, semester, tahun } = {}) {
     const rows = await read('NILAI!A:K');
-    let data   = rows.slice(1).filter(r => r[0]);
+    let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai');
 
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
     if (id_mapel) data = data.filter(r => r[3] === id_mapel);
@@ -455,8 +455,8 @@ const SHEETS = (() => {
    */
   async function getEkskul() {
     const rows = await read('EKSKUL!A:D');
-    return rows.slice(1)
-      .filter(r => r[0] && r[1])
+    return rows.slice(2)
+      .filter(r => r[0] && r[1] && r[0] !== 'id_dpl')
       .map(r => ({
         id:          r[0] || '',
         nama:        r[1] || '',
@@ -470,7 +470,7 @@ const SHEETS = (() => {
    */
   async function getAbsensi({ id_siswa, kelas, semester, tahun } = {}) {
     const rows = await read('ABSENSI!A:J');
-    let data   = rows.slice(1).filter(r => r[0]);
+    let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai');
 
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
     if (kelas)    data = data.filter(r => r[2] === kelas);
@@ -578,7 +578,7 @@ const SHEETS = (() => {
   async function _generateId(sheetName, prefix) {
     try {
       const rows  = await read(`${sheetName}!A:A`);
-      const count = rows.slice(1).filter(r => r[0]).length;
+      const count = rows.slice(2).filter(r => r[0] && !r[0].startsWith('id_')).length;
       const num   = String(count + 1).padStart(3, '0');
       return `${prefix}${num}`;
     } catch (_) {
