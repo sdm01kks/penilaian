@@ -492,24 +492,15 @@ textarea.cp-edit:focus {
         </div>
       </div>
 
-      <!-- CP -->
-      <div class="section-title">A. Capaian Pembelajaran (CP)</div>
-      <div class="cp-card">
-        <div class="cp-card-header">
-          <h2>Capaian Pembelajaran</h2>
-          <button class="btn btn-secondary btn-sm" id="btnEditCP" onclick="toggleEditCP()">
-            ✏️ Edit CP
-          </button>
-        </div>
-        <div class="cp-card-body">
-          <div class="cp-text" id="cpDisplay">
-            <span style="color:var(--ink-muted);font-style:italic;">Belum ada CP. Klik "Edit CP" untuk mengisi.</span>
-          </div>
-          <textarea class="cp-edit" id="cpEdit" style="display:none;"
-            placeholder="Tulis Capaian Pembelajaran di sini…"></textarea>
-          <div style="display:none;margin-top:10px;gap:8px;" id="cpButtons">
-            <button class="btn btn-primary btn-sm" onclick="simpanCP()">💾 Simpan CP</button>
-            <button class="btn btn-secondary btn-sm" onclick="batalEditCP()">Batal</button>
+      <!-- CP Note -->
+      <div class="alert info" style="animation:fadeUp .3s .05s ease both;">
+        <div class="alert-icon">💡</div>
+        <div>
+          <div class="alert-title">Capaian Pembelajaran (CP) per TP</div>
+          <div class="alert-text">
+            CP diisi langsung di dalam setiap kartu Tujuan Pembelajaran di bawah.
+            Setiap TP dapat memiliki CP yang berbeda meskipun berada dalam satu mata pelajaran —
+            karena satu CP bisa mencakup beberapa TP, atau satu TP bisa dilandasi CP yang berbeda.
           </div>
         </div>
       </div>
@@ -693,7 +684,6 @@ async function pilihMapel(m) {
     renderTP();
 
     // Muat CP jika ada (cari di TP_KKTP baris CP — atau simpan terpisah di CONFIG)
-    muatCP(m.id);
 
     // Bobot dari TP pertama jika ada
     if (allTP.length > 0) {
@@ -759,6 +749,17 @@ function renderTPCard(tp, idx) {
       </div>
       <div class="tp-card-body">
         <div class="tp-form-grid">
+          <div class="tp-form-group full">
+            <div class="tp-label">
+              Capaian Pembelajaran (CP) untuk TP ini
+              <span style="font-weight:400;color:var(--ink-muted);font-size:10.5px;margin-left:4px;">
+                — bisa berbeda antar TP meskipun dalam mapel yang sama
+              </span>
+            </div>
+            <textarea class="tp-textarea" id="tp-cp-${idx}"
+              placeholder="Tulis Capaian Pembelajaran yang menjadi landasan TP ini…"
+              rows="2">${tp.cp || ''}</textarea>
+          </div>
           <div class="tp-form-group full">
             <div class="tp-label">Nama / Rumusan TP <span style="color:var(--red)">*</span></div>
             <input type="text" class="tp-input" id="tp-nama-${idx}"
@@ -915,6 +916,7 @@ async function simpanTP(idx) {
   // Generate ID jika baru
   const idTP = tp.id_tp || `TP-${activeMapel?.id}-${kelas}-${nomor || (idx+1)}-${Date.now().toString(36)}`;
 
+    const cp = document.getElementById('tp-cp-' + idx)?.value.trim() || '';
   const row = [
     idTP,
     activeMapel?.id || '',
@@ -930,6 +932,7 @@ async function simpanTP(idx) {
     level[1].min, level[1].maks, level[1].deskripsi,
     level[2].min, level[2].maks, level[2].deskripsi,
     level[3].min, level[3].maks, level[3].deskripsi,
+      cp,  // kolom W
   ];
 
   showLoading('Menyimpan TP…');
