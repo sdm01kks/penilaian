@@ -346,7 +346,12 @@ const SHEETS = (() => {
     let data   = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_tp');
 
     if (id_mapel) data = data.filter(r => r[1] === id_mapel);
-    if (kelas)    data = data.filter(r => r[3] === kelas);
+    if (kelas) {
+      // TP disimpan per TINGKATAN (angka saja: "1","2",.."6")
+      // Query bisa pakai nama kelas penuh ("6B") → ekstrak tingkatan → cocokkan
+      const tingkatan = kelas.replace(/[^0-9]/g, '');
+      data = data.filter(r => r[3] === tingkatan || r[3] === kelas);
+    }
     if (fase)     data = data.filter(r => r[2] === fase);
 
     return data.map(r => ({
