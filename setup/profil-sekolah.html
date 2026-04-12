@@ -275,6 +275,7 @@ textarea { resize: vertical; min-height: 72px; }
 </head>
 <body>
 
+
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner-lg"></div>
   <p id="loadingText">Memuat konfigurasi…</p>
@@ -596,6 +597,7 @@ textarea { resize: vertical; min-height: 72px; }
 
 </main>
 
+
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
@@ -605,6 +607,10 @@ let semesterVal  = '';
 let seniGanjil   = '';
 let seniGenap    = '';
 let dplDipilih   = [];
+let allKelasData = [];
+let allSiswaData = [];
+let allUsersData = [];
+let editKelasId  = null;
 
 const DPL_LIST = [
   { id: 'DPL1', nama: 'Keimanan dan Ketakwaan',  icon: '🕌' },
@@ -638,66 +644,130 @@ window.addEventListener('load', async () => {
   }
 });
 
-/* ── Muat Data ───────────────────────────────────────── */
+/* ── Muat Semua Data ─────────────────────────────────── */
 async function muatSemuaData() {
-  [config] = await Promise.all([
-    SHEETS.getConfig(),
-  ]);
+  config = await SHEETS.getConfig();
 
-  // Isi form identitas
-  setValue('nama_sekolah', config['nama_sekolah']);
-  setValue('npsn',         config['npsn']);
+  setValue('nama_sekolah',   config['nama_sekolah']);
+  setValue('npsn',           config['npsn']);
   setValue('alamat_sekolah', config['alamat_sekolah']);
-  setValue('telp_sekolah', config['telp_sekolah']);
+  setValue('telp_sekolah',   config['telp_sekolah']);
+  setValue('nama_kepsek',    config['nama_kepsek']);
+  setValue('nbm_kepsek',     config['nbm_kepsek']);
+  setValue('tahun_pelajaran',config['tahun_pelajaran']);
+  setValue('tgl_rapor',      config['tgl_rapor']);
+  setValue('kota_rapor',     config['kota_rapor'] || 'Depok');
 
-  // Isi kepala sekolah
-  setValue('nama_kepsek',  config['nama_kepsek']);
-  setValue('nbm_kepsek',   config['nbm_kepsek']);
-
-  // Isi semester
-  setValue('tahun_pelajaran', config['tahun_pelajaran']);
-  setValue('tgl_rapor',    config['tgl_rapor']);
-  setValue('kota_rapor',   config['kota_rapor'] || 'Depok');
-
-  if (config['semester_aktif']) pilihSemester(config['semester_aktif']);
+  if (config['semester_aktif'])       pilihSemester(config['semester_aktif']);
   if (config['seni_semester_ganjil']) pilihSeni('ganjil', config['seni_semester_ganjil']);
   if (config['seni_semester_genap'])  pilihSeni('genap',  config['seni_semester_genap']);
 
-  // DPL
   const dplStr = config['dpl_semester_ini'] || '';
   dplDipilih   = dplStr.split(',').map(s => s.trim()).filter(Boolean);
   updateDPLUI();
 
-  // Kelas
   await muatKelas();
 }
 
-let allKelasData = [];
-  let allSiswaData = [];
-  let allUsersData = [];
-  let editKelasId  = null;
+/* ── Simpan Per Seksi ────────────────────────────────── */
+async function simpanSeksi(seksi) {
+  const btn = event.target;
+  btn.disabled    = true;
+  btn.textContent = '⏳ Menyimpan…';
 
-  async function muatKelas() {
-    [allKelasData, allSiswaData, allUsersData] = await Promise.all([
-      SHEETS.getKelas(),
-      SHEETS.getSiswa(),
-      SHEETS.getUsers(),
-    ]);
-    renderKelasTable();
+  const labelMap = {
+    identitas: 'Identitas Sekolah',
+    kepsek:    'Data Kepala Sekolah',
+    semester:  'Konfigurasi Semester',
+    dpl:       'Pilihan DPL',
+  };
+
+  try {
+    if (seksi === 'identitas') {
+      await simpanBatch({
+        'nama_sekolah':   getValue('nama_sekolah'),
+        'npsn':           getValue('npsn'),
+        'alamat_sekolah': getValue('alamat_sekolah'),
+        'telp_sekolah':   getValue('telp_sekolah'),
+      });
+      setStatus('identitas', true, '✅ Tersimpan');
+    }
+    else if (seksi === 'kepsek') {
+      await simpanBatch({
+        'nama_kepsek': getValue('nama_kepsek'),
+        'nbm_kepsek':  getValue('nbm_kepsek'),
+      });
+      setStatus('kepsek', true, '✅ Tersimpan');
+    }
+    else if (seksi === 'semester') {
+      if (!semesterVal) throw new Error('Pilih semester aktif terlebih dahulu.');
+      if (!seniGanjil)  throw new Error('Pilih Seni Budaya untuk Semester I.');
+      if (!seniGenap)   throw new Error('Pilih Seni Budaya untuk Semester II.');
+      if (seniGanjil === seniGenap) throw new Error('Seni Budaya Semester I dan II tidak boleh sama.');
+      await simpanBatch({
+        'semester_aktif':       semesterVal,
+        'tahun_pelajaran':      getValue('tahun_pelajaran'),
+        'seni_semester_ganjil': seniGanjil,
+        'seni_semester_genap':  seniGenap,
+        'tgl_rapor':            getValue('tgl_rapor'),
+        'kota_rapor':           getValue('kota_rapor'),
+      });
+      setStatus('semester', true, '✅ Tersimpan');
+    }
+    else if (seksi === 'dpl') {
+      if (dplDipilih.length < 3) throw new Error('Pilih minimal 3 DPL.');
+      await simpanBatch({ 'dpl_semester_ini': dplDipilih.join(',') });
+      setStatus('dpl', true, '✅ Tersimpan');
+    }
+  } catch(e) {
+    console.error(e);
+    setStatus(seksi, false, '⛔ ' + e.message);
+    showAlert('error', 'Gagal menyimpan', e.message);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '💾 Simpan ' + (labelMap[seksi] || '');
+  }
+}
+
+/* ── Simpan batch ke CONFIG ──────────────────────────── */
+async function simpanBatch(obj) {
+  const rows = await SHEETS.read('CONFIG!A:B');
+  for (const [key, val] of Object.entries(obj)) {
+    const idx = rows.findIndex((r, i) => i > 1 && r[0] === key);
+    if (idx > 1) {
+      await SHEETS.write(`CONFIG!B${idx + 1}`, [[val]]);
+    } else {
+      await SHEETS.append('CONFIG', [[key, val]]);
+      rows.push([key, val]);
+    }
+  }
+}
+
+/* ── Manajemen Kelas ─────────────────────────────────── */
+async function muatKelas() {
+  [allKelasData, allSiswaData, allUsersData] = await Promise.all([
+    SHEETS.getKelas(),
+    SHEETS.getSiswa(),
+    SHEETS.getUsers(),
+  ]);
+  renderKelasTable();
+}
+
+function renderKelasTable() {
+  const tbody = document.getElementById('tbodyKelas');
+  document.getElementById('totalKelas').textContent = allKelasData.length;
+
+  if (!allKelasData.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--ink-muted);">Belum ada kelas. Klik "+ Tambah Kelas Baru" di bawah.</td></tr>';
+    return;
   }
 
-  function renderKelasTable() {
-    const tbody = document.getElementById('tbodyKelas');
-    document.getElementById('totalKelas').textContent = allKelasData.length;
-    if (!allKelasData.length) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--ink-muted);">Belum ada kelas. Klik "+ Tambah Kelas Baru" di bawah.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = allKelasData.map(k => {
-      const jmlSiswa = allSiswaData.filter(s => s.kelas === k.nama).length;
-      const wali     = allUsersData.find(u => u.role === 'guru_kelas' && u.kelas === k.nama && u.status === 'aktif');
-      const bsHapus  = jmlSiswa === 0 && !wali;
-      return `<tr>
+  tbody.innerHTML = allKelasData.map(k => {
+    const jmlSiswa = allSiswaData.filter(s => s.kelas === k.nama).length;
+    const wali     = allUsersData.find(u => u.role === 'guru_kelas' && u.kelas === k.nama && u.status === 'aktif');
+    const bsHapus  = jmlSiswa === 0 && !wali;
+    return `
+      <tr>
         <td><span class="kelas-name-display">${k.nama}</span></td>
         <td>Kelas ${k.tingkat}</td>
         <td>Fase ${k.fase}</td>
@@ -706,126 +776,103 @@ let allKelasData = [];
         <td style="white-space:nowrap;">
           <button class="btn btn-secondary btn-sm" onclick="editKelas('${k.id}')">✏️ Edit</button>
           <button class="btn btn-danger btn-sm"
-            ${!bsHapus ? 'disabled title="Hapus siswa & guru dulu"' : 'onclick="hapusKelas(\''+k.id+'\',\''+k.nama+'\')'}">
-            🗑️
-          </button>
+            ${!bsHapus ? 'disabled title="Hapus siswa & guru kelas ini dulu"' : ''}
+            ${bsHapus ? 'onclick="hapusKelas(\'' + k.id + '\',\'' + k.nama + '\')"' : ''}>🗑️</button>
         </td>
       </tr>`;
-    }).join('');
-  }
+  }).join('');
+}
 
-  function bukaFormKelas() {
-    editKelasId = null;
-    document.getElementById('formKelasTitle').textContent = 'Tambah Kelas Baru';
-    document.getElementById('fk_nama').value    = '';
-    document.getElementById('fk_tingkat').value = '';
-    document.getElementById('fk_fase').value    = '';
-    document.getElementById('fk_ket').value     = '';
-    document.getElementById('fk_nama').disabled = false;
-    document.getElementById('formKelasWrap').style.display = 'block';
-    document.getElementById('fk_nama').focus();
-  }
+function bukaFormKelas() {
+  editKelasId = null;
+  document.getElementById('formKelasTitle').textContent = 'Tambah Kelas Baru';
+  document.getElementById('fk_nama').value    = '';
+  document.getElementById('fk_tingkat').value = '';
+  document.getElementById('fk_fase').value    = '';
+  document.getElementById('fk_ket').value     = '';
+  document.getElementById('fk_nama').disabled = false;
+  document.getElementById('formKelasWrap').style.display = 'block';
+  document.getElementById('fk_nama').focus();
+}
 
-  function editKelas(id) {
-    const k = allKelasData.find(k => k.id === id);
-    if (!k) return;
-    editKelasId = id;
-    document.getElementById('formKelasTitle').textContent = 'Edit Kelas ' + k.nama;
-    document.getElementById('fk_nama').value    = k.nama;
-    document.getElementById('fk_tingkat').value = k.tingkat;
-    document.getElementById('fk_fase').value    = 'Fase ' + k.fase;
-    document.getElementById('fk_ket').value     = k.keterangan || '';
-    document.getElementById('fk_nama').disabled = true;
-    document.getElementById('formKelasWrap').style.display = 'block';
-    document.getElementById('formKelasWrap').scrollIntoView({behavior:'smooth'});
-  }
+function editKelas(id) {
+  const k = allKelasData.find(k => k.id === id);
+  if (!k) return;
+  editKelasId = id;
+  document.getElementById('formKelasTitle').textContent = 'Edit Kelas ' + k.nama;
+  document.getElementById('fk_nama').value    = k.nama;
+  document.getElementById('fk_tingkat').value = k.tingkat;
+  document.getElementById('fk_fase').value    = 'Fase ' + k.fase;
+  document.getElementById('fk_ket').value     = k.keterangan || '';
+  document.getElementById('fk_nama').disabled = true;
+  document.getElementById('formKelasWrap').style.display = 'block';
+  document.getElementById('formKelasWrap').scrollIntoView({behavior:'smooth'});
+}
 
-  function tutupFormKelas() {
-    document.getElementById('formKelasWrap').style.display = 'none';
-    editKelasId = null;
-  }
+function tutupFormKelas() {
+  document.getElementById('formKelasWrap').style.display = 'none';
+  editKelasId = null;
+}
 
-  function autoFase() {
-    const t = parseInt(document.getElementById('fk_tingkat').value);
-    document.getElementById('fk_fase').value = isNaN(t) ? '' : 'Fase ' + (t<=2?'A':t<=4?'B':'C');
-  }
+function autoFase() {
+  const t = parseInt(document.getElementById('fk_tingkat').value);
+  document.getElementById('fk_fase').value = isNaN(t) ? '' : 'Fase ' + (t <= 2 ? 'A' : t <= 4 ? 'B' : 'C');
+}
 
-  async function simpanKelas() {
-    const nama    = document.getElementById('fk_nama').value.trim().toUpperCase();
-    const tingkat = document.getElementById('fk_tingkat').value;
-    const ket     = document.getElementById('fk_ket').value.trim();
-    const fase    = tingkat ? (parseInt(tingkat)<=2?'A':parseInt(tingkat)<=4?'B':'C') : '';
-    if (!nama)    { setStatus('kelas', false, '⛔ Nama kelas wajib.'); return; }
-    if (!tingkat) { setStatus('kelas', false, '⛔ Pilih tingkat.'); return; }
-    const dup = allKelasData.find(k => k.nama===nama && k.id!==editKelasId);
-    if (dup) { setStatus('kelas', false, '⛔ Kelas '+nama+' sudah ada.'); return; }
+async function simpanKelas() {
+  const nama    = document.getElementById('fk_nama').value.trim().toUpperCase();
+  const tingkat = document.getElementById('fk_tingkat').value;
+  const ket     = document.getElementById('fk_ket').value.trim();
+  const fase    = tingkat ? (parseInt(tingkat) <= 2 ? 'A' : parseInt(tingkat) <= 4 ? 'B' : 'C') : '';
 
-    showLoading('Menyimpan kelas…');
-    try {
-      if (editKelasId) {
-        const rows = await SHEETS.read('KELAS!A:E');
-        const idx  = rows.findIndex(r => r[0] === editKelasId);
-        if (idx < 0) throw new Error('Kelas tidak ditemukan.');
-        await SHEETS.write('KELAS!A'+(idx+1)+':E'+(idx+1), [[rows[idx][0], rows[idx][1], tingkat, fase, ket]]);
-        setStatus('kelas', true, '✅ Kelas '+nama+' diperbarui');
-      } else {
-        const id = 'KLS'+String(allKelasData.length+1).padStart(2,'0');
-        await SHEETS.append('KELAS', [[id, nama, tingkat, fase, ket]]);
-        setStatus('kelas', true, '✅ Kelas '+nama+' ditambahkan');
-      }
-      tutupFormKelas();
-      await muatKelas();
-    } catch(e) {
-      setStatus('kelas', false, '⛔ '+e.message);
-    } finally { hideLoading(); }
-  }
+  if (!nama)    { setStatus('kelas', false, '⛔ Nama kelas wajib diisi.'); return; }
+  if (!tingkat) { setStatus('kelas', false, '⛔ Pilih tingkat kelas.');   return; }
 
-  async function hapusKelas(id, nama) {
-    if (!confirm('Hapus kelas '+nama+'?')) return;
-    showLoading('Menghapus…');
-    try {
-      if (allSiswaData.some(s=>s.kelas===nama)) throw new Error('Masih ada siswa di kelas '+nama+'.');
-      if (allUsersData.some(u=>u.kelas===nama&&u.status==='aktif')) throw new Error('Masih ada guru di kelas '+nama+'.');
+  const dup = allKelasData.find(k => k.nama === nama && k.id !== editKelasId);
+  if (dup) { setStatus('kelas', false, '⛔ Kelas ' + nama + ' sudah ada.'); return; }
+
+  showLoading('Menyimpan kelas…');
+  try {
+    if (editKelasId) {
       const rows = await SHEETS.read('KELAS!A:E');
-      const idx  = rows.findIndex(r => r[0] === id);
+      const idx  = rows.findIndex(r => r[0] === editKelasId);
       if (idx < 0) throw new Error('Kelas tidak ditemukan.');
-      await SHEETS.write('KELAS!A'+(idx+1)+':E'+(idx+1), [['','','','','']]);
-      await muatKelas();
-      setStatus('kelas', true, '✅ Kelas '+nama+' dihapus');
-    } catch(e) {
-      showAlert('error','Tidak Bisa Hapus', e.message);
-    } finally { hideLoading(); }
+      await SHEETS.write('KELAS!A' + (idx+1) + ':E' + (idx+1),
+        [[rows[idx][0], rows[idx][1], tingkat, fase, ket]]);
+      setStatus('kelas', true, '✅ Kelas ' + nama + ' diperbarui');
+    } else {
+      const newId = 'KLS' + String(allKelasData.length + 1).padStart(2, '0');
+      await SHEETS.append('KELAS', [[newId, nama, tingkat, fase, ket]]);
+      setStatus('kelas', true, '✅ Kelas ' + nama + ' ditambahkan');
+    }
+    tutupFormKelas();
+    await muatKelas();
   } catch(e) {
-    console.error(e);
-    setStatus(seksi, false, '⛔ ' + e.message);
-    showAlert('error', 'Gagal menyimpan', e.message);
+    setStatus('kelas', false, '⛔ ' + e.message);
   } finally {
-    btn.disabled    = false;
-    btn.textContent = '💾 Simpan ' + {
-      identitas: 'Identitas Sekolah',
-      kepsek:    'Data Kepala Sekolah',
-      semester:  'Konfigurasi Semester',
-      dpl:       'Pilihan DPL',
-    }[seksi];
+    hideLoading();
   }
 }
 
-/* ── Simpan batch ke CONFIG sheet ───────────────────── */
-async function simpanBatch(obj) {
-  // Baca CONFIG dulu untuk tahu posisi baris
-  const rows = await SHEETS.read('CONFIG!A:B');
+async function hapusKelas(id, nama) {
+  if (!confirm('Yakin hapus kelas ' + nama + '?\n\nPastikan tidak ada siswa atau guru aktif di kelas ini.')) return;
+  showLoading('Menghapus kelas…');
+  try {
+    if (allSiswaData.some(s => s.kelas === nama))
+      throw new Error('Masih ada siswa di kelas ' + nama + '. Pindahkan atau hapus siswa dulu.');
+    if (allUsersData.some(u => u.kelas === nama && u.status === 'aktif'))
+      throw new Error('Masih ada guru aktif di kelas ' + nama + '. Ubah kelas guru dulu.');
 
-  // Untuk setiap key, cari atau tambah baris
-  for (const [key, val] of Object.entries(obj)) {
-    const idx = rows.findIndex((r, i) => i > 0 && r[0] === key);
-    if (idx > 0) {
-      // Update kolom B baris yang ada
-      await SHEETS.write(`CONFIG!B${idx + 1}`, [[val]]);
-    } else {
-      // Tambah baris baru
-      await SHEETS.append('CONFIG', [[key, val]]);
-      rows.push([key, val]); // update local copy
-    }
+    const rows = await SHEETS.read('KELAS!A:E');
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx < 0) throw new Error('Kelas tidak ditemukan di database.');
+    await SHEETS.write('KELAS!A' + (idx+1) + ':E' + (idx+1), [['', '', '', '', '']]);
+    await muatKelas();
+    setStatus('kelas', true, '✅ Kelas ' + nama + ' berhasil dihapus');
+  } catch(e) {
+    showAlert('error', 'Tidak Bisa Menghapus', e.message);
+  } finally {
+    hideLoading();
   }
 }
 
@@ -840,9 +887,8 @@ function pilihSemester(val) {
 function pilihSeni(tipe, val) {
   if (tipe === 'ganjil') seniGanjil = val;
   else                   seniGenap  = val;
-
   const grpId = tipe === 'ganjil' ? 'seniGanjilGroup' : 'seniGenapGroup';
-  document.querySelectorAll(`#${grpId} .radio-option`).forEach(el => {
+  document.querySelectorAll('#' + grpId + ' .radio-option').forEach(el => {
     el.classList.toggle('selected', el.querySelector('input').value === val);
   });
 }
@@ -873,20 +919,15 @@ function updateDPLUI() {
     el?.classList.toggle('selected', sel);
     if (chk) chk.checked = sel;
   });
-
   const count = dplDipilih.length;
   const el    = document.getElementById('dplCount');
-  el.textContent = `${count} DPL dipilih (${count < 3 ? 'minimal 3' : 'sudah cukup ✅'})`;
+  el.textContent = count + ' DPL dipilih (' + (count < 3 ? 'minimal 3' : 'sudah cukup ✅') + ')';
   el.className   = 'dpl-count ' + (count >= 3 ? 'ok' : 'warn');
 }
 
-function getValue(id) {
-  return (document.getElementById(id)?.value || '').trim();
-}
-function setValue(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.value = val || '';
-}
+function getValue(id) { return (document.getElementById(id)?.value || '').trim(); }
+function setValue(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
+
 function setStatus(seksi, ok, msg) {
   const el = document.getElementById('status-' + seksi);
   if (!el) return;
@@ -896,16 +937,17 @@ function setStatus(seksi, ok, msg) {
 }
 
 function showAlert(type, title, text) {
-  document.getElementById('alertArea').innerHTML = `
+  const area = document.getElementById('alertArea');
+  area.innerHTML = `
     <div class="alert ${type}">
       <div class="alert-icon">${type==='success'?'✅':type==='warning'?'⚠️':'⛔'}</div>
       <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
     </div>`;
-  setTimeout(() => { document.getElementById('alertArea').innerHTML = ''; }, 6000);
+  setTimeout(() => { area.innerHTML = ''; }, 6000);
 }
 
 function showLoading(msg) {
-  document.getElementById('loadingText').textContent = msg||'Memuat…';
+  document.getElementById('loadingText').textContent = msg || 'Memuat…';
   document.getElementById('loadingOverlay').classList.remove('hidden');
 }
 function hideLoading() {

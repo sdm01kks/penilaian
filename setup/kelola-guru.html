@@ -599,7 +599,7 @@ function renderTabel(users) {
             : `<button class="btn btn-secondary btn-sm" onclick="toggleStatus('${u.id}','aktif','${u.nama}')">▶️ Aktifkan</button>`
           }
           <button class="btn btn-danger btn-sm" onclick="hapusUser('${u.id}','${u.nama}')"
-            ${u.id === currentUser?.id_user ? 'disabled title="Tidak bisa menghapus akun sendiri"' : ''}>
+            ${u.id === AUTH.getUser()?.id_user ? 'disabled title="Tidak bisa menghapus akun sendiri"' : ''}>
             🗑️ Hapus
           </button>
         </td>
