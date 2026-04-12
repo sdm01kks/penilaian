@@ -73,25 +73,35 @@ const AUTH = (() => {
 
     clearTimeout(_refreshTimer);
 
-    const token = getToken();
-    if (token) {
-      try { google.accounts.oauth2.revoke(token); } catch (_) {}
-    }
-
+    // Bersihkan session terlebih dahulu sebelum revoke
+    // agar jika revoke gagal, user tetap ter-logout
     sessionStorage.removeItem('sdm01_user');
     sessionStorage.removeItem('sdm01_token');
     sessionStorage.removeItem('sdm01_token_expiry');
 
+    // Revoke token Google secara silent (tidak menunggu hasilnya)
+    try {
+      const token = getToken();
+      if (token && typeof google !== 'undefined' && google.accounts?.oauth2?.revoke) {
+        google.accounts.oauth2.revoke(token, () => {});
+      }
+      if (typeof google !== 'undefined' && google.accounts?.id?.disableAutoSelect) {
+        google.accounts.id.disableAutoSelect();
+      }
+    } catch (_) {
+      // Silent — jangan tampilkan error saat logout
+    }
+
     // Hitung path ke root (index.html) relatif dari halaman saat ini
     const depth = window.location.pathname
-      .replace(/\/[^/]*$/, '')   // hapus nama file
+      .replace(/\/[^/]*$/, '')
       .split('/')
       .filter(Boolean).length;
-
-    // Kurangi 1 untuk base path repo (penilaian)
     const ups    = Math.max(0, depth - 1);
     const prefix = ups > 0 ? '../'.repeat(ups) : './';
-    window.location.href = prefix + 'index.html';
+
+    // Redirect — gunakan replace agar tidak bisa back ke halaman terproteksi
+    window.location.replace(prefix + 'index.html');
   }
 
   /**
