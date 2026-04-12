@@ -115,7 +115,9 @@ const SHEETS = (() => {
 
     if (!token) throw new Error('Tidak ada token. Silakan login ulang.');
 
-    const url = `${BASE_URL}/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    // Ensure range includes cell reference for append (Google Sheets API requirement)
+    const safeRange = range.includes('!') ? range : range + '!A:ZZ';
+    const url = `${BASE_URL}/${id}/values/${encodeURIComponent(safeRange)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
     const res = await fetch(url, {
       method:  'POST',
       headers: {
@@ -340,7 +342,7 @@ const SHEETS = (() => {
    * Ambil TP dan KKTP, opsional filter per mapel/kelas.
    */
   async function getTPKKTP({ id_mapel, kelas, fase } = {}) {
-    const rows = await read('TP_KKTP!A:V');
+    const rows = await read('TP_KKTP!A:W');
     let data   = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_tp');
 
     if (id_mapel) data = data.filter(r => r[1] === id_mapel);
@@ -364,6 +366,7 @@ const SHEETS = (() => {
         { min: parseInt(r[16])||76, maks: parseInt(r[17])||85, deskripsi: r[18]||'' },
         { min: parseInt(r[19])||86, maks: parseInt(r[20])||100,deskripsi: r[21]||'' },
       ],
+      cp: r[22] || '',  // Capaian Pembelajaran per TP (kolom W)
     }));
   }
 
