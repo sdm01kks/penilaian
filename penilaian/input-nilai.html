@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Input Nilai SLM & SAS — SDM01KKS</title>
+<title>Input Nilai — SDM01KKS</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@ html{font-size:15px;scroll-behavior:smooth}
 }
 body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh;overflow-x:hidden}
 
-/* Topbar */
+/* ── Topbar ───────────────────────────────────────────── */
 .topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
 .topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
 .topbar-logo img{width:38px;height:38px;border-radius:8px;background:#fff;padding:2px;object-fit:contain}
@@ -42,7 +42,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .btn-logout:hover{background:rgba(255,255,255,.12);color:#fff}
 .sidebar-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
 
-/* Sidebar */
+/* ── Sidebar ──────────────────────────────────────────── */
 .sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--topbar-h));background:var(--white);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:20px 0 40px;transition:transform .3s ease}
 .sidebar-section-label{font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-muted);padding:14px 20px 6px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--ink-mid);text-decoration:none;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
@@ -50,13 +50,13 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .nav-item.active{background:var(--green-pale);color:var(--green-dark);font-weight:600;border-left-color:var(--green-dark)}
 .nav-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
 
-/* Main */
-.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:24px 24px 80px;min-height:calc(100vh - var(--topbar-h))}
+/* ── Main ─────────────────────────────────────────────── */
+.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:24px 24px 100px;min-height:calc(100vh - var(--topbar-h))}
 .page-header{margin-bottom:20px;animation:fadeUp .4s ease both}
 .page-header h1{font-family:'Amiri',serif;font-size:24px;color:var(--green-deep);font-weight:700}
 .page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
 
-/* Alert */
+/* ── Alert ────────────────────────────────────────────── */
 .alert{border-radius:var(--radius);padding:12px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:16px}
 .alert.warning{background:var(--yellow-light);border:1px solid rgba(243,156,18,.25)}
 .alert.error{background:var(--red-light);border:1px solid rgba(192,57,43,.2)}
@@ -66,250 +66,265 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
 .alert-text{font-size:12px;color:var(--ink-mid);line-height:1.6}
 
-/* Selector bar */
+/* ── Selector bar ─────────────────────────────────────── */
 .selector-bar{
   background:var(--white);border-radius:var(--radius);
   box-shadow:var(--shadow-card);border:1px solid var(--border);
-  padding:16px 18px;margin-bottom:20px;
+  padding:14px 18px;margin-bottom:16px;
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   animation:fadeUp .4s .05s ease both;
 }
-.selector-bar label{font-size:12px;font-weight:700;color:var(--ink-mid);white-space:nowrap}
-.selector-bar select{
+.selector-bar label{font-size:11.5px;font-weight:700;color:var(--ink-mid);white-space:nowrap}
+.sel{
   padding:7px 11px;border:1px solid var(--border);border-radius:8px;
   font-size:13px;font-family:inherit;color:var(--ink);
-  background:var(--white);outline:none;transition:border-color .2s;
-  min-width:160px;
+  background:var(--white);outline:none;transition:border-color .2s;min-width:160px;
 }
-.selector-bar select:focus{border-color:var(--green-light)}
-.selector-sep{width:1px;height:28px;background:var(--border);flex-shrink:0}
-.mode-tabs{display:flex;gap:6px}
-.mode-tab{
-  padding:6px 14px;border-radius:20px;border:1px solid var(--border);
-  font-size:12px;font-weight:600;cursor:pointer;background:var(--white);
-  color:var(--ink-mid);transition:all .2s;white-space:nowrap;
-}
-.mode-tab.active{background:var(--green-dark);color:#fff;border-color:var(--green-dark)}
-
-/* Progress bar */
-.progress-bar-wrap{
-  background:var(--white);border-radius:var(--radius);
-  box-shadow:var(--shadow);border:1px solid var(--border);
-  padding:14px 18px;margin-bottom:20px;
-  animation:fadeUp .4s .08s ease both;
-}
-.progress-bar-label{
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:12px;font-weight:600;color:var(--ink-mid);margin-bottom:8px;
-}
-.progress-bar-track{
-  height:8px;background:var(--green-ghost);border-radius:4px;overflow:hidden;
-}
-.progress-bar-fill{
-  height:100%;background:linear-gradient(90deg,var(--green-mid),var(--green-light));
-  border-radius:4px;transition:width .4s ease;
-}
-.progress-stats{
-  display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;
-}
-.progress-stat{
-  display:flex;align-items:center;gap:5px;
-  font-size:11.5px;color:var(--ink-muted);
-}
-.progress-stat .dot{
-  width:8px;height:8px;border-radius:50%;
-}
-.dot-done{background:var(--green-light)}
-.dot-partial{background:var(--yellow)}
-.dot-empty{background:var(--red)}
-
-/* Layout: 2 panel saat ada TP terpilih */
-.penilaian-layout{
-  display:grid;
-  grid-template-columns:260px 1fr;
-  gap:16px;
-  animation:fadeUp .4s .1s ease both;
-}
-
-/* Panel kiri - daftar TP */
-.tp-panel{
-  background:var(--white);border-radius:var(--radius);
-  box-shadow:var(--shadow-card);border:1px solid var(--border);
-  overflow:hidden;
-  position:sticky;top:calc(var(--topbar-h) + 16px);
-  max-height:calc(100vh - var(--topbar-h) - 32px);
-  display:flex;flex-direction:column;
-}
-.tp-panel-header{
-  padding:12px 14px;border-bottom:1px solid var(--border);
-  background:var(--green-ghost);flex-shrink:0;
-}
-.tp-panel-header h3{font-size:13px;font-weight:700;color:var(--green-deep)}
-.tp-panel-sub{font-size:11px;color:var(--ink-muted);margin-top:2px}
-.tp-panel-list{flex:1;overflow-y:auto;}
-
-.tp-panel-item{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 14px;cursor:pointer;
-  border-left:3px solid transparent;
-  transition:all .15s;border-bottom:1px solid var(--border);
-}
-.tp-panel-item:last-child{border-bottom:none}
-.tp-panel-item:hover{background:var(--green-ghost);border-left-color:var(--green-light)}
-.tp-panel-item.active{background:var(--green-pale);border-left-color:var(--green-dark)}
-.tp-panel-item.done .tp-item-status{color:var(--green-light)}
-.tp-panel-item.partial .tp-item-status{color:var(--yellow)}
-.tp-num{
-  width:24px;height:24px;border-radius:50%;
-  background:var(--green-dark);color:#fff;
-  font-size:11px;font-weight:700;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0;
-}
-.tp-panel-item.done .tp-num{background:var(--green-light)}
-.tp-panel-item.partial .tp-num{background:var(--yellow)}
-.tp-item-body{flex:1;min-width:0}
-.tp-item-nama{
-  font-size:12px;font-weight:600;color:var(--ink);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.tp-item-tipe{font-size:10.5px;color:var(--ink-muted);margin-top:1px}
-.tp-item-status{font-size:16px;flex-shrink:0}
-
-/* SAS item khusus */
-.tp-panel-sas{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 14px;cursor:pointer;
-  border-left:3px solid transparent;
-  transition:all .15s;
-  border-top:2px solid var(--border);
-  background:var(--gold-light);
-}
-.tp-panel-sas:hover{background:#fef3d8;border-left-color:var(--gold)}
-.tp-panel-sas.active{background:#fde8a0;border-left-color:var(--gold)}
-.tp-panel-sas .tp-num{background:var(--gold)}
-
-/* Panel kanan - tabel nilai */
-.nilai-panel{
-  background:var(--white);border-radius:var(--radius);
-  box-shadow:var(--shadow-card);border:1px solid var(--border);
-  overflow:hidden;
-}
-.nilai-panel-header{
-  padding:14px 18px;border-bottom:1px solid var(--border);
-  background:var(--green-ghost);
-  display:flex;align-items:flex-start;justify-content:space-between;
-  gap:12px;flex-wrap:wrap;
-}
-.nilai-panel-title{
-  font-family:'Amiri',serif;font-size:18px;font-weight:700;
-  color:var(--green-deep);line-height:1.2;
-}
-.nilai-panel-sub{font-size:12px;color:var(--ink-muted);margin-top:3px}
-
-/* KKTP info box */
-.kktp-info{
-  display:grid;grid-template-columns:repeat(4,1fr);
-  gap:6px;padding:12px 18px;background:var(--green-ghost);
-  border-bottom:1px solid var(--border);
-}
-.kktp-info-col{
-  border-radius:7px;padding:7px 10px;
-}
-.kktp-info-col.pb{background:var(--red-light);border:1px solid rgba(192,57,43,.15)}
-.kktp-info-col.c{background:var(--yellow-light);border:1px solid rgba(243,156,18,.2)}
-.kktp-info-col.b{background:var(--blue-light);border:1px solid rgba(41,128,185,.2)}
-.kktp-info-col.sb{background:var(--green-pale);border:1px solid rgba(30,77,59,.15)}
-.kktp-info-col .lv-nama{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-.kktp-info-col.pb .lv-nama{color:var(--red)}
-.kktp-info-col.c  .lv-nama{color:#7a4a00}
-.kktp-info-col.b  .lv-nama{color:var(--blue)}
-.kktp-info-col.sb .lv-nama{color:var(--green-dark)}
-.kktp-info-col .lv-range{font-size:11px;font-weight:700;color:var(--ink)}
-.kktp-info-col .lv-desc{font-size:10.5px;color:var(--ink-mid);line-height:1.4;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-
-/* Nilai table */
-.nilai-table-wrap{overflow-x:auto}
-.nilai-table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
-.nilai-table th{
-  background:var(--green-pale);color:var(--green-dark);
-  font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
-  padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);
+.sel:focus{border-color:var(--green-light)}
+.sel:disabled{background:var(--green-ghost);color:var(--ink-muted);cursor:not-allowed}
+.sem-pill{
+  font-size:12px;font-weight:600;color:var(--green-dark);
+  background:var(--green-pale);padding:5px 12px;border-radius:20px;
   white-space:nowrap;
 }
+
+/* ── Rekap mapel bar ──────────────────────────────────── */
+.rekap-bar{
+  background:var(--white);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  padding:12px 18px;margin-bottom:16px;
+  display:none;animation:fadeUp .4s .08s ease both;
+}
+.rekap-row{
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+}
+.rekap-item{
+  display:flex;align-items:center;gap:6px;font-size:12px;
+}
+.rekap-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-full{background:var(--green-light)}
+.dot-slm{background:var(--blue)}
+.dot-empty{background:#ddd}
+.rekap-val{font-weight:700;font-size:14px;color:var(--green-dark)}
+.rekap-lbl{color:var(--ink-muted)}
+
+/* ── Info logika penilaian ────────────────────────────── */
+.logic-info{
+  background:var(--blue-light);border:1px solid rgba(41,128,185,.2);
+  border-radius:var(--radius);padding:10px 14px;
+  margin-bottom:16px;font-size:12px;color:var(--ink-mid);
+  line-height:1.7;display:none;animation:fadeUp .4s ease both;
+}
+.logic-info strong{color:var(--blue)}
+
+/* ── TP Accordion ─────────────────────────────────────── */
+.tp-list{display:flex;flex-direction:column;gap:14px}
+
+.tp-card{
+  background:var(--white);border-radius:var(--radius);
+  box-shadow:var(--shadow-card);border:1px solid var(--border);
+  overflow:hidden;animation:fadeUp .4s ease both;
+}
+
+.tp-card-header{
+  padding:14px 18px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;user-select:none;
+  background:var(--green-ghost);
+  border-bottom:1px solid transparent;
+  transition:background .15s;
+}
+.tp-card.open .tp-card-header{
+  border-bottom-color:var(--border);background:var(--green-pale);
+}
+.tp-card-header:hover{background:var(--green-pale)}
+
+.tp-num{
+  width:30px;height:30px;border-radius:50%;
+  background:var(--green-dark);color:#fff;
+  font-size:13px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.tp-card.slm-done .tp-num{background:var(--blue)}
+.tp-card.full-done .tp-num{background:var(--green-light)}
+
+.tp-header-body{flex:1;min-width:0}
+.tp-nama{
+  font-size:13.5px;font-weight:700;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tp-meta{font-size:11px;color:var(--ink-muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+.tp-tipe-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;
+}
+.tp-tipe-badge.pengetahuan{background:var(--blue-light);color:var(--blue)}
+.tp-tipe-badge.kinerja{background:var(--gold-light);color:#7a4a00}
+
+.tp-status-group{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.tp-status-pill{
+  font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:10px;
+  display:inline-flex;align-items:center;gap:4px;
+}
+.pill-slm-done{background:var(--blue-light);color:var(--blue)}
+.pill-slm-empty{background:#f0f0f0;color:var(--ink-muted)}
+.pill-sas-done{background:var(--gold-light);color:#7a4a00}
+.pill-sas-empty{background:#f0f0f0;color:var(--ink-muted)}
+.pill-full{background:var(--green-pale);color:var(--green-dark)}
+
+.tp-bobot{
+  font-size:11px;color:var(--ink-muted);
+  background:var(--white);border:1px solid var(--border);
+  padding:3px 8px;border-radius:6px;white-space:nowrap;flex-shrink:0;
+}
+.tp-chevron{font-size:14px;color:var(--ink-muted);transition:transform .2s;flex-shrink:0}
+.tp-card.open .tp-chevron{transform:rotate(180deg)}
+
+/* ── TP Card Body ─────────────────────────────────────── */
+.tp-card-body{display:none;}
+.tp-card.open .tp-card-body{display:block}
+
+/* ── KKTP Toggle ──────────────────────────────────────── */
+.kktp-toggle-bar{
+  padding:8px 18px;background:var(--green-ghost);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.kktp-toggle-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:7px;border:1px solid var(--border);
+  background:var(--white);color:var(--green-dark);font-size:11.5px;
+  font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;
+}
+.kktp-toggle-btn:hover{background:var(--green-pale)}
+.kktp-end-tp{
+  font-size:11.5px;color:var(--ink-mid);line-height:1.5;
+  max-width:70%;
+}
+.kktp-end-tp strong{color:var(--green-dark)}
+
+/* ── KKTP Panel (collapsible) ─────────────────────────── */
+.kktp-panel{
+  display:none;padding:14px 18px;
+  background:#fafffe;border-bottom:1px solid var(--border);
+}
+.kktp-panel.show{display:block}
+.kktp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kktp-col{border-radius:8px;padding:10px 12px}
+.kktp-col.pb{background:var(--red-light);border:1px solid rgba(192,57,43,.15)}
+.kktp-col.c{background:var(--yellow-light);border:1px solid rgba(243,156,18,.2)}
+.kktp-col.b{background:var(--blue-light);border:1px solid rgba(41,128,185,.2)}
+.kktp-col.sb{background:var(--green-pale);border:1px solid rgba(30,77,59,.15)}
+.kktp-lv-nama{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.kktp-col.pb .kktp-lv-nama{color:var(--red)}
+.kktp-col.c  .kktp-lv-nama{color:#7a4a00}
+.kktp-col.b  .kktp-lv-nama{color:var(--blue)}
+.kktp-col.sb .kktp-lv-nama{color:var(--green-dark)}
+.kktp-range{font-size:11.5px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.kktp-desc{font-size:11.5px;color:var(--ink-mid);line-height:1.55}
+
+/* ── Tabel Nilai ──────────────────────────────────────── */
+.nilai-table-wrap{overflow-x:auto}
+.nilai-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:600px}
+.nilai-table th{
+  background:var(--green-pale);color:var(--green-dark);
+  font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;padding:9px 12px;text-align:left;
+  border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.nilai-table th.center{text-align:center}
 .nilai-table td{
-  padding:8px 14px;border-bottom:1px solid var(--border);
+  padding:7px 12px;border-bottom:1px solid var(--border);
   vertical-align:middle;
 }
 .nilai-table tr:last-child td{border-bottom:none}
 .nilai-table tr:nth-child(even) td{background:var(--green-ghost)}
+.nilai-table tr:hover td{background:var(--green-pale)}
 
-/* Input nilai */
+/* ── Input nilai ──────────────────────────────────────── */
+.wrap-input{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
 .input-nilai{
-  width:68px;padding:6px 8px;
+  width:62px;padding:5px 8px;
   border:2px solid var(--border);border-radius:7px;
   font-size:14px;font-weight:700;text-align:center;
   font-family:inherit;color:var(--ink);
-  outline:none;transition:border-color .2s,background .2s;
+  outline:none;transition:border-color .15s,background .15s;
+  background:var(--white);
 }
 .input-nilai:focus{border-color:var(--green-light);background:var(--green-ghost)}
 .input-nilai.valid{border-color:var(--green-light)}
 .input-nilai.invalid{border-color:var(--red);background:var(--red-light)}
+.input-nilai.sas-input{border-style:dashed;border-color:var(--gold)}
+.input-nilai.sas-input:focus{border-color:var(--gold);background:var(--gold-light)}
+.input-nilai.sas-input.valid{border-style:solid;border-color:var(--gold)}
+.input-label{
+  font-size:9.5px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--ink-muted);
+}
+.input-label.sas{color:var(--gold)}
 
-/* Level badge */
-.level-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:3px 9px;border-radius:10px;font-size:10.5px;font-weight:700;
+/* ── Level badge ──────────────────────────────────────── */
+.lv-badge{
+  display:inline-flex;align-items:center;
+  padding:2px 8px;border-radius:8px;font-size:10.5px;font-weight:700;
   white-space:nowrap;
 }
-.level-badge.pb{background:var(--red-light);color:var(--red)}
-.level-badge.c{background:var(--yellow-light);color:#7a4a00}
-.level-badge.b{background:var(--blue-light);color:var(--blue)}
-.level-badge.sb{background:var(--green-pale);color:var(--green-dark)}
-.level-badge.empty{background:#f0f0f0;color:var(--ink-muted)}
+.lv-badge.pb{background:var(--red-light);color:var(--red)}
+.lv-badge.c{background:var(--yellow-light);color:#7a4a00}
+.lv-badge.b{background:var(--blue-light);color:var(--blue)}
+.lv-badge.sb{background:var(--green-pale);color:var(--green-dark)}
+.lv-badge.empty{background:#f0f0f0;color:var(--ink-muted)}
 
-/* Deskripsi cell */
-.desc-cell{
-  font-size:11.5px;color:var(--ink-mid);line-height:1.5;
-  max-width:280px;
+/* ── Nilai akhir TP cell ──────────────────────────────── */
+.akhir-cell{
+  font-size:13px;font-weight:700;color:var(--green-deep);
+  text-align:center;
 }
+.akhir-formula{
+  font-size:10px;color:var(--ink-muted);margin-top:2px;
+  text-align:center;
+}
+
+/* ── Deskripsi cell ───────────────────────────────────── */
+.desc-cell{font-size:11.5px;color:var(--ink-mid);line-height:1.5;max-width:260px}
 .desc-cell.empty{color:var(--ink-muted);font-style:italic}
 
-/* Save bar */
-.save-bar{
-  position:fixed;bottom:0;left:var(--sidebar-w);right:0;
-  background:var(--white);border-top:1px solid var(--border);
-  padding:12px 24px;display:flex;align-items:center;gap:12px;
-  z-index:150;box-shadow:0 -4px 16px rgba(0,0,0,.08);
-  flex-wrap:wrap;
+/* ── TP actions bar ───────────────────────────────────── */
+.tp-actions{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 18px;border-top:1px solid var(--border);
+  background:var(--green-ghost);flex-wrap:wrap;
 }
-.save-bar-info{
+.tp-actions-info{
   font-size:12px;color:var(--ink-muted);flex:1;min-width:0;
 }
-.save-bar-info strong{color:var(--green-dark)}
-.save-status{
-  font-size:12px;font-weight:600;
-  padding:5px 12px;border-radius:20px;
-  background:var(--green-pale);color:var(--green-dark);
+.tp-actions-info strong{color:var(--green-dark)}
+.save-status-tp{
+  font-size:11.5px;font-weight:600;padding:4px 10px;
+  border-radius:16px;background:var(--green-pale);color:var(--green-dark);
   opacity:0;transition:opacity .3s;
 }
-.save-status.show{opacity:1}
+.save-status-tp.show{opacity:1}
 
-/* Tombol */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;border:none;text-decoration:none;white-space:nowrap}
+/* ── Tombol ───────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;border:none;text-decoration:none;white-space:nowrap}
 .btn-primary{background:var(--green-dark);color:#fff}
 .btn-primary:hover{background:var(--green-mid)}
 .btn-secondary{background:var(--white);color:var(--green-dark);border:1px solid var(--border)}
 .btn-secondary:hover{background:var(--green-ghost)}
-.btn-sm{padding:5px 12px;font-size:12px}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#b07020}
+.btn-sm{padding:5px 11px;font-size:11.5px}
 .btn:disabled{opacity:.6;cursor:not-allowed}
 
-/* Empty state */
+/* ── Empty state ──────────────────────────────────────── */
 .empty-state{padding:48px 24px;text-align:center}
 .empty-state .icon{font-size:44px;margin-bottom:12px}
 .empty-state h3{font-size:15px;font-weight:700;color:var(--ink-mid);margin-bottom:6px}
-.empty-state p{font-size:12.5px;color:var(--ink-muted);line-height:1.7;max-width:360px;margin:0 auto}
+.empty-state p{font-size:12.5px;color:var(--ink-muted);line-height:1.7;max-width:380px;margin:0 auto}
 
-/* Loading */
+/* ── Loading ──────────────────────────────────────────── */
 .loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
 .loading-overlay.hidden{display:none}
 .spinner-lg{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green-light);border-radius:50%;animation:spin .8s linear infinite}
@@ -319,25 +334,23 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-/* Responsive */
-@media(max-width:1024px){
-  .penilaian-layout{grid-template-columns:220px 1fr}
-  .kktp-info{grid-template-columns:repeat(2,1fr)}
+/* ── Responsive ───────────────────────────────────────── */
+@media(max-width:1100px){
+  .kktp-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.2)}
   .sidebar-overlay.open{display:block}
   .sidebar-toggle{display:block}
-  .main{margin-left:0;padding:20px 12px 80px}
-  .penilaian-layout{grid-template-columns:1fr}
-  .tp-panel{position:static;max-height:none}
-  .save-bar{left:0}
+  .main{margin-left:0;padding:20px 12px 100px}
   .brand-sub,.user-info{display:none}
+  .kktp-grid{grid-template-columns:1fr 1fr}
+  .selector-bar{flex-direction:column;align-items:flex-start;gap:8px}
 }
 @media(max-width:480px){
-  .kktp-info{grid-template-columns:1fr 1fr}
-  .selector-bar{flex-direction:column;align-items:flex-start;gap:8px}
+  .kktp-grid{grid-template-columns:1fr}
+  .tp-status-group{flex-wrap:wrap}
 }
 </style>
 </head>
@@ -376,9 +389,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 <!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Dashboard</div>
-  <a class="nav-item" href="../dashboard/guru-kelas.html" id="navGK" style="display:none"><span class="nav-icon">🏠</span> Dashboard Guru Kelas</a>
-  <a class="nav-item" href="../dashboard/guru-mapel.html" id="navGM" style="display:none"><span class="nav-icon">🏠</span> Dashboard Guru Mapel</a>
-  <a class="nav-item" href="../dashboard/admin.html" id="navAdmin" style="display:none"><span class="nav-icon">🏠</span> Dashboard Admin</a>
+  <a class="nav-item" id="navGK" href="../dashboard/guru-kelas.html" style="display:none"><span class="nav-icon">🏠</span> Dashboard Guru Kelas</a>
+  <a class="nav-item" id="navGM" href="../dashboard/guru-mapel.html" style="display:none"><span class="nav-icon">🏠</span> Dashboard Guru Mapel</a>
+  <a class="nav-item" id="navAdmin" href="../dashboard/admin.html" style="display:none"><span class="nav-icon">🏠</span> Dashboard Admin</a>
   <div class="sidebar-section-label">Input Penilaian</div>
   <a class="nav-item active" href="input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM & SAS</a>
   <a class="nav-item" href="input-dpl.html"><span class="nav-icon">🌱</span> Input Kokurikuler</a>
@@ -395,152 +408,102 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 
   <div class="page-header">
     <h1>Input Nilai SLM & SAS</h1>
-    <p>Input nilai Sumatif Lingkup Materi (SLM) per Tujuan Pembelajaran dan Sumatif Akhir Semester (SAS).
-       Nilai Akhir dan deskripsi capaian dihitung otomatis berdasarkan KKTP.</p>
+    <p>Input nilai setiap Tujuan Pembelajaran saat SLM dan SAS.
+       SAS bersifat opsional — jika tidak diisi, nilai SLM menjadi nilai akhir TP tersebut.</p>
   </div>
 
   <div id="alertArea"></div>
 
-  <!-- Selector bar -->
+  <!-- Selector -->
   <div class="selector-bar">
     <label>Kelas</label>
-    <select id="selKelas" onchange="gantiKelas()">
+    <select class="sel" id="selKelas" onchange="gantiKelas()">
       <option value="">-- Pilih Kelas --</option>
     </select>
-    <div class="selector-sep"></div>
     <label>Mata Pelajaran</label>
-    <select id="selMapel" onchange="gantiMapel()" disabled>
+    <select class="sel" id="selMapel" onchange="gantiMapel()" disabled>
       <option value="">-- Pilih Mapel --</option>
     </select>
-    <div class="selector-sep"></div>
-    <label style="font-size:11px;color:var(--ink-muted);">Semester</label>
-    <span id="semBadge" style="font-size:12px;font-weight:600;color:var(--green-dark);background:var(--green-pale);padding:5px 12px;border-radius:20px;white-space:nowrap;">—</span>
+    <div class="sem-pill" id="semPill">—</div>
   </div>
 
-  <!-- Progress -->
-  <div class="progress-bar-wrap" id="progressWrap" style="display:none">
-    <div class="progress-bar-label">
-      <span id="progressLabel">Progress Pengisian Nilai</span>
-      <span id="progressPct">0%</span>
-    </div>
-    <div class="progress-bar-track">
-      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
-    </div>
-    <div class="progress-stats">
-      <div class="progress-stat"><div class="dot dot-done"></div><span id="statDone">0 siswa lengkap</span></div>
-      <div class="progress-stat"><div class="dot dot-partial"></div><span id="statPartial">0 sebagian</span></div>
-      <div class="progress-stat"><div class="dot dot-empty"></div><span id="statEmpty">0 belum ada nilai</span></div>
+  <!-- Logika penilaian info -->
+  <div class="logic-info" id="logicInfo">
+    📌 <strong>Cara kerja nilai:</strong>
+    Setiap TP memiliki nilai <strong>SLM</strong> (wajib) dan nilai <strong>SAS</strong> (opsional).
+    Jika hanya ada SLM → nilai akhir TP = SLM.
+    Jika ada keduanya → nilai akhir TP = (SLM × bobot%) + (SAS × bobot%).
+    Nilai akhir mapel = rata-rata nilai akhir semua TP.
+  </div>
+
+  <!-- Rekap progress -->
+  <div class="rekap-bar" id="rekapBar">
+    <div class="rekap-row">
+      <div class="rekap-item">
+        <div class="rekap-dot dot-full"></div>
+        <div>
+          <span class="rekap-val" id="rekapFull">0</span>
+          <span class="rekap-lbl"> TP SLM+SAS lengkap</span>
+        </div>
+      </div>
+      <div class="rekap-item">
+        <div class="rekap-dot dot-slm"></div>
+        <div>
+          <span class="rekap-val" id="rekapSLM">0</span>
+          <span class="rekap-lbl"> TP hanya SLM</span>
+        </div>
+      </div>
+      <div class="rekap-item">
+        <div class="rekap-dot dot-empty"></div>
+        <div>
+          <span class="rekap-val" id="rekapEmpty">0</span>
+          <span class="rekap-lbl"> TP belum ada nilai</span>
+        </div>
+      </div>
+      <div style="margin-left:auto;font-size:12px;color:var(--ink-muted);">
+        <span id="rekapKelas">—</span>
+      </div>
     </div>
   </div>
 
-  <!-- Empty state awal -->
+  <!-- Empty state -->
   <div class="empty-state" id="emptyState">
     <div class="icon">📝</div>
     <h3>Pilih Kelas dan Mata Pelajaran</h3>
-    <p>Pilih kelas dan mata pelajaran dari dropdown di atas untuk mulai memasukkan nilai siswa.</p>
+    <p>Pilih kelas dan mata pelajaran dari dropdown di atas untuk mulai memasukkan nilai per Tujuan Pembelajaran.</p>
   </div>
 
-  <!-- Layout 2 panel (muncul setelah mapel dipilih) -->
-  <div class="penilaian-layout" id="penilaianLayout" style="display:none">
-
-    <!-- Panel kiri: daftar TP -->
-    <div class="tp-panel">
-      <div class="tp-panel-header">
-        <h3 id="tpPanelTitle">Tujuan Pembelajaran</h3>
-        <div class="tp-panel-sub" id="tpPanelSub">—</div>
-      </div>
-      <div class="tp-panel-list" id="tpPanelList">
-        <!-- diisi JS -->
-      </div>
-    </div>
-
-    <!-- Panel kanan: tabel nilai -->
-    <div class="nilai-panel">
-
-      <div class="nilai-panel-header">
-        <div>
-          <div class="nilai-panel-title" id="nilaiPanelTitle">Pilih TP di sebelah kiri</div>
-          <div class="nilai-panel-sub" id="nilaiPanelSub">—</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary btn-sm" onclick="isiOtomatisSemua()"
-            id="btnAutoFill" style="display:none" title="Isi nilai yang kosong dengan nilai minimal KKTP">
-            ⚡ Isi Otomatis
-          </button>
-          <button class="btn btn-primary btn-sm" id="btnSimpanTP"
-            onclick="simpanNilaiTP()" style="display:none">
-            💾 Simpan Nilai
-          </button>
-        </div>
-      </div>
-
-      <!-- KKTP info (muncul saat TP dipilih) -->
-      <div class="kktp-info" id="kktpInfoBar" style="display:none">
-        <!-- diisi JS -->
-      </div>
-
-      <!-- Tabel -->
-      <div class="nilai-table-wrap">
-        <table class="nilai-table">
-          <thead id="nilaiTableHead">
-            <tr>
-              <th>#</th>
-              <th>Nama Siswa</th>
-              <th style="text-align:center">Nilai</th>
-              <th>Level KKTP</th>
-              <th>Deskripsi Capaian</th>
-            </tr>
-          </thead>
-          <tbody id="nilaiTableBody">
-            <tr><td colspan="5">
-              <div class="empty-state" style="padding:32px;">
-                <div class="icon" style="font-size:32px;">👈</div>
-                <h3>Pilih TP atau SAS</h3>
-                <p>Klik salah satu Tujuan Pembelajaran atau SAS dari panel kiri.</p>
-              </div>
-            </td></tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div><!-- end nilai-panel -->
-  </div><!-- end penilaian-layout -->
+  <!-- TP list (diisi JS) -->
+  <div class="tp-list" id="tpList" style="display:none"></div>
 
 </main>
-
-<!-- Save bar -->
-<div class="save-bar" id="saveBar" style="display:none">
-  <div class="save-bar-info" id="saveBarInfo">—</div>
-  <div class="save-status" id="saveStatus"></div>
-  <button class="btn btn-secondary btn-sm" onclick="lihatRekap()">📊 Lihat Rekap</button>
-  <button class="btn btn-primary" id="saveBarBtn" onclick="simpanNilaiTP()">
-    💾 Simpan Nilai
-  </button>
-</div>
 
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
-/* ── State ────────────────────────────────────────────── */
-let currentUser  = null;
-let config       = {};
-let allKelas     = [];
-let allMapel     = [];
-let allSiswa     = [];    // siswa kelas aktif
-let allTP        = [];    // TP mapel aktif
-let allNilaiDB   = [];    // nilai sudah ada di DB untuk kelas+mapel ini
-let activeKelas  = '';
-let activeMapel  = null;  // object mapel
-let activeTP     = null;  // object TP yang sedang diinput (atau 'SAS')
-let nilaiBuffer  = {};   // { id_siswa: nilai } — buffer sebelum disimpan
-let isSAS        = false; // apakah mode SAS
+/* ════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
+let currentUser = null;
+let config      = {};
+let allKelas    = [];
+let allMapel    = [];
+let allSiswa    = [];    // siswa kelas aktif
+let allTP       = [];    // TP mapel aktif
+let nilaiDB     = {};   // { id_siswa + '|' + id_tp: { slm, sas } }
+let buffer      = {};   // perubahan belum disimpan: { id_siswa+'|'+id_tp: { slm, sas } }
+let activeKelas = '';
+let activeMapel = null;
+let seniAktif   = '';
 
-/* Level names */
-const LV_P = ['Perlu Bimbingan','Cukup','Baik','Sangat Baik'];
-const LV_K = ['Mulai Berkembang','Layak','Cakap','Mahir'];
+/* Level metadata */
+const LV_P   = ['Perlu Bimbingan','Cukup','Baik','Sangat Baik'];
+const LV_K   = ['Mulai Berkembang','Layak','Cakap','Mahir'];
 const LV_CLS = ['pb','c','b','sb'];
 
-/* ── Init ─────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
   AUTH.init();
   currentUser = AUTH.requireLogin();
@@ -549,10 +512,9 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
   document.getElementById('userRole').textContent   =
-    currentUser.role === 'admin' ? 'Administrator' :
+    currentUser.role === 'admin'      ? 'Administrator' :
     currentUser.role === 'guru_kelas' ? 'Guru Kelas ' + (currentUser.kelas||'') :
-    'Guru ' + (currentUser.mapel||'');
-
+                                        'Guru ' + (currentUser.mapel||'');
   aturNav();
 
   showLoading('Memuat konfigurasi…');
@@ -565,25 +527,25 @@ window.addEventListener('load', async () => {
 
     const sem = config['semester_aktif'] || '?';
     const tp  = config['tahun_pelajaran'] || '?';
-    document.getElementById('semBadge').textContent = 'Semester ' + sem + ' · ' + tp;
+    document.getElementById('semPill').textContent = 'Semester ' + sem + ' · ' + tp;
+
+    seniAktif = sem === 'I'
+      ? config['seni_semester_ganjil']
+      : config['seni_semester_genap'];
 
     isiDropdownKelas();
     isiDropdownMapel();
 
-    // Baca URL params
-    const params  = new URLSearchParams(window.location.search);
-    const pKelas  = params.get('kelas');
-    const pMapel  = params.get('mapel');
-
-    if (pKelas) {
-      document.getElementById('selKelas').value = pKelas;
+    // URL params
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('kelas')) {
+      document.getElementById('selKelas').value = p.get('kelas');
       await gantiKelas();
     }
-    if (pMapel) {
-      document.getElementById('selMapel').value = pMapel;
+    if (p.get('mapel')) {
+      document.getElementById('selMapel').value = p.get('mapel');
       await gantiMapel();
     }
-
     hideLoading();
   } catch(e) {
     showAlert('error','⛔ Gagal memuat', e.message);
@@ -593,545 +555,560 @@ window.addEventListener('load', async () => {
 
 function aturNav() {
   const r = currentUser.role;
-  if (r === 'admin')      document.getElementById('navAdmin').style.display = 'flex';
-  else if (r === 'guru_kelas') document.getElementById('navGK').style.display = 'flex';
-  else                    document.getElementById('navGM').style.display = 'flex';
+  if (r === 'admin')       document.getElementById('navAdmin').style.display = 'flex';
+  else if (r==='guru_kelas') document.getElementById('navGK').style.display = 'flex';
+  else                     document.getElementById('navGM').style.display = 'flex';
 }
 
-/* ── Dropdown Kelas ───────────────────────────────────── */
+/* ── Dropdown ─────────────────────────────────────────── */
 function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
-
-  // Filter kelas sesuai role
   let kelas = allKelas;
-  if (currentUser.role === 'guru_kelas') {
-    kelas = allKelas.filter(k => currentUser.kelas?.split(',').map(s=>s.trim()).includes(k.nama));
-  } else if (currentUser.role === 'guru_mapel') {
-    kelas = allKelas.filter(k => currentUser.kelas?.split(',').map(s=>s.trim()).includes(k.nama));
+  if (currentUser.role !== 'admin') {
+    const diampuArr = (currentUser.kelas||'').split(',').map(s=>s.trim());
+    kelas = allKelas.filter(k => diampuArr.includes(k.nama));
   }
-
   sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama} (Fase ${k.fase})</option>`).join('');
 }
 
-/* ── Dropdown Mapel ───────────────────────────────────── */
-function isiDropdownMapel(kelas) {
+function isiDropdownMapel() {
   const sel = document.getElementById('selMapel');
-
   let mapel = allMapel;
-
-  // Guru mapel: hanya mapel yang diampu
   if (currentUser.role === 'guru_mapel') {
     mapel = allMapel.filter(m => m.id === currentUser.mapel);
   }
-
-  // Seni budaya: filter yang aktif semester ini
-  const sem = config['semester_aktif'];
-  const seniAktif = sem === 'I'
-    ? config['seni_semester_ganjil']
-    : config['seni_semester_genap'];
-
   sel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
     mapel.map(m => {
       const label = m.id === 'MP07' ? 'Seni Budaya (' + (seniAktif||'—') + ')' : m.nama;
-      return `<option value="${m.id}">${label} — ${m.kelompok}</option>`;
+      return `<option value="${m.id}">${label}</option>`;
     }).join('');
   sel.disabled = false;
 }
 
-/* ── Ganti Kelas ──────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   GANTI KELAS / MAPEL
+════════════════════════════════════════════════════════ */
 async function gantiKelas() {
-  const kelas = document.getElementById('selKelas').value;
-  if (!kelas) return;
-  activeKelas = kelas;
+  activeKelas = document.getElementById('selKelas').value;
   document.getElementById('selMapel').value = '';
-  activeMapel = null; activeTP = null; nilaiBuffer = {};
-  document.getElementById('penilaianLayout').style.display = 'none';
-  document.getElementById('progressWrap').style.display   = 'none';
-  document.getElementById('emptyState').style.display     = 'block';
-  document.getElementById('saveBar').style.display        = 'none';
+  activeMapel = null; allTP = []; nilaiDB = {}; buffer = {};
+  resetUI();
 
-  // Muat siswa kelas ini
-  showLoading('Memuat siswa kelas ' + kelas + '…');
+  if (!activeKelas) return;
+  showLoading('Memuat siswa kelas ' + activeKelas + '…');
   try {
-    allSiswa = await SHEETS.getSiswa(kelas);
-    if (allSiswa.length === 0) {
+    allSiswa = await SHEETS.getSiswa(activeKelas);
+    if (!allSiswa.length)
       showAlert('warning','Data Siswa Kosong',
-        'Kelas ' + kelas + ' belum memiliki data siswa. Minta admin untuk mengisi data siswa.');
-    }
+        'Kelas ' + activeKelas + ' belum ada data siswa. Minta admin melengkapinya.');
     hideLoading();
-  } catch(e) {
-    showAlert('error','⛔ Gagal', e.message);
-    hideLoading();
-  }
+  } catch(e) { showAlert('error','⛔ Gagal', e.message); hideLoading(); }
 }
 
-/* ── Ganti Mapel ──────────────────────────────────────── */
 async function gantiMapel() {
   const idMapel = document.getElementById('selMapel').value;
   if (!idMapel || !activeKelas) return;
 
   activeMapel = allMapel.find(m => m.id === idMapel) || null;
-  activeTP    = null;
-  nilaiBuffer = {};
+  buffer = {};
 
-  document.getElementById('topbarTitle').textContent =
-    (activeMapel?.nama || '') + ' — Kelas ' + activeKelas;
+  const namaLabel = activeMapel?.id === 'MP07'
+    ? 'Seni Budaya (' + seniAktif + ')'
+    : (activeMapel?.nama || '');
+  document.getElementById('topbarTitle').textContent = namaLabel + ' — Kelas ' + activeKelas;
 
-  showLoading('Memuat TP dan nilai…');
+  showLoading('Memuat TP & nilai…');
   try {
-    [allTP, allNilaiDB] = await Promise.all([
+    const sem = config['semester_aktif'] || '';
+    const tp  = config['tahun_pelajaran'] || '';
+
+    const [tpData, nilaiRaw] = await Promise.all([
       SHEETS.getTPKKTP({ id_mapel: idMapel, kelas: activeKelas }),
-      SHEETS.getNilai({
-        kelas:    activeKelas,
-        id_mapel: idMapel,
-        semester: config['semester_aktif'],
-        tahun:    config['tahun_pelajaran'],
-      }),
+      SHEETS.getNilai({ kelas: activeKelas, id_mapel: idMapel, semester: sem, tahun: tp }),
     ]);
+    allTP = tpData;
 
-    if (allTP.length === 0) {
-      showAlert('warning','TP Belum Diisi',
-        'Mata pelajaran ini belum memiliki Tujuan Pembelajaran. ' +
-        'Silakan isi TP & KKTP di halaman Setup terlebih dahulu.');
-    }
+    // Bangun nilaiDB: key = id_siswa + '|' + id_tp
+    nilaiDB = {};
+    nilaiRaw.forEach(n => {
+      const key = n.id_siswa + '|' + n.id_tp;
+      nilaiDB[key] = { slm: n.nilai_slm, sas: n.nilai_sas };
+    });
 
-    renderTPPanel();
-    renderProgress();
-    document.getElementById('penilaianLayout').style.display = 'grid';
-    document.getElementById('progressWrap').style.display   = 'block';
-    document.getElementById('emptyState').style.display     = 'none';
+    if (!allTP.length)
+      showAlert('warning','TP Belum Ada',
+        'Mapel ini belum memiliki Tujuan Pembelajaran. Isi dulu di Setup → Mapel & TP/KKTP.');
+
+    renderRekapBar();
+    renderTPList();
+    document.getElementById('rekapBar').style.display   = 'block';
+    document.getElementById('logicInfo').style.display  = 'block';
+    document.getElementById('tpList').style.display     = 'flex';
+    document.getElementById('emptyState').style.display = 'none';
     hideLoading();
-  } catch(e) {
-    showAlert('error','⛔ Gagal memuat', e.message);
-    hideLoading();
-  }
+  } catch(e) { showAlert('error','⛔ Gagal memuat', e.message); hideLoading(); }
 }
 
-/* ── Render panel TP kiri ─────────────────────────────── */
-function renderTPPanel() {
-  document.getElementById('tpPanelTitle').textContent =
-    (activeMapel?.nama || '—');
-  document.getElementById('tpPanelSub').textContent =
-    allTP.length + ' TP · Kelas ' + activeKelas;
-
-  const list = document.getElementById('tpPanelList');
-  let html = allTP.map((tp, i) => {
-    const nilaiTP = allNilaiDB.filter(n => n.id_tp === tp.id_tp);
-    const done    = nilaiTP.length >= allSiswa.length && allSiswa.length > 0;
-    const partial = nilaiTP.length > 0 && !done;
-    const cls     = done ? 'done' : partial ? 'partial' : '';
-    const icon    = done ? '✅' : partial ? '⏳' : '○';
-    const tipe    = tp.tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan';
-    return `
-      <div class="tp-panel-item ${cls}" id="tpi-${i}" onclick="pilihTP(${i})">
-        <div class="tp-num">${i+1}</div>
-        <div class="tp-item-body">
-          <div class="tp-item-nama">${tp.nama_tp || 'TP ' + (i+1)}</div>
-          <div class="tp-item-tipe">${tipe}</div>
-        </div>
-        <div class="tp-item-status">${icon}</div>
-      </div>`;
-  }).join('');
-
-  // SAS
-  const nilaiSAS = allNilaiDB.filter(n => n.id_tp === 'SAS');
-  const sasDone = nilaiSAS.length >= allSiswa.length && allSiswa.length > 0;
-  html += `
-    <div class="tp-panel-sas ${sasDone?'done':''}" id="tpi-sas" onclick="pilihSAS()">
-      <div class="tp-num">S</div>
-      <div class="tp-item-body">
-        <div class="tp-item-nama">Sumatif Akhir Semester (SAS)</div>
-        <div class="tp-item-tipe">Nilai akhir semester</div>
-      </div>
-      <div class="tp-item-status">${sasDone?'✅':'○'}</div>
-    </div>`;
-
-  list.innerHTML = html;
+function resetUI() {
+  document.getElementById('tpList').innerHTML        = '';
+  document.getElementById('tpList').style.display    = 'none';
+  document.getElementById('rekapBar').style.display  = 'none';
+  document.getElementById('logicInfo').style.display = 'none';
+  document.getElementById('emptyState').style.display= 'block';
 }
 
-/* ── Pilih TP ─────────────────────────────────────────── */
-function pilihTP(idx) {
-  activeTP  = allTP[idx];
-  isSAS     = false;
-  nilaiBuffer = {};
-
-  // Update active state
-  document.querySelectorAll('.tp-panel-item,.tp-panel-sas').forEach(el => el.classList.remove('active'));
-  document.getElementById('tpi-' + idx)?.classList.add('active');
-
-  renderKKTPInfo(activeTP);
-  renderNilaiTable(activeTP, false);
-
-  document.getElementById('nilaiPanelTitle').textContent =
-    'TP ' + (idx+1) + ' — ' + (activeTP.nama_tp || 'Tujuan Pembelajaran');
-  document.getElementById('nilaiPanelSub').textContent =
-    (activeTP.tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan') +
-    ' · Bobot SLM: ' + activeTP.bobot_slm + '% · Bobot SAS: ' + activeTP.bobot_sas + '%';
-
-  document.getElementById('btnSimpanTP').style.display = 'inline-flex';
-  document.getElementById('btnAutoFill').style.display = 'inline-flex';
-  document.getElementById('saveBar').style.display     = 'flex';
-  updateSaveBarInfo();
+/* ════════════════════════════════════════════════════════
+   REKAP BAR
+════════════════════════════════════════════════════════ */
+function renderRekapBar() {
+  // Hitung per-TP: apakah semua siswa sudah punya nilai SLM?
+  let full = 0, slmOnly = 0, empty = 0;
+  allTP.forEach(tp => {
+    const slmCount = allSiswa.filter(s => {
+      const v = nilaiDB[s.id + '|' + tp.id_tp];
+      return v && (v.slm !== null && v.slm !== undefined && v.slm !== '');
+    }).length;
+    const sasCount = allSiswa.filter(s => {
+      const v = nilaiDB[s.id + '|' + tp.id_tp];
+      return v && (v.sas !== null && v.sas !== undefined && v.sas !== '');
+    }).length;
+    if (slmCount === 0)         empty++;
+    else if (sasCount === allSiswa.length && allSiswa.length > 0) full++;
+    else                         slmOnly++;
+  });
+  document.getElementById('rekapFull').textContent  = full;
+  document.getElementById('rekapSLM').textContent   = slmOnly;
+  document.getElementById('rekapEmpty').textContent = empty;
+  document.getElementById('rekapKelas').textContent =
+    (activeMapel?.id === 'MP07' ? 'Seni Budaya (' + seniAktif + ')' : activeMapel?.nama||'') +
+    ' · Kelas ' + activeKelas + ' · ' + allSiswa.length + ' siswa · ' + allTP.length + ' TP';
 }
 
-/* ── Pilih SAS ────────────────────────────────────────── */
-function pilihSAS() {
-  activeTP  = null;
-  isSAS     = true;
-  nilaiBuffer = {};
-
-  document.querySelectorAll('.tp-panel-item,.tp-panel-sas').forEach(el => el.classList.remove('active'));
-  document.getElementById('tpi-sas')?.classList.add('active');
-
-  document.getElementById('kktpInfoBar').style.display = 'none';
-  renderNilaiTable(null, true);
-
-  document.getElementById('nilaiPanelTitle').textContent = 'Sumatif Akhir Semester (SAS)';
-  document.getElementById('nilaiPanelSub').textContent =
-    'Nilai SAS digunakan bersama nilai SLM untuk menghitung Nilai Akhir · Bobot SAS: ' +
-    (allTP[0]?.bobot_sas || 40) + '%';
-
-  document.getElementById('btnSimpanTP').style.display = 'inline-flex';
-  document.getElementById('btnAutoFill').style.display = 'none';
-  document.getElementById('saveBar').style.display     = 'flex';
-  updateSaveBarInfo();
+/* ════════════════════════════════════════════════════════
+   RENDER DAFTAR TP
+════════════════════════════════════════════════════════ */
+function renderTPList() {
+  const list = document.getElementById('tpList');
+  list.innerHTML = allTP.map((tp, i) => renderTPCard(tp, i)).join('');
 }
 
-/* ── Render KKTP info bar ─────────────────────────────── */
-function renderKKTPInfo(tp) {
-  if (!tp) { document.getElementById('kktpInfoBar').style.display = 'none'; return; }
+function renderTPCard(tp, i) {
   const isPeng  = tp.tipe !== 'kinerja';
   const lvNames = isPeng ? LV_P : LV_K;
-  const cls     = ['pb','c','b','sb'];
+  const lvCls   = LV_CLS;
 
-  const html = (tp.level || []).map((lv, i) => `
-    <div class="kktp-info-col ${cls[i]}">
-      <div class="lv-nama">${lvNames[i]}</div>
-      <div class="lv-range">${lv.min} – ${lv.maks}</div>
-      <div class="lv-desc">${lv.deskripsi || '—'}</div>
-    </div>
-  `).join('');
+  /* Status badge */
+  const slmCount = allSiswa.filter(s => {
+    const v = nilaiDB[s.id + '|' + tp.id_tp];
+    return v?.slm !== null && v?.slm !== undefined && v?.slm !== '';
+  }).length;
+  const sasCount = allSiswa.filter(s => {
+    const v = nilaiDB[s.id + '|' + tp.id_tp];
+    return v?.sas !== null && v?.sas !== undefined && v?.sas !== '';
+  }).length;
 
-  document.getElementById('kktpInfoBar').innerHTML = html;
-  document.getElementById('kktpInfoBar').style.display = 'grid';
-}
+  const slmDone = slmCount === allSiswa.length && allSiswa.length > 0;
+  const sasDone = sasCount === allSiswa.length && allSiswa.length > 0;
+  const cardCls = slmDone && sasDone ? 'full-done' : slmDone ? 'slm-done' : '';
 
-/* ── Render tabel nilai ───────────────────────────────── */
-function renderNilaiTable(tp, isSas) {
-  const head  = document.getElementById('nilaiTableHead');
-  const tbody = document.getElementById('nilaiTableBody');
+  const slmPill = slmDone
+    ? `<span class="tp-status-pill pill-slm-done">✅ SLM (${slmCount}/${allSiswa.length})</span>`
+    : slmCount > 0
+    ? `<span class="tp-status-pill pill-slm-empty">⏳ SLM (${slmCount}/${allSiswa.length})</span>`
+    : `<span class="tp-status-pill pill-slm-empty">○ SLM belum ada</span>`;
 
-  if (isSas) {
-    head.innerHTML = `<tr>
-      <th>#</th><th>Nama Siswa</th>
-      <th style="text-align:center">Nilai SAS</th>
-      <th>Nilai Akhir (Preview)</th>
-    </tr>`;
-  } else {
-    head.innerHTML = `<tr>
-      <th>#</th><th>Nama Siswa</th>
-      <th style="text-align:center">Nilai SLM</th>
-      <th>Level KKTP</th>
-      <th>Deskripsi Capaian</th>
-    </tr>`;
-  }
+  const sasPill = sasDone
+    ? `<span class="tp-status-pill pill-sas-done">🏅 SAS (${sasCount}/${allSiswa.length})</span>`
+    : sasCount > 0
+    ? `<span class="tp-status-pill pill-sas-empty">⏳ SAS (${sasCount}/${allSiswa.length})</span>`
+    : `<span class="tp-status-pill pill-sas-empty" style="font-style:italic;">SAS opsional</span>`;
 
-  if (!allSiswa.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state" style="padding:24px;"><p>Tidak ada data siswa di kelas ini.</p></div></td></tr>';
-    return;
-  }
+  /* KKTP panel */
+  const kktpCols = (tp.level || []).map((lv, li) => `
+    <div class="kktp-col ${lvCls[li]}">
+      <div class="kktp-lv-nama">${lvNames[li]}</div>
+      <div class="kktp-range">${lv.min} – ${lv.maks}</div>
+      <div class="kktp-desc">${lv.deskripsi || '<em style="color:var(--ink-muted)">Belum diisi</em>'}</div>
+    </div>`).join('');
 
-  tbody.innerHTML = allSiswa.map((s, i) => {
-    const idTP     = isSas ? 'SAS' : (tp?.id_tp || '');
-    const existing = allNilaiDB.find(n => n.id_siswa === s.id && n.id_tp === idTP);
-    const curVal   = nilaiBuffer[s.id] !== undefined
-      ? nilaiBuffer[s.id]
-      : (existing?.nilai_slm ?? '');
+  /* Baris siswa */
+  const rows = allSiswa.map((s, si) => {
+    const key     = s.id + '|' + tp.id_tp;
+    const saved   = nilaiDB[key] || {};
+    const bufEntry= buffer[key]  || {};
+    const curSLM  = bufEntry.slm !== undefined ? bufEntry.slm : (saved.slm ?? '');
+    const curSAS  = bufEntry.sas !== undefined ? bufEntry.sas : (saved.sas ?? '');
+    const lvSLM   = tentukanLevel(curSLM, tp);
+    const akhir   = hitungAkhirTP(curSLM, curSAS, tp);
+    const bgRow   = si % 2 === 1 ? 'style="background:var(--green-ghost)"' : '';
 
-    if (isSas) {
-      // SAS: simple nilai saja + preview nilai akhir
-      const sasExist = allNilaiDB.find(n => n.id_siswa === s.id && n.id_tp === 'SAS');
-      const curSAS   = nilaiBuffer[s.id] !== undefined ? nilaiBuffer[s.id] : (sasExist?.nilai_slm ?? '');
-      const preview  = hitungPreviewAkhir(s.id, curSAS);
-      return `<tr>
-        <td style="color:var(--ink-muted);font-size:12px;">${i+1}</td>
-        <td><strong>${s.nama}</strong></td>
-        <td style="text-align:center;">
-          <input type="number" class="input-nilai" id="nv-${s.id}"
-            value="${curSAS}" min="0" max="100"
-            oninput="onNilaiInput('${s.id}',this)"
-            onfocus="this.select()">
-        </td>
-        <td style="font-size:12px;color:var(--ink-mid);">${preview}</td>
-      </tr>`;
-    }
-
-    const lv = tentukanLevel(curVal, tp);
-    return `<tr>
-      <td style="color:var(--ink-muted);font-size:12px;">${i+1}</td>
-      <td><strong>${s.nama}</strong></td>
-      <td style="text-align:center;">
-        <input type="number" class="input-nilai ${curVal!==''?'valid':''}" id="nv-${s.id}"
-          value="${curVal}" min="0" max="100"
-          oninput="onNilaiInput('${s.id}',this)"
-          onfocus="this.select()">
+    return `<tr ${bgRow}>
+      <td style="color:var(--ink-muted);font-size:12px;width:36px">${si+1}</td>
+      <td><strong>${s.nama}</strong><br><span style="font-size:10.5px;color:var(--ink-muted)">${s.nisn||''}</span></td>
+      <td class="center" style="width:90px">
+        <div class="wrap-input">
+          <input type="number" class="input-nilai ${curSLM!==''?'valid':''}"
+            id="slm-${i}-${s.id}" value="${curSLM}" min="0" max="100"
+            placeholder="—"
+            oninput="onInput(${i},'${s.id}','slm',this)"
+            onfocus="this.select()" tabindex="${si*2 + i*allSiswa.length*2 + 1}">
+          <span class="input-label">SLM</span>
+        </div>
       </td>
-      <td><span class="level-badge ${lv.cls}" id="lv-${s.id}">${lv.label}</span></td>
-      <td class="desc-cell ${lv.desc?'':'empty'}" id="desc-${s.id}">
-        ${lv.desc || 'Belum ada nilai'}
+      <td class="center" style="width:90px">
+        <div class="wrap-input">
+          <input type="number" class="input-nilai sas-input ${curSAS!==''?'valid':''}"
+            id="sas-${i}-${s.id}" value="${curSAS}" min="0" max="100"
+            placeholder="—"
+            oninput="onInput(${i},'${s.id}','sas',this)"
+            onfocus="this.select()" tabindex="${si*2 + i*allSiswa.length*2 + 2}">
+          <span class="input-label sas">SAS</span>
+        </div>
+      </td>
+      <td style="width:100px">
+        <div class="akhir-cell" id="akhir-${i}-${s.id}">${akhir.display}</div>
+        <div class="akhir-formula" id="formula-${i}-${s.id}">${akhir.formula}</div>
+      </td>
+      <td style="width:120px">
+        <span class="lv-badge ${lvSLM.cls}" id="lv-${i}-${s.id}">${lvSLM.label}</span>
+      </td>
+      <td class="desc-cell ${lvSLM.desc?'':'empty'}" id="desc-${i}-${s.id}">
+        ${lvSLM.desc || 'Belum ada nilai SLM'}
       </td>
     </tr>`;
   }).join('');
+
+  return `
+  <div class="tp-card ${cardCls}" id="tpc-${i}">
+    <!-- Header -->
+    <div class="tp-card-header" onclick="toggleCard(${i})">
+      <div class="tp-num">${i+1}</div>
+      <div class="tp-header-body">
+        <div class="tp-nama">${tp.nama_tp || 'TP ' + (i+1)}</div>
+        <div class="tp-meta">
+          <span class="tp-tipe-badge ${tp.tipe}">${tp.tipe==='kinerja'?'⚙️ Kinerja':'📖 Pengetahuan'}</span>
+          ${slmPill} ${sasPill}
+        </div>
+      </div>
+      <div class="tp-bobot">SLM ${tp.bobot_slm||60}% + SAS ${tp.bobot_sas||40}%</div>
+      <span class="tp-chevron">▾</span>
+    </div>
+
+    <!-- Body (collapsible) -->
+    <div class="tp-card-body">
+
+      <!-- KKTP toggle bar -->
+      <div class="kktp-toggle-bar">
+        <div class="kktp-end-tp">
+          ${tp.end_tp ? '<strong>End TP:</strong> ' + tp.end_tp : '<em style="color:var(--ink-muted)">End TP belum diisi</em>'}
+        </div>
+        <button class="kktp-toggle-btn" onclick="toggleKKTP(${i})">
+          <span id="kktp-btn-icon-${i}">📋</span>
+          <span id="kktp-btn-label-${i}">Lihat KKTP</span>
+        </button>
+      </div>
+
+      <!-- KKTP panel (hidden by default) -->
+      <div class="kktp-panel" id="kktp-panel-${i}">
+        <div class="kktp-grid">${kktpCols}</div>
+      </div>
+
+      <!-- Tabel nilai -->
+      <div class="nilai-table-wrap">
+        <table class="nilai-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nama Siswa</th>
+              <th class="center">Nilai SLM <span style="color:var(--red)">*</span></th>
+              <th class="center" style="color:var(--gold)">Nilai SAS <span style="font-weight:400;font-style:italic">(opsional)</span></th>
+              <th class="center">Nilai Akhir TP</th>
+              <th>Level KKTP</th>
+              <th>Deskripsi Capaian</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-${i}">${rows}</tbody>
+        </table>
+      </div>
+
+      <!-- Actions -->
+      <div class="tp-actions">
+        <div class="tp-actions-info" id="info-${i}">
+          <strong>0</strong> perubahan belum disimpan
+        </div>
+        <span class="save-status-tp" id="status-${i}"></span>
+        <button class="btn btn-secondary btn-sm" onclick="isiOtomatisSLM(${i})"
+          title="Isi nilai SLM yang kosong dengan nilai minimum KKTP">
+          ⚡ Auto SLM
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="simpanTP(${i})">
+          💾 Simpan TP ${i+1}
+        </button>
+      </div>
+    </div>
+  </div>`;
 }
 
-/* ── Input handler ─────────────────────────────────────── */
-function onNilaiInput(id_siswa, el) {
-  const val = el.value.trim();
-  const n   = parseInt(val);
+/* ════════════════════════════════════════════════════════
+   TOGGLE
+════════════════════════════════════════════════════════ */
+function toggleCard(i) {
+  document.getElementById('tpc-' + i)?.classList.toggle('open');
+}
+
+function toggleKKTP(i) {
+  const panel = document.getElementById('kktp-panel-' + i);
+  const icon  = document.getElementById('kktp-btn-icon-' + i);
+  const label = document.getElementById('kktp-btn-label-' + i);
+  const show  = !panel.classList.contains('show');
+  panel.classList.toggle('show', show);
+  icon.textContent  = show ? '🙈' : '📋';
+  label.textContent = show ? 'Sembunyikan KKTP' : 'Lihat KKTP';
+}
+
+/* ════════════════════════════════════════════════════════
+   INPUT HANDLER
+════════════════════════════════════════════════════════ */
+function onInput(tpIdx, id_siswa, type, el) {
+  const raw = el.value.trim();
+  const n   = raw === '' ? '' : parseInt(raw);
+  const key = id_siswa + '|' + allTP[tpIdx].id_tp;
 
   // Validasi
-  if (val === '') {
-    el.className = 'input-nilai';
-    nilaiBuffer[id_siswa] = '';
-  } else if (isNaN(n) || n < 0 || n > 100) {
-    el.className = 'input-nilai invalid';
+  if (raw !== '' && (isNaN(n) || n < 0 || n > 100)) {
+    el.classList.add('invalid'); el.classList.remove('valid');
     return;
-  } else {
-    el.className = 'input-nilai valid';
-    nilaiBuffer[id_siswa] = n;
+  }
+  el.classList.remove('invalid');
+  el.classList.toggle('valid', raw !== '');
+
+  // Update buffer
+  if (!buffer[key]) buffer[key] = {};
+  buffer[key][type] = raw === '' ? '' : n;
+
+  // Ambil nilai terkini (buffer atau DB)
+  const saved  = nilaiDB[key] || {};
+  const curSLM = buffer[key].slm !== undefined ? buffer[key].slm : (saved.slm ?? '');
+  const curSAS = buffer[key].sas !== undefined ? buffer[key].sas : (saved.sas ?? '');
+
+  // Update UI real-time
+  const tp    = allTP[tpIdx];
+  const akhir = hitungAkhirTP(curSLM, curSAS, tp);
+  const lvSLM = tentukanLevel(curSLM, tp);
+
+  const akhirEl  = document.getElementById('akhir-' + tpIdx + '-' + id_siswa);
+  const formulaEl= document.getElementById('formula-' + tpIdx + '-' + id_siswa);
+  const lvEl     = document.getElementById('lv-' + tpIdx + '-' + id_siswa);
+  const descEl   = document.getElementById('desc-' + tpIdx + '-' + id_siswa);
+
+  if (akhirEl)   akhirEl.textContent  = akhir.display;
+  if (formulaEl) formulaEl.textContent = akhir.formula;
+  if (lvEl)  { lvEl.className = 'lv-badge ' + lvSLM.cls; lvEl.textContent = lvSLM.label; }
+  if (descEl){
+    descEl.textContent = lvSLM.desc || 'Belum ada nilai SLM';
+    descEl.className   = 'desc-cell ' + (lvSLM.desc ? '' : 'empty');
   }
 
-  if (!isSAS && activeTP) {
-    // Update level & deskripsi secara real-time
-    const lv = tentukanLevel(val === '' ? '' : n, activeTP);
-    const lvEl   = document.getElementById('lv-' + id_siswa);
-    const descEl = document.getElementById('desc-' + id_siswa);
-    if (lvEl)   { lvEl.className = 'level-badge ' + lv.cls; lvEl.textContent = lv.label; }
-    if (descEl) {
-      descEl.textContent  = lv.desc || 'Belum ada nilai';
-      descEl.className    = 'desc-cell ' + (lv.desc ? '' : 'empty');
-    }
-  } else if (isSAS) {
-    // Update preview nilai akhir
-    const previewEl = el.closest('tr')?.cells[3];
-    if (previewEl) previewEl.textContent = hitungPreviewAkhir(id_siswa, val===''?'':n);
-  }
-
-  updateSaveBarInfo();
+  // Update counter perubahan
+  updateInfoBar(tpIdx);
 }
 
-/* ── Tentukan level dari nilai & KKTP ─────────────────── */
-function tentukanLevel(nilai, tp) {
-  if (nilai === '' || nilai === null || nilai === undefined) {
-    return { cls:'empty', label:'—', desc:'' };
+function updateInfoBar(tpIdx) {
+  const tp  = allTP[tpIdx];
+  let cnt = 0;
+  allSiswa.forEach(s => {
+    const key = s.id + '|' + tp.id_tp;
+    if (buffer[key] && Object.keys(buffer[key]).length > 0) cnt++;
+  });
+  const el = document.getElementById('info-' + tpIdx);
+  if (el) el.innerHTML = `<strong>${cnt}</strong> siswa diubah, belum disimpan`;
+}
+
+/* ════════════════════════════════════════════════════════
+   KALKULASI
+════════════════════════════════════════════════════════ */
+function hitungAkhirTP(slm, sas, tp) {
+  const s = slm === '' || slm === null || slm === undefined ? null : parseFloat(slm);
+  const a = sas === '' || sas === null || sas === undefined ? null : parseFloat(sas);
+
+  if (s === null) return { display: '—', formula: '' };
+
+  if (a === null) {
+    // Hanya SLM → nilai akhir = SLM
+    return {
+      display: String(Math.round(s)),
+      formula: 'Hanya SLM',
+    };
   }
-  const n       = parseInt(nilai);
+
+  // Ada SLM + SAS → hitung berdasarkan bobot
+  const wSLM  = (tp.bobot_slm || 60) / 100;
+  const wSAS  = (tp.bobot_sas || 40) / 100;
+  const akhir = Math.round(s * wSLM + a * wSAS);
+  return {
+    display: String(akhir),
+    formula: s + '×' + (tp.bobot_slm||60) + '%' + ' + ' + a + '×' + (tp.bobot_sas||40) + '%',
+  };
+}
+
+function tentukanLevel(nilai, tp) {
+  if (nilai === '' || nilai === null || nilai === undefined)
+    return { cls:'empty', label:'—', desc:'' };
+  const n       = parseFloat(nilai);
   const isPeng  = tp?.tipe !== 'kinerja';
   const lvNames = isPeng ? LV_P : LV_K;
   const levels  = tp?.level || [];
-
   for (let i = 0; i < levels.length; i++) {
     if (n >= levels[i].min && n <= levels[i].maks) {
-      return {
-        cls:   LV_CLS[i],
-        label: lvNames[i],
-        desc:  levels[i].deskripsi || '',
-      };
+      return { cls: LV_CLS[i], label: lvNames[i], desc: levels[i].deskripsi || '' };
     }
   }
-  // Fallback: nilai tertinggi
   const last = levels.length - 1;
   return {
     cls:   LV_CLS[last] || 'sb',
-    label: lvNames[last] || 'Sangat Baik',
+    label: lvNames[last] || (isPeng ? 'Sangat Baik' : 'Mahir'),
     desc:  levels[last]?.deskripsi || '',
   };
 }
 
-/* ── Preview nilai akhir saat input SAS ──────────────── */
-function hitungPreviewAkhir(id_siswa, nilaiSAS) {
-  if (nilaiSAS === '' || allTP.length === 0) return '—';
-  const bobot_slm = allTP[0]?.bobot_slm || 60;
-  const bobot_sas = allTP[0]?.bobot_sas || 40;
+/* ════════════════════════════════════════════════════════
+   AUTO-FILL SLM
+════════════════════════════════════════════════════════ */
+function isiOtomatisSLM(tpIdx) {
+  const tp     = allTP[tpIdx];
+  const minVal = tp.level?.[0]?.maks || 60;
+  if (!confirm('Isi nilai SLM yang kosong dengan ' + minVal + '?\nNilai yang sudah diisi tidak akan berubah.')) return;
 
-  const nilaiSLMs = allTP.map(tp => {
-    const n = allNilaiDB.find(n => n.id_siswa === id_siswa && n.id_tp === tp.id_tp);
-    return n ? n.nilai_slm : null;
-  }).filter(v => v !== null);
-
-  if (!nilaiSLMs.length) return '—';
-  const rataSLM = nilaiSLMs.reduce((a,b)=>a+b,0) / nilaiSLMs.length;
-  const akhir   = Math.round((rataSLM * bobot_slm / 100) + (parseInt(nilaiSAS) * bobot_sas / 100));
-  return akhir + ' (estimasi)';
-}
-
-/* ── Auto-fill ────────────────────────────────────────── */
-function isiOtomatisSemua() {
-  if (!activeTP) return;
-  if (!confirm('Ini akan mengisi nilai yang KOSONG dengan nilai minimum level "' +
-    (activeTP.level[0]?.maks || 60) + '"\nNilai yang sudah diisi tidak akan berubah.')) return;
-
-  const minVal = activeTP.level[0]?.maks || 60;
   allSiswa.forEach(s => {
-    const el = document.getElementById('nv-' + s.id);
+    const el = document.getElementById('slm-' + tpIdx + '-' + s.id);
     if (el && el.value === '') {
       el.value = minVal;
-      onNilaiInput(s.id, el);
+      onInput(tpIdx, s.id, 'slm', el);
     }
   });
 }
 
-/* ── Simpan Nilai ─────────────────────────────────────── */
-async function simpanNilaiTP() {
-  const idTP    = isSAS ? 'SAS' : (activeTP?.id_tp || '');
-  const idMapel = activeMapel?.id || '';
-  const sem     = config['semester_aktif'] || '';
-  const tp      = config['tahun_pelajaran'] || '';
+/* ════════════════════════════════════════════════════════
+   SIMPAN NILAI 1 TP
+════════════════════════════════════════════════════════ */
+async function simpanTP(tpIdx) {
+  const tp    = allTP[tpIdx];
+  const sem   = config['semester_aktif'] || '';
+  const tahun = config['tahun_pelajaran'] || '';
 
-  // Kumpulkan nilai yang perlu disimpan/diperbarui
+  // Kumpulkan yang berubah
   const toSave = [];
   allSiswa.forEach(s => {
-    const val = nilaiBuffer[s.id];
-    if (val === undefined) return; // tidak berubah
-    const n = val === '' ? null : parseInt(val);
-    if (n !== null && (isNaN(n) || n < 0 || n > 100)) return; // invalid
-    toSave.push({ id_siswa: s.id, nilai: n });
+    const key    = s.id + '|' + tp.id_tp;
+    const buf    = buffer[key];
+    if (!buf || Object.keys(buf).length === 0) return;
+
+    const saved  = nilaiDB[key] || {};
+    const curSLM = buf.slm !== undefined ? buf.slm : (saved.slm ?? '');
+    const curSAS = buf.sas !== undefined ? buf.sas : (saved.sas ?? '');
+
+    if (curSLM === '') return; // SLM kosong → tidak simpan
+
+    const lvSLM  = tentukanLevel(curSLM, tp);
+    const akhir  = hitungAkhirTP(curSLM, curSAS, tp);
+    toSave.push({
+      id_siswa:  s.id,
+      slm:       parseFloat(curSLM),
+      sas:       curSAS === '' ? '' : parseFloat(curSAS),
+      akhir_tp:  akhir.display,
+      level:     lvSLM.label,
+      deskripsi: lvSLM.desc,
+    });
   });
 
   if (!toSave.length) {
-    showSaveStatus('Tidak ada perubahan untuk disimpan.');
+    showStatusTP(tpIdx, 'Tidak ada perubahan.');
     return;
   }
 
-  const btn = document.getElementById('btnSimpanTP');
-  const btn2= document.getElementById('saveBarBtn');
-  btn.disabled = true; btn.textContent = '⏳';
-  btn2.disabled = true; btn2.textContent = '⏳ Menyimpan…';
+  const btn = document.querySelector('#tpc-' + tpIdx + ' .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
 
-  showLoading('Menyimpan ' + toSave.length + ' nilai…');
+  showLoading('Menyimpan ' + toSave.length + ' nilai TP ' + (tpIdx+1) + '…');
   try {
-    // Baca semua baris NILAI untuk cek existing
+    // Baca semua baris NILAI untuk deteksi existing
     const rows = await SHEETS.read('NILAI!A:K');
 
-    let saved = 0;
     for (const item of toSave) {
-      if (item.nilai === null) continue; // skip kosong
-
-      // Hitung nilai akhir jika ini SAS
-      let nilaiAkhir = '';
-      let levelKKTP  = '';
-
-      if (!isSAS && activeTP) {
-        const lv = tentukanLevel(item.nilai, activeTP);
-        levelKKTP = lv.label;
-      }
-
-      // Cek apakah baris sudah ada (update) atau baru (append)
-      const existIdx = rows.findIndex((r, i) =>
-        i > 1 &&
-        r[1] === item.id_siswa &&
-        r[2] === idTP &&
-        r[3] === idMapel &&
-        r[4] === activeKelas &&
-        r[5] === sem &&
-        r[6] === tp
-      );
-
-      const newId = existIdx > 1 ? rows[existIdx][0] : 'NL' + Date.now().toString(36) + saved;
-
-      const rowData = [
-        newId,
+      const row = [
+        '',              // id — diisi di bawah
         item.id_siswa,
-        idTP,
-        idMapel,
+        tp.id_tp,
+        activeMapel.id,
         activeKelas,
         sem,
-        tp,
-        item.nilai,  // nilai_slm (juga untuk SAS kita simpan di kolom ini)
-        '',          // nilai_sas (diisi terpisah)
-        '',          // nilai_akhir (dihitung saat generate rapor)
-        levelKKTP,
+        tahun,
+        item.slm,        // nilai_slm
+        item.sas,        // nilai_sas ('' jika tidak ada)
+        item.akhir_tp,   // nilai_akhir TP
+        item.level,      // level_kktp
       ];
 
+      // Cek apakah sudah ada baris ini
+      const existIdx = rows.findIndex((r, ri) =>
+        ri > 1 &&
+        r[1] === item.id_siswa &&
+        r[2] === tp.id_tp &&
+        r[3] === activeMapel.id &&
+        r[4] === activeKelas &&
+        r[5] === sem &&
+        r[6] === tahun
+      );
+
       if (existIdx > 1) {
-        await SHEETS.write('NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [rowData]);
+        row[0] = rows[existIdx][0]; // pertahankan ID
+        await SHEETS.write('NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]);
       } else {
-        await SHEETS.append('NILAI', [rowData]);
-        rows.push(rowData); // update local copy
+        row[0] = 'NL' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+        await SHEETS.append('NILAI', [row]);
+        rows.push(row);
       }
-      saved++;
+
+      // Update nilaiDB lokal
+      const key = item.id_siswa + '|' + tp.id_tp;
+      nilaiDB[key] = { slm: item.slm, sas: item.sas };
     }
 
-    // Reload nilai dari DB
-    allNilaiDB = await SHEETS.getNilai({
-      kelas: activeKelas, id_mapel: idMapel,
-      semester: sem, tahun: tp,
+    // Bersihkan buffer untuk TP ini
+    allSiswa.forEach(s => {
+      delete buffer[s.id + '|' + tp.id_tp];
     });
 
-    // Reset buffer
-    nilaiBuffer = {};
+    // Re-render card ini
+    const cardEl = document.getElementById('tpc-' + tpIdx);
+    const wasOpen = cardEl?.classList.contains('open');
+    const kktpOpen= document.getElementById('kktp-panel-' + tpIdx)?.classList.contains('show');
 
-    // Re-render
-    renderTPPanel();
-    renderProgress();
-    if (!isSAS && activeTP) renderNilaiTable(activeTP, false);
-    else if (isSAS)          renderNilaiTable(null, true);
+    cardEl.outerHTML = renderTPCard(tp, tpIdx);
 
-    showSaveStatus('✅ ' + saved + ' nilai berhasil disimpan');
+    if (wasOpen) document.getElementById('tpc-' + tpIdx)?.classList.add('open');
+    if (kktpOpen) {
+      document.getElementById('kktp-panel-' + tpIdx)?.classList.add('show');
+      document.getElementById('kktp-btn-icon-' + tpIdx).textContent  = '🙈';
+      document.getElementById('kktp-btn-label-' + tpIdx).textContent = 'Sembunyikan KKTP';
+    }
+
+    renderRekapBar();
+    showStatusTP(tpIdx, '✅ ' + toSave.length + ' nilai disimpan');
   } catch(e) {
     console.error(e);
     showAlert('error','⛔ Gagal menyimpan', e.message);
   } finally {
-    btn.disabled = false; btn.textContent = '💾 Simpan Nilai';
-    btn2.disabled = false; btn2.textContent = '💾 Simpan Nilai';
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan TP ' + (tpIdx+1); }
     hideLoading();
   }
 }
 
-/* ── Progress ─────────────────────────────────────────── */
-function renderProgress() {
-  if (!allSiswa.length || !allTP.length) return;
-
-  let done = 0, partial = 0, empty = 0;
-  const totalTP = allTP.length;
-
-  allSiswa.forEach(s => {
-    const cnt = allTP.filter(tp =>
-      allNilaiDB.some(n => n.id_siswa === s.id && n.id_tp === tp.id_tp)
-    ).length;
-    if (cnt === 0)       empty++;
-    else if (cnt === totalTP) done++;
-    else                 partial++;
-  });
-
-  const pct = allSiswa.length > 0 ? Math.round(done / allSiswa.length * 100) : 0;
-  document.getElementById('progressFill').style.width  = pct + '%';
-  document.getElementById('progressPct').textContent   = pct + '%';
-  document.getElementById('progressLabel').textContent =
-    (activeMapel?.nama||'') + ' — Kelas ' + activeKelas;
-  document.getElementById('statDone').textContent    = done + ' siswa lengkap';
-  document.getElementById('statPartial').textContent = partial + ' sebagian';
-  document.getElementById('statEmpty').textContent   = empty + ' belum ada nilai';
-}
-
-function updateSaveBarInfo() {
-  const changed = Object.keys(nilaiBuffer).length;
-  const label   = isSAS ? 'nilai SAS' : 'nilai SLM TP ' + ((allTP.indexOf(activeTP)+1)||'');
-  document.getElementById('saveBarInfo').innerHTML =
-    `<strong>${changed}</strong> perubahan belum disimpan · ${label} · Kelas ${activeKelas}`;
-}
-
-function lihatRekap() {
-  window.location.href = (currentUser.role === 'guru_mapel'
-    ? '../dashboard/guru-mapel.html'
-    : '../dashboard/guru-kelas.html')
-    + '?kelas=' + activeKelas;
-}
-
-/* ── UI Helpers ───────────────────────────────────────── */
-function showSaveStatus(msg) {
-  const el = document.getElementById('saveStatus');
+/* ── Helpers ──────────────────────────────────────────── */
+function showStatusTP(tpIdx, msg) {
+  const el = document.getElementById('status-' + tpIdx);
+  if (!el) return;
   el.textContent = msg;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 4000);
@@ -1144,7 +1121,7 @@ function showAlert(type, title, text) {
       <div class="alert-icon">${type==='success'?'✅':type==='warning'?'⚠️':type==='info'?'💡':'⛔'}</div>
       <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
     </div>`;
-  if (type==='success') setTimeout(()=>area.innerHTML='',5000);
+  if (type === 'success') setTimeout(() => area.innerHTML='', 5000);
 }
 
 function showLoading(msg) {
@@ -1159,12 +1136,12 @@ function toggleSidebar() {
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
-// Keyboard shortcut: Enter pindah ke input berikutnya
+// Enter → pindah ke input berikutnya
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.target.classList.contains('input-nilai')) {
     e.preventDefault();
     const inputs = [...document.querySelectorAll('.input-nilai')];
-    const idx    = inputs.indexOf(e.target);
+    const idx = inputs.indexOf(e.target);
     if (idx < inputs.length - 1) inputs[idx+1].focus();
   }
 });
