@@ -456,6 +456,25 @@ textarea.cp-edit:focus {
   <div class="panel-left">
     <div class="panel-left-header">
       <h2>📚 Mata Pelajaran</h2>
+      <div style="margin-bottom:8px;">
+        <label style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+          color:var(--ink-muted);display:block;margin-bottom:4px;">Tingkatan Kelas</label>
+        <select id="selTingkatan"
+          style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:7px;
+          font-size:12.5px;font-family:inherit;outline:none;background:var(--white);"
+          onchange="gantiTingkatan()">
+          <option value="">-- Pilih Tingkatan --</option>
+          <option value="1">Kelas 1 (Fase A)</option>
+          <option value="2">Kelas 2 (Fase A)</option>
+          <option value="3">Kelas 3 (Fase B)</option>
+          <option value="4">Kelas 4 (Fase B)</option>
+          <option value="5">Kelas 5 (Fase C)</option>
+          <option value="6">Kelas 6 (Fase C)</option>
+        </select>
+        <p style="font-size:10px;color:var(--ink-muted);margin-top:4px;line-height:1.4;">
+          TP yang diinput berlaku untuk semua kelas di tingkatan ini.
+        </p>
+      </div>
       <div class="panel-search">
         <input type="text" placeholder="Cari mapel…" oninput="filterMapelList(this.value)">
       </div>
@@ -471,9 +490,10 @@ textarea.cp-edit:focus {
     <!-- Welcome state -->
     <div class="welcome-state" id="welcomeState">
       <div class="welcome-icon">📝</div>
-      <h2>Pilih Mata Pelajaran</h2>
-      <p>Pilih mata pelajaran dari daftar di sebelah kiri untuk mulai mengisi
-         Capaian Pembelajaran, Tujuan Pembelajaran, dan KKTP.</p>
+      <h2>Pilih Tingkatan & Mata Pelajaran</h2>
+      <p>Pertama pilih <strong>tingkatan kelas</strong> dari dropdown di panel kiri,
+         kemudian pilih mata pelajaran. TP yang diinput akan berlaku untuk
+         semua kelas di tingkatan tersebut (contoh: Kelas 6 berlaku untuk 6A, 6B, 6C).</p>
     </div>
 
     <!-- Detail (tersembunyi sampai mapel dipilih) -->
@@ -550,7 +570,7 @@ let currentUser  = null;
 let allMapel     = [];
 let allTP        = [];    // TP untuk mapel yang sedang aktif
 let activeMapel  = null;  // object mapel yang dipilih
-let activeKelas  = '';    // kelas aktif (untuk guru mapel/kelas)
+let activeKelas  = '';    // tingkatan aktif (angka: '1'-'6')
 let config       = {};
 let tpCounter    = 0;     // counter untuk TP baru yang belum disimpan
 
@@ -614,6 +634,36 @@ function aturNav() {
   }
 }
 
+/* ── Ganti Tingkatan ─────────────────────────────────────── */
+function gantiTingkatan() {
+  const val = document.getElementById('selTingkatan').value;
+  activeKelas = val; // simpan sebagai tingkatan (angka)
+
+  // Reset mapel aktif
+  activeMapel = null;
+  document.getElementById('welcomeState').style.display = 'block';
+  document.getElementById('detailArea').style.display   = 'none';
+  document.getElementById('topbarTitle').textContent    = 'Setup — Mapel & TP/KKTP';
+  document.querySelectorAll('.mapel-item').forEach(el => el.classList.remove('active'));
+
+  if (!val) return;
+
+  // Auto-set tingkatan dari kelas guru
+  if (currentUser.role === 'guru_kelas' && currentUser.kelas) {
+    const tingkatan = currentUser.kelas.split(',')[0].trim().replace(/[^0-9]/g,'');
+    if (tingkatan) {
+      document.getElementById('selTingkatan').value = tingkatan;
+      activeKelas = tingkatan;
+    }
+  }
+
+  // Jika guru mapel: langsung buka mapelnya
+  if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
+    const m = allMapel.find(m => m.id === currentUser.mapel);
+    if (m) setTimeout(() => pilihMapel(m), 100);
+  }
+}
+
 /* ── Render daftar mapel di panel kiri ──────────────────── */
 function renderMapelList(mapel) {
   const list = document.getElementById('mapelList');
@@ -651,6 +701,11 @@ function filterMapelList(q) {
 
 /* ── Pilih mapel ─────────────────────────────────────────── */
 async function pilihMapel(m) {
+  if (!activeKelas && currentUser.role !== 'admin') {
+    showAlert('warning','Pilih Tingkatan Dulu',
+      'Silakan pilih tingkatan kelas terlebih dahulu sebelum memilih mata pelajaran.');
+    return;
+  }
   activeMapel = m;
 
   // Update UI panel kiri
@@ -667,7 +722,10 @@ async function pilihMapel(m) {
   // Isi header
   document.getElementById('detailNamaMapel').textContent = m.nama;
   document.getElementById('detailKelompok').textContent  = m.kelompok + ' · Kurikulum Merdeka';
-  document.getElementById('pilFase').textContent         = 'Semua Fase';
+  const tingkatanLabel = activeKelas
+      ? 'Kelas ' + activeKelas + ' (Berlaku: ' + (allKelas.filter(k=>k.tingkat===activeKelas).map(k=>k.nama).join(', ')||'semua') + ')'
+      : 'Semua Fase';
+    document.getElementById('pilFase').textContent = tingkatanLabel;
 
   const sem = config['semester_aktif'] || '?';
   const tp  = config['tahun_pelajaran'] || '?';
@@ -676,9 +734,10 @@ async function pilihMapel(m) {
   showLoading('Memuat TP & KKTP ' + m.nama + '…');
   try {
     // Muat TP sesuai kelas guru (jika guru kelas/mapel) atau semua (admin)
-    const filter = currentUser.role === 'admin'
-      ? { id_mapel: m.id }
-      : { id_mapel: m.id, kelas: activeKelas };
+    // activeKelas = tingkatan angka ('1'-'6')
+    // getTPKKTP akan cocokkan dengan field kelas di sheet
+    const filter = { id_mapel: m.id };
+    if (activeKelas) filter.kelas = activeKelas;
 
     allTP = await SHEETS.getTPKKTP(filter);
     renderTP();
@@ -910,7 +969,7 @@ async function simpanTP(idx) {
   const bobot_slm = parseInt(document.getElementById('bobotSLM').value) || 60;
   const bobot_sas = parseInt(document.getElementById('bobotSAS').value) || 40;
 
-  const kelas = currentUser.role === 'admin' ? (activeKelas || 'semua') : activeKelas;
+  const kelas = activeKelas || 'semua'; // tingkatan angka berlaku untuk semua kelas di tingkatan
   const fase  = allMapel.find(m => m.id === activeMapel?.id)?.berlaku_fase || 'semua';
 
   // Generate ID jika baru
