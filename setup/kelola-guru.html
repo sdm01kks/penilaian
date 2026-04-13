@@ -808,11 +808,26 @@ let mapelDipilih = [];
   }
 
   function isiDropdownMapel() { /* deprecated */ }
+
+/* ── Simpan ───────────────────────────────────────────── */
+async function simpanGuru() {
+  const nama   = document.getElementById('f_nama').value.trim();
+  const email  = document.getElementById('f_email').value.trim().toLowerCase();
+  const status = document.getElementById('f_status').value;
+
+  // Validasi
+  if (!nama)  { showAlert('error','Validasi','Nama guru wajib diisi.'); return; }
+  if (!email) { showAlert('error','Validasi','Email Google wajib diisi.'); return; }
+  if (!email.includes('@')) { showAlert('error','Validasi','Format email tidak valid.'); return; }
+  if (!roleVal) { showAlert('error','Validasi','Pilih role/peran terlebih dahulu.'); return; }
+  if (roleVal !== 'admin' && kelasDipilih.length === 0) {
+    showAlert('error','Validasi','Pilih setidaknya satu kelas.'); return;
+  }
   if (roleVal !== 'admin' && mapelDipilih.length === 0) {
     showAlert('error','Validasi','Pilih setidaknya satu mata pelajaran yang diajarkan.'); return;
   }
 
-  // Cek duplikasi email (kecuali saat edit diri sendiri)
+  // Cek duplikasi email
   const duplikat = allUsers.find(u => u.email === email && u.id !== editId);
   if (duplikat) {
     showAlert('error','Duplikasi','Email ini sudah terdaftar atas nama ' + duplikat.nama + '.');
