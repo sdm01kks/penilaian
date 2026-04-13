@@ -376,8 +376,23 @@ textarea.cp-edit:focus {
   .float-save { bottom:16px; right:16px; }
 }
 </style>
+<!-- Tambahan style untuk tombol hapus TP -->
+<style>
+.btn-danger { display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;border:1px solid rgba(192,57,43,.25);background:transparent;color:var(--red);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s; }
+.btn-danger:hover { background:var(--red-light); }
+.alert { border-radius:var(--radius);padding:12px 16px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px; }
+.alert.warning{ background:var(--yellow-light);border:1px solid rgba(243,156,18,.25); }
+.alert.error  { background:var(--red-light);border:1px solid rgba(192,57,43,.2); }
+.alert.success{ background:var(--green-pale);border:1px solid rgba(30,77,59,.15); }
+.alert.info   { background:var(--blue-light);border:1px solid rgba(41,128,185,.2); }
+.alert-icon { font-size:18px;flex-shrink:0; }
+.alert-title{ font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px; }
+.alert-text { font-size:12px;color:var(--ink-mid);line-height:1.6; }
+#alertArea { animation:fadeUp .3s ease both; }
+</style>
 </head>
 <body>
+
 
 <!-- Loading -->
 <div class="loading-overlay" id="loadingOverlay">
@@ -562,25 +577,25 @@ textarea.cp-edit:focus {
   </div><!-- end panel-right -->
 </div><!-- end main -->
 
+
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
-/* ── State ────────────────────────────────────────────── */
+
+/* ════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
 let currentUser  = null;
 let allMapel     = [];
-let allTP        = [];    // TP untuk mapel yang sedang aktif
-let activeMapel  = null;  // object mapel yang dipilih
-let activeKelas  = '';    // tingkatan aktif (angka: '1'-'6')
+let allKelas     = [];
+let allTP        = [];
+let activeMapel  = null;
+let activeTingkatan = '';  // '1'-'6' — angka tingkatan saja
 let config       = {};
-let tpCounter    = 0;     // counter untuk TP baru yang belum disimpan
 
-/* Level names */
-const LV_PENGETAHUAN = ['Perlu Bimbingan','Cukup','Baik','Sangat Baik'];
-const LV_KINERJA     = ['Mulai Berkembang','Layak','Cakap','Mahir'];
-const LV_CLASS_P     = ['pb','c','b','sb'];
-const LV_CLASS_K     = ['mb','l','ca','m'];
-
-/* ── Init ─────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
   AUTH.init();
   currentUser = AUTH.requireLogin();
@@ -589,85 +604,81 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
   document.getElementById('userRole').textContent   =
-    currentUser.role === 'admin' ? 'Administrator' :
-    currentUser.role === 'guru_kelas' ? 'Guru Kelas ' + currentUser.kelas :
-    'Guru ' + currentUser.mapel;
-
-  // Tampilkan nav sesuai role
+    currentUser.role === 'admin'      ? 'Administrator' :
+    currentUser.role === 'guru_kelas' ? 'Guru Kelas ' + (currentUser.kelas||'') :
+                                        'Guru Mapel';
   aturNav();
 
-  // Kelas aktif
-  activeKelas = currentUser.kelas?.split(',')[0]?.trim() || '';
-
-  showLoading('Memuat daftar mata pelajaran…');
+  showLoading('Memuat data…');
   try {
-    [config, allMapel] = await Promise.all([
+    [config, allMapel, allKelas] = await Promise.all([
       SHEETS.getConfig(),
       SHEETS.getMapel(),
+      SHEETS.getKelas(),
     ]);
-    renderMapelList(allMapel);
-    hideLoading();
 
-    // Jika guru mapel: langsung buka mapelnya
-    if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
-      const m = allMapel.find(m => m.id === currentUser.mapel);
-      if (m) setTimeout(() => pilihMapel(m), 300);
+    // Filter mapel sesuai role & pengaturan akun
+    allMapel = filterMapelByUser(allMapel);
+    renderMapelList(allMapel);
+
+    // Auto-set tingkatan untuk guru kelas
+    if (currentUser.role === 'guru_kelas') {
+      const kelas0 = (currentUser.kelasList || currentUser.kelas?.split(',')||[])[0]?.trim();
+      if (kelas0) {
+        const t = kelas0.replace(/[^0-9]/g, '');
+        if (t) {
+          document.getElementById('selTingkatan').value = t;
+          activeTingkatan = t;
+        }
+      }
     }
+    hideLoading();
   } catch(e) {
     showAlert('error','⛔ Gagal memuat', e.message);
     hideLoading();
   }
 });
 
+/* ── Filter mapel berdasarkan hak akses user ─────────── */
+function filterMapelByUser(mapel) {
+  if (currentUser.role === 'admin') return mapel;
+
+  // Mapel yang diajarkan user (dari field mapel di USERS, bisa multi)
+  const mapelDiampu = currentUser.mapelList || [];
+  if (!mapelDiampu.length || mapelDiampu.includes('semua')) return mapel;
+
+  return mapel.filter(m => mapelDiampu.includes(m.id));
+}
+
+/* ── Atur nav sesuai role ─────────────────────────────── */
 function aturNav() {
   const r = currentUser.role;
   if (r === 'admin') {
-    document.getElementById('navAdmin').style.display = 'flex';
-    document.getElementById('navProfil').style.display = 'flex';
-    document.getElementById('navSiswa').style.display = 'flex';
-    document.getElementById('navGuru').style.display = 'flex';
-    document.getElementById('navEkskul').style.display = 'flex';
+    ['navAdmin','navProfil','navSiswa','navGuru','navEkskul']
+      .forEach(id => { const el=document.getElementById(id); if(el) el.style.display='flex'; });
   } else if (r === 'guru_kelas') {
-    document.getElementById('navGuruKelas').style.display = 'flex';
+    const el=document.getElementById('navGK'); if(el) el.style.display='flex';
   } else {
-    document.getElementById('navGuruMapel').style.display = 'flex';
+    const el=document.getElementById('navGM'); if(el) el.style.display='flex';
   }
 }
 
-/* ── Ganti Tingkatan ─────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   TINGKATAN & MAPEL SELECTOR
+════════════════════════════════════════════════════════ */
 function gantiTingkatan() {
-  const val = document.getElementById('selTingkatan').value;
-  activeKelas = val; // simpan sebagai tingkatan (angka)
-
-  // Reset mapel aktif
-  activeMapel = null;
+  activeTingkatan = document.getElementById('selTingkatan').value;
+  activeMapel = null; allTP = [];
   document.getElementById('welcomeState').style.display = 'block';
   document.getElementById('detailArea').style.display   = 'none';
   document.getElementById('topbarTitle').textContent    = 'Setup — Mapel & TP/KKTP';
   document.querySelectorAll('.mapel-item').forEach(el => el.classList.remove('active'));
-
-  if (!val) return;
-
-  // Auto-set tingkatan dari kelas guru
-  if (currentUser.role === 'guru_kelas' && currentUser.kelas) {
-    const tingkatan = currentUser.kelas.split(',')[0].trim().replace(/[^0-9]/g,'');
-    if (tingkatan) {
-      document.getElementById('selTingkatan').value = tingkatan;
-      activeKelas = tingkatan;
-    }
-  }
-
-  // Jika guru mapel: langsung buka mapelnya
-  if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
-    const m = allMapel.find(m => m.id === currentUser.mapel);
-    if (m) setTimeout(() => pilihMapel(m), 100);
-  }
 }
 
-/* ── Render daftar mapel di panel kiri ──────────────────── */
+/* ── Render daftar mapel di panel kiri ───────────────── */
 function renderMapelList(mapel) {
   const list = document.getElementById('mapelList');
-  const groups = {'Wajib':[], 'Mulok':[], 'ISMUBA':[]};
+  const groups = { 'Wajib':[], 'Mulok':[], 'ISMUBA':[] };
   mapel.forEach(m => { (groups[m.kelompok] || groups['Wajib']).push(m); });
 
   let html = '';
@@ -675,21 +686,19 @@ function renderMapelList(mapel) {
     if (!items.length) continue;
     html += `<div class="mapel-section-label">${grp}</div>`;
     items.forEach(m => {
-      const adaTP = allTP.filter(t => t.id_mapel === m.id).length;
       html += `
-        <div class="mapel-item" id="mi-${m.id}" onclick="pilihMapel(${JSON.stringify(m).replace(/"/g,'&quot;')})">
+        <div class="mapel-item" id="mi-${m.id}"
+          onclick='pilihMapel(${JSON.stringify(m).replace(/'/g,"\'")})'>>
           <div class="mapel-item-icon">📖</div>
           <div class="mapel-item-body">
             <div class="mapel-item-nama">${m.nama}</div>
             <div class="mapel-item-kelompok">${m.kelompok}</div>
           </div>
-          <div class="mapel-item-badge ${adaTP > 0 ? 'done' : 'empty'}" id="mib-${m.id}">
-            ${adaTP > 0 ? adaTP + ' TP' : '—'}
-          </div>
+          <div class="mapel-item-badge empty" id="mib-${m.id}">—</div>
         </div>`;
     });
   }
-  list.innerHTML = html;
+  list.innerHTML = html || '<div style="padding:16px;font-size:12px;color:var(--ink-muted);">Tidak ada mapel yang bisa diakses.</div>';
 }
 
 function filterMapelList(q) {
@@ -699,33 +708,31 @@ function filterMapelList(q) {
   });
 }
 
-/* ── Pilih mapel ─────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   PILIH MAPEL
+════════════════════════════════════════════════════════ */
 async function pilihMapel(m) {
-  if (!activeKelas && currentUser.role !== 'admin') {
+  if (!activeTingkatan && currentUser.role !== 'admin') {
     showAlert('warning','Pilih Tingkatan Dulu',
-      'Silakan pilih tingkatan kelas terlebih dahulu sebelum memilih mata pelajaran.');
+      'Silakan pilih tingkatan kelas terlebih dahulu dari dropdown di panel kiri.');
     return;
   }
-  activeMapel = m;
 
-  // Update UI panel kiri
+  activeMapel = m;
   document.querySelectorAll('.mapel-item').forEach(el => el.classList.remove('active'));
   document.getElementById('mi-' + m.id)?.classList.add('active');
-
-  // Topbar
-  document.getElementById('topbarTitle').textContent = m.nama;
-
-  // Show detail
+  document.getElementById('topbarTitle').textContent = m.nama + (activeTingkatan ? ' — Kelas ' + activeTingkatan : '');
   document.getElementById('welcomeState').style.display = 'none';
   document.getElementById('detailArea').style.display   = 'block';
 
-  // Isi header
   document.getElementById('detailNamaMapel').textContent = m.nama;
   document.getElementById('detailKelompok').textContent  = m.kelompok + ' · Kurikulum Merdeka';
-  const tingkatanLabel = activeKelas
-      ? 'Kelas ' + activeKelas + ' (Berlaku: ' + (allKelas.filter(k=>k.tingkat===activeKelas).map(k=>k.nama).join(', ')||'semua') + ')'
-      : 'Semua Fase';
-    document.getElementById('pilFase').textContent = tingkatanLabel;
+
+  const kelasDiTingkatan = allKelas.filter(k => k.tingkat === activeTingkatan).map(k=>k.nama).join(', ') || '—';
+  document.getElementById('pilFase').textContent =
+    activeTingkatan
+      ? 'Tingkat ' + activeTingkatan + ' → ' + kelasDiTingkatan
+      : 'Semua Tingkat';
 
   const sem = config['semester_aktif'] || '?';
   const tp  = config['tahun_pelajaran'] || '?';
@@ -733,24 +740,14 @@ async function pilihMapel(m) {
 
   showLoading('Memuat TP & KKTP ' + m.nama + '…');
   try {
-    // Muat TP sesuai kelas guru (jika guru kelas/mapel) atau semua (admin)
-    // activeKelas = tingkatan angka ('1'-'6')
-    // getTPKKTP akan cocokkan dengan field kelas di sheet
+    // Load TP: jika ada tingkatan filter, gunakan; jika admin tanpa tingkatan → load semua
     const filter = { id_mapel: m.id };
-    if (activeKelas) filter.kelas = activeKelas;
-
+    if (activeTingkatan) filter.kelas = activeTingkatan;
     allTP = await SHEETS.getTPKKTP(filter);
+
     renderTP();
-
-    // Muat CP jika ada (cari di TP_KKTP baris CP — atau simpan terpisah di CONFIG)
-
-    // Bobot dari TP pertama jika ada
-    if (allTP.length > 0) {
-      document.getElementById('bobotSLM').value = allTP[0].bobot_slm || 60;
-      document.getElementById('bobotSAS').value = allTP[0].bobot_sas || 40;
-      updateBobotSum();
-    }
-
+    updateMapelBadge();
+    muatBobot();
     document.getElementById('pilJumlahTP').textContent = allTP.length + ' TP';
     hideLoading();
   } catch(e) {
@@ -759,7 +756,17 @@ async function pilihMapel(m) {
   }
 }
 
-/* ── Render semua TP ─────────────────────────────────────── */
+function muatBobot() {
+  if (allTP.length > 0) {
+    document.getElementById('bobotSLM').value = allTP[0].bobot_slm || 60;
+    document.getElementById('bobotSAS').value = allTP[0].bobot_sas || 40;
+    updateBobotSum();
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   RENDER TP LIST
+════════════════════════════════════════════════════════ */
 function renderTP() {
   const list = document.getElementById('tpList');
   if (!allTP.length) {
@@ -767,7 +774,8 @@ function renderTP() {
       <div style="text-align:center;padding:32px;color:var(--ink-muted);
         background:var(--white);border-radius:var(--radius);border:1px dashed var(--border);">
         <div style="font-size:32px;margin-bottom:8px;">📝</div>
-        <p style="font-size:13px;">Belum ada TP untuk mapel ini.<br>Klik <strong>Tambah TP</strong> di bawah untuk memulai.</p>
+        <p style="font-size:13px;">Belum ada TP${activeTingkatan?' untuk Kelas '+activeTingkatan:''}.
+        Klik <strong>Tambah TP</strong> di bawah untuk memulai.</p>
       </div>`;
     return;
   }
@@ -777,18 +785,20 @@ function renderTP() {
 function renderTPCard(tp, idx) {
   const tipe   = tp.tipe || 'pengetahuan';
   const isPeng = tipe === 'pengetahuan';
-  const lvNames = isPeng ? LV_PENGETAHUAN : LV_KINERJA;
-  const lvClass = isPeng ? LV_CLASS_P     : LV_CLASS_K;
+  const lv_P   = ['Perlu Bimbingan','Cukup','Baik','Sangat Baik'];
+  const lv_K   = ['Mulai Berkembang','Layak','Cakap','Mahir'];
+  const lvNames = isPeng ? lv_P : lv_K;
+  const lvCls   = ['pb','c','b','sb'];
 
   const kktp = (tp.level || [{},{},{},{}]).map((lv, li) => `
     <div class="kktp-col">
-      <div class="kktp-col-head ${lvClass[li]}">${lvNames[li]}</div>
+      <div class="kktp-col-head ${lvCls[li]}">${lvNames[li]}</div>
       <div class="kktp-range-row">
-        <input type="number" class="lv-min-${idx}-${li}" value="${lv.min ?? (li*25)}"
-          min="0" max="100" placeholder="min">
+        <input type="number" class="lv-min-${idx}-${li}" value="${lv.min ?? (li===0?0:li===1?61:li===2?76:86)}"
+          min="0" max="100">
         <span class="kktp-range-sep">–</span>
-        <input type="number" class="lv-max-${idx}-${li}" value="${lv.maks ?? (li*25+24)}"
-          min="0" max="100" placeholder="maks">
+        <input type="number" class="lv-max-${idx}-${li}" value="${lv.maks ?? (li===0?60:li===1?75:li===2?85:100)}"
+          min="0" max="100">
       </div>
       <textarea class="kktp-desc lv-desc-${idx}-${li}"
         placeholder="${lvNames[li]}…" rows="4">${lv.deskripsi || ''}</textarea>
@@ -799,11 +809,18 @@ function renderTPCard(tp, idx) {
     <div class="tp-card" id="tpc-${idx}">
       <div class="tp-card-header" onclick="toggleTP(${idx})">
         <div class="tp-num">${idx+1}</div>
-        <div class="tp-title">
+        <div class="tp-title-wrap">
           <div class="tp-title-main" id="tpc-nama-${idx}">${tp.nama_tp || 'TP baru — klik untuk mengisi'}</div>
-          <div class="tp-title-sub" id="tpc-tipe-sub-${idx}">${isPeng ? '📖 Pengetahuan' : '⚙️ Kinerja'}</div>
+          <div class="tp-title-sub">
+            ${tipe === 'kinerja' ? '⚙️ Kinerja' : '📖 Pengetahuan'}
+            · Tingkatan ${tp.kelas || activeTingkatan || '—'}
+          </div>
         </div>
         <span class="tp-tipe-badge ${tipe}">${tipe === 'pengetahuan' ? '📖' : '⚙️'} ${tipe}</span>
+        <div style="display:flex;gap:6px;margin-left:8px;">
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();hapusTP(${idx})"
+            title="Hapus TP ini">🗑️</button>
+        </div>
         <span class="tp-chevron">▾</span>
       </div>
       <div class="tp-card-body">
@@ -812,7 +829,7 @@ function renderTPCard(tp, idx) {
             <div class="tp-label">
               Capaian Pembelajaran (CP) untuk TP ini
               <span style="font-weight:400;color:var(--ink-muted);font-size:10.5px;margin-left:4px;">
-                — bisa berbeda antar TP meskipun dalam mapel yang sama
+                — boleh berbeda antar TP dalam mapel yang sama
               </span>
             </div>
             <textarea class="tp-textarea" id="tp-cp-${idx}"
@@ -822,7 +839,7 @@ function renderTPCard(tp, idx) {
           <div class="tp-form-group full">
             <div class="tp-label">Nama / Rumusan TP <span style="color:var(--red)">*</span></div>
             <input type="text" class="tp-input" id="tp-nama-${idx}"
-              value="${tp.nama_tp || ''}"
+              value="${(tp.nama_tp||'').replace(/"/g,'&quot;')}"
               placeholder="Contoh: Memahami konsep nilai tempat bilangan cacah sampai ribuan"
               oninput="document.getElementById('tpc-nama-${idx}').textContent=this.value||'TP baru'">
           </div>
@@ -845,7 +862,6 @@ function renderTPCard(tp, idx) {
               value="${tp.nomor_tp || (idx+1)}" min="1" max="99">
           </div>
         </div>
-
         <!-- KKTP -->
         <div class="kktp-wrap">
           <div class="kktp-title">
@@ -854,14 +870,11 @@ function renderTPCard(tp, idx) {
               (rentang nilai 0–100, tidak boleh tumpang tindih)
             </span>
           </div>
-          <div class="kktp-grid" id="kktp-grid-${idx}">
-            ${kktp}
-          </div>
+          <div class="kktp-grid" id="kktp-grid-${idx}">${kktp}</div>
         </div>
-
         <!-- Actions -->
         <div class="tp-actions">
-          <button class="btn btn-danger btn-sm" onclick="hapusTP(${idx})">🗑️ Hapus TP</button>
+          <button class="btn btn-danger btn-sm" onclick="hapusTP(${idx})">🗑️ Hapus TP ini</button>
           <button class="btn btn-secondary btn-sm" onclick="toggleTP(${idx})">✕ Tutup</button>
           <button class="btn btn-primary btn-sm" onclick="simpanTP(${idx})">💾 Simpan TP ini</button>
         </div>
@@ -869,29 +882,21 @@ function renderTPCard(tp, idx) {
     </div>`;
 }
 
-function toggleTP(idx) {
-  document.getElementById('tpc-' + idx)?.classList.toggle('open');
-}
+function toggleTP(idx) { document.getElementById('tpc-'+idx)?.classList.toggle('open'); }
 
 function gantiTipe(idx, tipe) {
   const isPeng  = tipe === 'pengetahuan';
-  const lvNames = isPeng ? LV_PENGETAHUAN : LV_KINERJA;
-  const lvClass = isPeng ? LV_CLASS_P     : LV_CLASS_K;
-
-  // Update badge & subtitle
-  const badge = document.querySelector('#tpc-' + idx + ' .tp-tipe-badge');
-  if (badge) {
-    badge.className = `tp-tipe-badge ${tipe}`;
-    badge.textContent = (isPeng ? '📖 ' : '⚙️ ') + tipe;
-  }
-  const sub = document.getElementById('tpc-tipe-sub-' + idx);
-  if (sub) sub.textContent = isPeng ? '📖 Pengetahuan' : '⚙️ Kinerja';
-
-  // Update KKTP headers
-  const grid = document.getElementById('kktp-grid-' + idx);
+  const lvNames = isPeng ? ['Perlu Bimbingan','Cukup','Baik','Sangat Baik']
+                         : ['Mulai Berkembang','Layak','Cakap','Mahir'];
+  const lvCls   = ['pb','c','b','sb'];
+  const badge   = document.querySelector('#tpc-'+idx+' .tp-tipe-badge');
+  if (badge) { badge.className=`tp-tipe-badge ${tipe}`; badge.textContent=(isPeng?'📖 ':'⚙️ ')+tipe; }
+  const sub = document.querySelector('#tpc-'+idx+' .tp-title-sub');
+  if (sub) { sub.textContent=(isPeng?'📖 Pengetahuan':'⚙️ Kinerja')+' · Tingkatan '+(activeTingkatan||'—'); }
+  const grid = document.getElementById('kktp-grid-'+idx);
   if (!grid) return;
   grid.querySelectorAll('.kktp-col-head').forEach((el, li) => {
-    el.className = 'kktp-col-head ' + lvClass[li];
+    el.className = 'kktp-col-head ' + lvCls[li];
     el.textContent = lvNames[li];
   });
   grid.querySelectorAll('.kktp-desc').forEach((el, li) => {
@@ -899,20 +904,17 @@ function gantiTipe(idx, tipe) {
   });
 }
 
-/* ── Tambah TP baru (kosong) ──────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   TAMBAH TP
+════════════════════════════════════════════════════════ */
 function tambahTP() {
   const tpBaru = {
-    id_tp:    '',
-    id_mapel: activeMapel?.id || '',
-    fase:     '',
-    kelas:    activeKelas,
-    nomor_tp: allTP.length + 1,
-    nama_tp:  '',
-    end_tp:   '',
-    tipe:     'pengetahuan',
-    bobot_slm: parseInt(document.getElementById('bobotSLM').value) || 60,
-    bobot_sas: parseInt(document.getElementById('bobotSAS').value) || 40,
-    level: [
+    id_tp:'', id_mapel:activeMapel?.id||'', fase:'', kelas:activeTingkatan,
+    nomor_tp:allTP.length+1, nama_tp:'', end_tp:'', cp:'',
+    tipe:'pengetahuan',
+    bobot_slm:parseInt(document.getElementById('bobotSLM').value)||60,
+    bobot_sas: parseInt(document.getElementById('bobotSAS').value)||40,
+    level:[
       {min:0,  maks:60,  deskripsi:''},
       {min:61, maks:75,  deskripsi:''},
       {min:76, maks:85,  deskripsi:''},
@@ -921,128 +923,108 @@ function tambahTP() {
   };
   allTP.push(tpBaru);
   const idx = allTP.length - 1;
-
-  // Tambahkan card ke DOM
   const list = document.getElementById('tpList');
-  // Hapus empty state jika ada
   if (idx === 0) list.innerHTML = '';
   list.insertAdjacentHTML('beforeend', renderTPCard(tpBaru, idx));
-
-  // Buka langsung & scroll ke sana
   setTimeout(() => {
-    document.getElementById('tpc-' + idx)?.classList.add('open');
-    document.getElementById('tpc-' + idx)?.scrollIntoView({behavior:'smooth', block:'start'});
-    document.getElementById('tp-nama-' + idx)?.focus();
+    document.getElementById('tpc-'+idx)?.classList.add('open');
+    document.getElementById('tpc-'+idx)?.scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('tp-nama-'+idx)?.focus();
   }, 50);
-
   document.getElementById('pilJumlahTP').textContent = allTP.length + ' TP';
 }
 
-/* ── Simpan satu TP ───────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   SIMPAN SATU TP
+════════════════════════════════════════════════════════ */
 async function simpanTP(idx) {
-  const tp = allTP[idx];
+  const tp    = allTP[idx];
   if (!tp) return;
 
-  const nama  = document.getElementById('tp-nama-' + idx)?.value.trim();
-  const tipe  = document.getElementById('tp-tipe-' + idx)?.value;
-  const nomor = document.getElementById('tp-nomor-' + idx)?.value;
-  const endtp = document.getElementById('tp-endtp-' + idx)?.value.trim();
+  const nama   = document.getElementById('tp-nama-'+idx)?.value.trim();
+  const tipe   = document.getElementById('tp-tipe-'+idx)?.value;
+  const nomor  = document.getElementById('tp-nomor-'+idx)?.value;
+  const endtp  = document.getElementById('tp-endtp-'+idx)?.value.trim();
+  const cp     = document.getElementById('tp-cp-'+idx)?.value.trim() || '';
 
-  if (!nama) {
-    showAlert('error','Validasi','Nama TP wajib diisi sebelum disimpan.'); return;
-  }
+  if (!nama) { showAlert('error','Validasi','Nama TP wajib diisi.'); return; }
 
-  // Kumpulkan level KKTP
   const level = [0,1,2,3].map(li => ({
-    min:       parseInt(document.querySelector(`.lv-min-${idx}-${li}`)?.value) || 0,
-    maks:      parseInt(document.querySelector(`.lv-max-${idx}-${li}`)?.value) || 0,
-    deskripsi: document.querySelector(`.lv-desc-${idx}-${li}`)?.value.trim() || '',
+    min:       parseInt(document.querySelector('.lv-min-'+idx+'-'+li)?.value) || 0,
+    maks:      parseInt(document.querySelector('.lv-max-'+idx+'-'+li)?.value) || 0,
+    deskripsi: document.querySelector('.lv-desc-'+idx+'-'+li)?.value.trim() || '',
   }));
-
-  // Validasi rentang
-  for (let i = 0; i < 3; i++) {
-    if (level[i].maks >= level[i+1].min && level[i].min < level[i+1].min) {
-      // OK — rentang berurutan
-    }
-  }
 
   const bobot_slm = parseInt(document.getElementById('bobotSLM').value) || 60;
   const bobot_sas = parseInt(document.getElementById('bobotSAS').value) || 40;
 
-  const kelas = activeKelas || 'semua'; // tingkatan angka berlaku untuk semua kelas di tingkatan
-  const fase  = allMapel.find(m => m.id === activeMapel?.id)?.berlaku_fase || 'semua';
+  // SELALU simpan kelas sebagai TINGKATAN (angka) agar berlaku untuk semua kelas di tingkatan itu
+  const kelas = activeTingkatan || tp.kelas || 'semua';
+  const fase  = allKelas.find(k => k.tingkat === kelas)?.fase ||
+                (kelas==='1'||kelas==='2'?'A':kelas==='3'||kelas==='4'?'B':'C');
 
-  // Generate ID jika baru
-  const idTP = tp.id_tp || `TP-${activeMapel?.id}-${kelas}-${nomor || (idx+1)}-${Date.now().toString(36)}`;
+  const idTP  = tp.id_tp ||
+    `TP-${activeMapel?.id}-${kelas}-${nomor||(idx+1)}-${Date.now().toString(36)}`;
 
-    const cp = document.getElementById('tp-cp-' + idx)?.value.trim() || '';
   const row = [
-    idTP,
-    activeMapel?.id || '',
-    fase,
-    kelas,
-    nomor || (idx+1),
-    nama,
-    endtp,
-    tipe,
-    bobot_slm,
-    bobot_sas,
+    idTP, activeMapel?.id||'', fase, kelas, nomor||(idx+1),
+    nama, endtp, tipe, bobot_slm, bobot_sas,
     level[0].min, level[0].maks, level[0].deskripsi,
     level[1].min, level[1].maks, level[1].deskripsi,
     level[2].min, level[2].maks, level[2].deskripsi,
     level[3].min, level[3].maks, level[3].deskripsi,
-      cp,  // kolom W
+    cp,
   ];
 
   showLoading('Menyimpan TP…');
   try {
-    if (tp.id_tp) {
-      // Update baris yang ada
-      const rows = await SHEETS.read('TP_KKTP!A:A');
-      const rowIdx = rows.findIndex(r => r[0] === tp.id_tp);
-      if (rowIdx > 0) {
-        await SHEETS.write(`TP_KKTP!A${rowIdx+1}:V${rowIdx+1}`, [row]);
-      } else {
-        await SHEETS.append('TP_KKTP', [row]);
-      }
+    const rows = await SHEETS.read('TP_KKTP!A:A');
+    const rowIdx = rows.findIndex(r => r[0] === tp.id_tp);
+    if (rowIdx > 1 && tp.id_tp) {
+      await SHEETS.write(`TP_KKTP!A${rowIdx+1}:W${rowIdx+1}`, [row]);
     } else {
-      await SHEETS.append('TP_KKTP', [row]);
+      await SHEETS.append('TP_KKTP!A:W', [row]);
       allTP[idx].id_tp = idTP;
     }
-
-    // Perbarui local state
+    // Update local state
     allTP[idx] = { ...allTP[idx], id_tp:idTP, nama_tp:nama, end_tp:endtp,
-      tipe, nomor_tp:nomor, bobot_slm, bobot_sas, level };
+      cp, tipe, nomor_tp:nomor, bobot_slm, bobot_sas, kelas, level };
 
-    showFloatStatus('✅ TP ' + (idx+1) + ' berhasil disimpan');
-    // Update badge di panel kiri
+    // Re-render card in place
+    const card   = document.getElementById('tpc-'+idx);
+    const wasOpen = card?.classList.contains('open');
+    card.outerHTML = renderTPCard(allTP[idx], idx);
+    if (wasOpen) document.getElementById('tpc-'+idx)?.classList.add('open');
+
     updateMapelBadge();
-    hideLoading();
-
+    showFloatStatus('✅ TP ' + (idx+1) + ' disimpan');
   } catch(e) {
     showAlert('error','⛔ Gagal menyimpan TP', e.message);
+  } finally {
     hideLoading();
   }
 }
 
-/* ── Hapus TP ─────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   HAPUS TP
+════════════════════════════════════════════════════════ */
 async function hapusTP(idx) {
   const tp = allTP[idx];
-  if (!confirm('Yakin ingin menghapus TP ' + (idx+1) + '?\n\nData nilai siswa yang terkait TP ini juga akan terpengaruh.')) return;
+  if (!confirm('Hapus TP ' + (idx+1) + ': "' + (tp.nama_tp||'(belum diberi nama)') + '"?\n\n' +
+    'Data nilai siswa yang menggunakan TP ini juga akan terpengaruh.')) return;
 
   showLoading('Menghapus TP…');
   try {
     if (tp.id_tp) {
       const rows = await SHEETS.read('TP_KKTP!A:A');
       const rowIdx = rows.findIndex(r => r[0] === tp.id_tp);
-      if (rowIdx > 0) {
-        // Kosongkan baris
-        await SHEETS.write(`TP_KKTP!A${rowIdx+1}:V${rowIdx+1}`,
-          [Array(22).fill('')]);
+      if (rowIdx > 1) {
+        // Kosongkan baris (soft delete — baris kosong akan difilter saat baca)
+        await SHEETS.write(`TP_KKTP!A${rowIdx+1}:W${rowIdx+1}`, [Array(23).fill('')]);
       }
     }
     allTP.splice(idx, 1);
-    renderTP();
+    renderTP(); // re-render semua TP
     document.getElementById('pilJumlahTP').textContent = allTP.length + ' TP';
     updateMapelBadge();
     showFloatStatus('🗑️ TP berhasil dihapus');
@@ -1053,68 +1035,15 @@ async function hapusTP(idx) {
   }
 }
 
-/* ── CP ───────────────────────────────────────────────── */
-async function muatCP(idMapel) {
-  try {
-    const key  = 'cp_' + idMapel;
-    const rows = await SHEETS.read('CONFIG!A:B');
-    const row  = rows.find(r => r[0] === key);
-    const text = row ? (row[1] || '') : '';
-    const el   = document.getElementById('cpDisplay');
-    el.textContent = text || '';
-    el.classList.toggle('empty', !text);
-    if (!text) el.innerHTML = '<span style="color:var(--ink-muted);font-style:italic;">Belum ada CP. Klik "Edit CP" untuk mengisi.</span>';
-    document.getElementById('cpEdit').value = text;
-  } catch(_) {}
-}
-
-function toggleEditCP() {
-  const disp  = document.getElementById('cpDisplay');
-  const edit  = document.getElementById('cpEdit');
-  const btns  = document.getElementById('cpButtons');
-  const btnEdit = document.getElementById('btnEditCP');
-  const editing = edit.style.display !== 'none';
-  disp.style.display  = editing ? '' : 'none';
-  edit.style.display  = editing ? 'none' : '';
-  btns.style.display  = editing ? 'none' : 'flex';
-  btnEdit.textContent = editing ? '✏️ Edit CP' : '';
-  if (!editing) edit.focus();
-}
-
-function batalEditCP() {
-  document.getElementById('cpDisplay').style.display = '';
-  document.getElementById('cpEdit').style.display    = 'none';
-  document.getElementById('cpButtons').style.display = 'none';
-  document.getElementById('btnEditCP').textContent   = '✏️ Edit CP';
-}
-
-async function simpanCP() {
-  const text = document.getElementById('cpEdit').value.trim();
-  const key  = 'cp_' + (activeMapel?.id || '');
-  showLoading('Menyimpan CP…');
-  try {
-    await SHEETS.setConfig(key, text);
-    const el = document.getElementById('cpDisplay');
-    el.textContent = text || '';
-    el.classList.toggle('empty', !text);
-    if (!text) el.innerHTML = '<span style="color:var(--ink-muted);font-style:italic;">Belum ada CP.</span>';
-    batalEditCP();
-    showFloatStatus('✅ CP berhasil disimpan');
-  } catch(e) {
-    showAlert('error','⛔ Gagal menyimpan CP', e.message);
-  } finally {
-    hideLoading();
-  }
-}
-
-/* ── Bobot ────────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   BOBOT & CP
+════════════════════════════════════════════════════════ */
 function updateBobotSum() {
   const slm = parseInt(document.getElementById('bobotSLM').value) || 0;
   const sas = parseInt(document.getElementById('bobotSAS').value) || 0;
-  const sum = slm + sas;
   const el  = document.getElementById('bobotSum');
-  el.textContent = 'Total: ' + sum + '%';
-  el.className   = 'bobot-sum' + (sum !== 100 ? ' warn' : '');
+  el.textContent = 'Total: ' + (slm+sas) + '%';
+  el.className   = 'bobot-sum' + (slm+sas !== 100 ? ' warn' : '');
 }
 
 async function simpanBobot() {
@@ -1124,36 +1053,32 @@ async function simpanBobot() {
     showAlert('error','Validasi','Total bobot harus 100%. Saat ini: ' + (slm+sas) + '%.');
     return;
   }
-  showLoading('Menyimpan bobot…');
+  showLoading('Menyimpan bobot ke semua TP…');
   try {
-    // Update semua TP mapel ini dengan bobot baru
     const rows = await SHEETS.read('TP_KKTP!A:J');
-    const updates = [];
-    rows.forEach((r, i) => {
-      if (i === 0) return;
-      if (r[1] === activeMapel?.id) {
-        updates.push({ row: i+1, slm, sas });
+    for (let ri = 2; ri < rows.length; ri++) {
+      if (rows[ri][1] === activeMapel?.id) {
+        await SHEETS.write(`TP_KKTP!I${ri+1}:J${ri+1}`, [[slm, sas]]);
       }
-    });
-    for (const u of updates) {
-      await SHEETS.write(`TP_KKTP!I${u.row}:J${u.row}`, [[u.slm, u.sas]]);
     }
     allTP.forEach(tp => { tp.bobot_slm = slm; tp.bobot_sas = sas; });
-    showFloatStatus('✅ Bobot berhasil disimpan');
+    showFloatStatus('✅ Bobot disimpan untuk semua TP');
   } catch(e) {
-    showAlert('error','⛔ Gagal menyimpan bobot', e.message);
+    showAlert('error','⛔ Gagal', e.message);
   } finally {
     hideLoading();
   }
 }
 
-/* ── Helpers ──────────────────────────────────────────── */
+/* ════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════ */
 function updateMapelBadge() {
-  const id  = activeMapel?.id;
+  const id = activeMapel?.id;
   if (!id) return;
-  const el  = document.getElementById('mib-' + id);
+  const el = document.getElementById('mib-' + id);
   if (el) {
-    el.className = 'mapel-item-badge ' + (allTP.length > 0 ? 'done' : 'empty');
+    el.className   = 'mapel-item-badge ' + (allTP.length > 0 ? 'done' : 'empty');
     el.textContent = allTP.length > 0 ? allTP.length + ' TP' : '—';
   }
 }
@@ -1174,7 +1099,6 @@ function showAlert(type, title, text) {
       <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
     </div>`;
   if (type === 'success') setTimeout(() => area.innerHTML='', 5000);
-  area.scrollIntoView({behavior:'smooth'});
 }
 
 function showLoading(msg) {
@@ -1188,6 +1112,7 @@ function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
+
 </script>
 </body>
 </html>
