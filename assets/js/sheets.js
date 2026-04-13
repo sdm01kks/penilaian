@@ -286,17 +286,22 @@ const SHEETS = (() => {
 
     if (role) users = users.filter(r => (r[3] || '') === role);
 
-    return users.map(r => ({
-      id:       r[0] || '',
-      email:    r[1] || '',
-      nama:     r[2] || '',
-      role:     r[3] || '',
-      kelas:    r[4] || '',
-      mapel:    r[5] || '',
-      status:   r[6] || '',
-      ditambah: r[7] || '',
-      tanggal:  r[8] || '',
-    }));
+    return users.map(r => {
+      const mapelRaw = r[5] || '';
+      return {
+        id:         r[0] || '',
+        email:      r[1] || '',
+        nama:       r[2] || '',
+        role:       r[3] || '',
+        kelas:      r[4] || '',
+        mapel:      mapelRaw,                                      // raw string (bisa multi, pisah koma)
+        mapelList:  mapelRaw ? mapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        kelasList:  r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
+        status:     r[6] || '',
+        ditambah:   r[7] || '',
+        tanggal:    r[8] || '',
+      };
+    });
   }
 
   /**
@@ -343,16 +348,29 @@ const SHEETS = (() => {
    */
   async function getTPKKTP({ id_mapel, kelas, fase } = {}) {
     const rows = await read('TP_KKTP!A:W');
-    let data   = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_tp');
+    let data   = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_tp' && r[0].trim() !== '');
 
     if (id_mapel) data = data.filter(r => r[1] === id_mapel);
     if (kelas) {
-      // TP disimpan per TINGKATAN (angka saja: "1","2",.."6")
-      // Query bisa pakai nama kelas penuh ("6B") → ekstrak tingkatan → cocokkan
-      const tingkatan = kelas.replace(/[^0-9]/g, '');
-      data = data.filter(r => r[3] === tingkatan || r[3] === kelas);
+      // Normalisasi: ekstrak angka tingkatan dari nama kelas
+      // "6B" → "6", "6" → "6", "1A" → "1"
+      const tingkatanQuery = String(kelas).replace(/[^0-9]/g, '');
+      data = data.filter(r => {
+        const tingkatanRow = String(r[3] || '').replace(/[^0-9]/g, '');
+        return tingkatanRow === tingkatanQuery;
+      });
     }
-    if (fase)     data = data.filter(r => r[2] === fase);
+    if (fase) data = data.filter(r => r[2] === fase);
+
+    // Deduplikasi berdasarkan id_tp — ambil entri terbaru (index tertinggi)
+    const seen = new Map();
+    data.forEach((r, i) => {
+      const id = r[0];
+      if (!seen.has(id) || i > seen.get(id).idx) {
+        seen.set(id, { r, idx: i });
+      }
+    });
+    data = [...seen.values()].map(v => v.r);
 
     return data.map(r => ({
       id_tp:     r[0]  || '',
