@@ -287,14 +287,14 @@ input:disabled { background:var(--green-ghost); color:var(--ink-muted); cursor:n
         </p>
       </div>
 
-      <!-- Mapel yang diampu (guru mapel) -->
+      <!-- Mapel yang diampu -->
       <div id="seksiMapel" style="display:none;">
-        <div class="form-section-title">Mata Pelajaran yang Diampu</div>
-        <select id="f_mapel">
-          <option value="">-- Pilih Mata Pelajaran --</option>
-        </select>
-        <p class="input-note" style="margin-top:6px;">
-          Guru bidang studi hanya memegang satu mata pelajaran dalam sistem ini.
+        <div class="form-section-title" id="labelMapel">Mata Pelajaran yang Diampu</div>
+        <div class="kelas-check-grid" id="mapelCheckGrid">
+          <!-- diisi JS -->
+        </div>
+        <p class="input-note" style="margin-top:6px;" id="noteMapel">
+          Pilih semua mata pelajaran yang diajarkan guru ini.
         </p>
       </div>
 
@@ -639,7 +639,7 @@ function cekKelasKosong() {
 
 /* ── Modal ────────────────────────────────────────────── */
 function bukaTambah() {
-  editId = null; roleVal = ''; kelasDipilih = [];
+  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = [];
   document.getElementById('modalTitle').textContent = 'Tambah Akun Guru';
   resetForm();
   bukaModal();
@@ -676,10 +676,13 @@ function bukaEdit(id) {
         el.closest('.kelas-check')?.classList.add('selected');
       }
     });
-    // Set mapel
-    if (u.role === 'guru_mapel') {
-      document.getElementById('f_mapel').value = u.mapel || '';
-    }
+    // Restore mapel checkboxes
+    mapelDipilih = u.mapelList || (u.mapel && u.mapel !== 'semua'
+      ? u.mapel.split(',').map(s=>s.trim()).filter(Boolean)
+      : []);
+    setTimeout(() => {
+      renderMapelCheckbox();
+    }, 50);
   }, 50);
 
   bukaModal();
@@ -694,7 +697,7 @@ function tutupModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   document.body.style.overflow = '';
   resetForm();
-  editId = null; roleVal = ''; kelasDipilih = [];
+  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = [];
 }
 
 function resetForm() {
@@ -723,16 +726,22 @@ function pilihRole(role) {
     seksiMapel.style.display = 'none';
   } else if (role === 'guru_kelas') {
     seksiKelas.style.display = 'block';
-    seksiMapel.style.display = 'none';
-    document.getElementById('labelKelas').textContent = 'Kelas yang Dipegang (pilih 1)';
-    document.getElementById('noteKelas').textContent  = 'Wali kelas hanya memegang 1 kelas.';
-    renderKelasCheckbox(false);
+    seksiMapel.style.display = 'block';
+    document.getElementById('labelKelas').textContent  = 'Kelas yang Dipegang';
+    document.getElementById('noteKelas').textContent   = 'Bisa lebih dari 1 kelas jika memang mengajar di beberapa kelas.';
+    document.getElementById('labelMapel').textContent  = 'Mata Pelajaran yang Diajarkan';
+    document.getElementById('noteMapel').textContent   = 'Pilih semua mapel yang diajarkan — termasuk di kelas lain.';
+    renderKelasCheckbox(true);
+    renderMapelCheckbox();
   } else if (role === 'guru_mapel') {
     seksiKelas.style.display = 'block';
     seksiMapel.style.display = 'block';
-    document.getElementById('labelKelas').textContent = 'Kelas yang Diampu (bisa pilih beberapa)';
-    document.getElementById('noteKelas').textContent  = 'Guru mapel bisa mengampu lebih dari 1 kelas.';
+    document.getElementById('labelKelas').textContent  = 'Kelas yang Diampu (bisa pilih beberapa)';
+    document.getElementById('noteKelas').textContent   = 'Guru mapel bisa mengampu lebih dari 1 kelas dan tingkatan.';
+    document.getElementById('labelMapel').textContent  = 'Mata Pelajaran yang Diajarkan';
+    document.getElementById('noteMapel').textContent   = 'Pilih semua mapel yang diajarkan.';
     renderKelasCheckbox(true);
+    renderMapelCheckbox();
   }
 }
 
@@ -773,29 +782,34 @@ function toggleKelasCheck(nama, onlyOne = false) {
 }
 
 /* ── Dropdown Mapel ───────────────────────────────────── */
-function isiDropdownMapel() {
-  const sel = document.getElementById('f_mapel');
-  sel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
-    allMapel.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
-}
+let mapelDipilih = [];
 
-/* ── Simpan ───────────────────────────────────────────── */
-async function simpanGuru() {
-  const nama   = document.getElementById('f_nama').value.trim();
-  const email  = document.getElementById('f_email').value.trim().toLowerCase();
-  const status = document.getElementById('f_status').value;
-  const mapel  = document.getElementById('f_mapel')?.value || '';
-
-  // Validasi
-  if (!nama)  { showAlert('error','Validasi','Nama guru wajib diisi.'); return; }
-  if (!email) { showAlert('error','Validasi','Email Google wajib diisi.'); return; }
-  if (!email.includes('@')) { showAlert('error','Validasi','Format email tidak valid.'); return; }
-  if (!roleVal) { showAlert('error','Validasi','Pilih role/peran terlebih dahulu.'); return; }
-  if (roleVal !== 'admin' && kelasDipilih.length === 0) {
-    showAlert('error','Validasi','Pilih setidaknya satu kelas yang diampu.'); return;
+  function renderMapelCheckbox() {
+    const grid = document.getElementById('mapelCheckGrid');
+    if (!grid || !allMapel) return;
+    grid.innerHTML = allMapel.map(m => `
+      <label class="kelas-check ${mapelDipilih.includes(m.id)?'selected':''}"
+             id="mc-wrap-${m.id}" onclick="toggleMapelCheck('${m.id}')">
+        <input type="checkbox" id="mc-${m.id}" value="${m.id}"
+          ${mapelDipilih.includes(m.id)?'checked':''}>
+        <span style="font-size:10px;font-weight:700;margin-right:2px;">${m.id}</span>
+        <span style="font-size:10.5px;">${m.nama}</span>
+      </label>
+    `).join('');
   }
-  if (roleVal === 'guru_mapel' && !mapel) {
-    showAlert('error','Validasi','Pilih mata pelajaran yang diampu.'); return;
+
+  function toggleMapelCheck(id) {
+    const idx = mapelDipilih.indexOf(id);
+    if (idx > -1) mapelDipilih.splice(idx, 1);
+    else          mapelDipilih.push(id);
+    document.getElementById('mc-wrap-'+id)?.classList.toggle('selected', mapelDipilih.includes(id));
+    const chk = document.getElementById('mc-'+id);
+    if (chk) chk.checked = mapelDipilih.includes(id);
+  }
+
+  function isiDropdownMapel() { /* deprecated */ }
+  if (roleVal !== 'admin' && mapelDipilih.length === 0) {
+    showAlert('error','Validasi','Pilih setidaknya satu mata pelajaran yang diajarkan.'); return;
   }
 
   // Cek duplikasi email (kecuali saat edit diri sendiri)
@@ -815,7 +829,7 @@ async function simpanGuru() {
       nama,
       role:   roleVal,
       kelas:  kelasDipilih.join(','),
-      mapel:  roleVal === 'guru_mapel' ? mapel : 'semua',
+      mapel:  roleVal === 'admin' ? 'semua' : (mapelDipilih.length ? mapelDipilih.join(',') : 'semua'),
       status,
     };
 
