@@ -324,6 +324,70 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .empty-state h3{font-size:15px;font-weight:700;color:var(--ink-mid);margin-bottom:6px}
 .empty-state p{font-size:12.5px;color:var(--ink-muted);line-height:1.7;max-width:380px;margin:0 auto}
 
+/* ── Import/Export Panel ──────────────────────────────── */
+.ie-panel{
+  background:var(--white);border-radius:var(--radius);
+  box-shadow:var(--shadow-card);border:1px solid var(--border);
+  margin-bottom:16px;overflow:hidden;
+  animation:fadeUp .4s .06s ease both;
+  display:none;
+}
+.ie-panel.show{display:block}
+.ie-panel-header{
+  padding:12px 18px;background:var(--green-ghost);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.ie-panel-header h3{font-size:13px;font-weight:700;color:var(--green-deep)}
+.ie-panel-body{padding:16px 18px}
+.ie-hint{font-size:12px;color:var(--ink-muted);line-height:1.6;margin-bottom:12px}
+.ie-hint strong{color:var(--ink)}
+.drop-zone{
+  border:2px dashed var(--border);border-radius:10px;
+  padding:24px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--white);
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--green-light);background:var(--green-ghost);
+}
+.drop-zone .dz-icon{font-size:32px;margin-bottom:8px}
+.drop-zone p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+.drop-zone label{color:var(--green-dark);font-weight:600;cursor:pointer}
+.import-preview{
+  margin-top:14px;border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;
+}
+.import-preview-header{
+  padding:10px 14px;background:var(--green-ghost);
+  border-bottom:1px solid var(--border);
+  font-size:12px;font-weight:700;color:var(--green-deep);
+}
+.import-table-wrap{overflow-x:auto;max-height:300px;overflow-y:auto}
+.import-table{width:100%;border-collapse:collapse;font-size:12px}
+.import-table th{
+  background:var(--green-pale);color:var(--green-dark);
+  font-size:10.5px;font-weight:700;letter-spacing:.4px;
+  padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);
+  white-space:nowrap;position:sticky;top:0;
+}
+.import-table td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.import-table tr:last-child td{border-bottom:none}
+.import-table tr:nth-child(even) td{background:var(--green-ghost)}
+.row-ok{background:var(--green-ghost)!important}
+.row-warn{background:var(--yellow-light)!important}
+.row-err{background:var(--red-light)!important}
+.val-badge{display:inline-block;padding:2px 6px;border-radius:5px;font-weight:700;font-size:11.5px}
+.val-ok{background:var(--green-pale);color:var(--green-dark)}
+.val-warn{background:var(--yellow-light);color:#7a4a00}
+.val-err{background:var(--red-light);color:var(--red)}
+.val-empty{background:#f0f0f0;color:var(--ink-muted)}
+.import-summary{
+  padding:10px 14px;font-size:12px;
+  display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--border);
+  background:var(--white);
+}
+.import-summary span{display:flex;align-items:center;gap:5px}
+
 /* ── Loading ──────────────────────────────────────────── */
 .loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
 .loading-overlay.hidden{display:none}
@@ -425,6 +489,71 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
       <option value="">-- Pilih Mapel --</option>
     </select>
     <div class="sem-pill" id="semPill">—</div>
+    <button class="btn btn-secondary btn-sm" id="btnToggleIE"
+      onclick="toggleIEPanel()" style="display:none"
+      title="Import/Export Nilai dari Excel">
+      📊 Import/Export
+    </button>
+  </div>
+
+  <!-- Toolbar Import/Export (muncul setelah mapel dipilih) -->
+  <div class="ie-panel" id="iePanel">
+    <div class="ie-panel-header">
+      <h3>📊 Import / Export Nilai</h3>
+      <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="eksporTemplate()" id="btnEksport">
+          📥 Export Template Excel
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="bukaImport()">
+          📤 Import Nilai dari Excel
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="tutupIEPanel()">✕</button>
+      </div>
+    </div>
+    <div class="ie-panel-body" id="iePanelBody" style="display:none">
+
+      <!-- Drop zone -->
+      <div class="ie-hint">
+        <strong>Cara kerja:</strong> Export template → guru isi nilai di Excel →
+        import kembali. Sistem akan memvalidasi setiap nilai sebelum disimpan.
+      </div>
+      <div class="drop-zone" id="dropZone"
+        ondragover="event.preventDefault();this.classList.add('drag-over')"
+        ondragleave="this.classList.remove('drag-over')"
+        ondrop="handleFileDrop(event)">
+        <div class="dz-icon">📊</div>
+        <p>Seret file Excel (.xlsx) ke sini atau<br>
+          <label>klik untuk memilih file
+            <input type="file" id="fileImport" accept=".xlsx,.xls"
+              style="display:none" onchange="handleFileSelect(this)">
+          </label>
+        </p>
+      </div>
+
+      <!-- Preview import -->
+      <div id="importPreviewWrap" style="display:none">
+        <div class="import-preview">
+          <div class="import-preview-header" id="importPreviewTitle">—</div>
+          <div class="import-table-wrap">
+            <table class="import-table">
+              <thead id="importTableHead"></thead>
+              <tbody id="importTableBody"></tbody>
+            </table>
+          </div>
+          <div class="import-summary" id="importSummary"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnEksekusiImport" onclick="eksekusiImport()">
+            ⬆️ Import Nilai Sekarang
+          </button>
+          <button class="btn btn-secondary" onclick="resetImport()">
+            🔄 Pilih File Lain
+          </button>
+          <span style="font-size:11.5px;color:var(--ink-muted);align-self:center;" id="importWarningNote"></span>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- Logika penilaian info -->
@@ -478,6 +607,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
@@ -646,6 +776,8 @@ async function gantiMapel() {
     document.getElementById('logicInfo').style.display  = 'block';
     document.getElementById('tpList').style.display     = 'flex';
     document.getElementById('emptyState').style.display = 'none';
+    // Tampilkan tombol import/export
+    document.getElementById('btnToggleIE').style.display = 'inline-flex';
     hideLoading();
   } catch(e) { showAlert('error','⛔ Gagal memuat', e.message); hideLoading(); }
 }
@@ -656,6 +788,10 @@ function resetUI() {
   document.getElementById('rekapBar').style.display  = 'none';
   document.getElementById('logicInfo').style.display = 'none';
   document.getElementById('emptyState').style.display= 'block';
+  document.getElementById('btnToggleIE').style.display = 'none';
+  document.getElementById('iePanel').classList.remove('show');
+  document.getElementById('iePanelBody').style.display = 'none';
+  resetImportState();
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1145,6 +1281,511 @@ document.addEventListener('keydown', e => {
     if (idx < inputs.length - 1) inputs[idx+1].focus();
   }
 });
+
+/* ════════════════════════════════════════════════════════
+   IMPORT / EXPORT NILAI
+   ─────────────────────────────────────────────────────
+   Format template:
+   Baris 1 : META (hidden prefix ##META##) — jangan diubah
+   Baris 2 : HEADER kolom — jangan diubah
+   Baris 3+: Data siswa — isi nilai di sini
+════════════════════════════════════════════════════════ */
+
+const META_PREFIX  = '##SDM01KKS_NILAI_v1##';
+let importData     = null;  // hasil parsing file sebelum eksekusi
+
+/* ── Toggle panel ─────────────────────────────────────── */
+function toggleIEPanel() {
+  const panel = document.getElementById('iePanel');
+  panel.classList.toggle('show');
+}
+function tutupIEPanel() {
+  document.getElementById('iePanel').classList.remove('show');
+}
+function bukaImport() {
+  document.getElementById('iePanelBody').style.display = 'block';
+  document.getElementById('iePanel').classList.add('show');
+  document.getElementById('iePanel').scrollIntoView({ behavior: 'smooth' });
+}
+function resetImportState() {
+  importData = null;
+  document.getElementById('importPreviewWrap').style.display = 'none';
+  document.getElementById('dropZone').style.display         = 'block';
+  const fi = document.getElementById('fileImport');
+  if (fi) fi.value = '';
+}
+function resetImport() { resetImportState(); }
+
+/* ══════════════════════════════════════════════════════════
+   EKSPOR TEMPLATE
+══════════════════════════════════════════════════════════ */
+function eksporTemplate() {
+  if (!activeMapel || !allTP.length || !allSiswa.length) {
+    showAlert('warning', 'Belum Siap',
+      'Pilih kelas dan mapel terlebih dahulu, dan pastikan TP & siswa sudah dimuat.');
+    return;
+  }
+
+  const sem   = config['semester_aktif'] || '';
+  const tahun = config['tahun_pelajaran'] || '';
+  const namaMapel = activeMapel.id === 'MP07'
+    ? 'Seni Budaya (' + seniAktif + ')'
+    : (activeMapel.nama || activeMapel.id);
+
+  const wb = XLSX.utils.book_new();
+
+  /* ─── Susun data sheet ─────────────────────────────── */
+  const aoa = []; // array of arrays
+
+  // Baris 0: METADATA (encode sebagai JSON di sel A1)
+  const meta = {
+    prefix:    META_PREFIX,
+    id_mapel:  activeMapel.id,
+    nama_mapel:namaMapel,
+    kelas:     activeKelas,
+    semester:  sem,
+    tahun:     tahun,
+    tp_ids:    allTP.map(tp => tp.id_tp),
+  };
+  // Simpan metadata di satu sel, kolom lain kosong
+  const metaRow = [JSON.stringify(meta), ...Array(4 + allTP.length * 2).fill('')];
+  aoa.push(metaRow);
+
+  // Baris 1: HEADER — nama kolom yang terlihat guru
+  const headerRow = ['No', 'NISN', 'Nama Siswa'];
+  allTP.forEach((tp, i) => {
+    const namaTP = tp.nama_tp || ('TP ' + (i + 1));
+    headerRow.push('TP' + (i+1) + ' — SLM
+' + namaTP);
+    headerRow.push('TP' + (i+1) + ' — SAS (opsional)
+' + namaTP);
+  });
+  headerRow.push('Keterangan (jangan diisi)');
+  aoa.push(headerRow);
+
+  // Baris 2+: data siswa (nilai dikosongkan untuk diisi guru)
+  allSiswa.forEach((s, si) => {
+    const row = [si + 1, s.nisn || '', s.nama];
+    allTP.forEach(tp => {
+      // Pre-fill dengan nilai yang sudah ada jika ada
+      const key    = s.id + '|' + tp.id_tp;
+      const saved  = nilaiDB[key] || {};
+      row.push(saved.slm !== undefined && saved.slm !== '' ? saved.slm : '');
+      row.push(saved.sas !== undefined && saved.sas !== '' ? saved.sas : '');
+    });
+    row.push(''); // kolom keterangan
+    aoa.push(row);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  /* ─── Lebar kolom ──────────────────────────────────── */
+  const wscols = [
+    { wch: 4 },   // No
+    { wch: 12 },  // NISN
+    { wch: 28 },  // Nama
+  ];
+  allTP.forEach(() => {
+    wscols.push({ wch: 22 }); // SLM
+    wscols.push({ wch: 22 }); // SAS
+  });
+  wscols.push({ wch: 18 }); // Keterangan
+  ws['!cols'] = wscols;
+
+  /* ─── Style baris metadata & header ────────────────── */
+  // Sembunyikan baris metadata (tinggi = 0 tidak didukung semua viewer,
+  // tapi kita tandai dengan warna merah muda agar guru tahu ini kunci)
+  if (!ws['!rows']) ws['!rows'] = [];
+  ws['!rows'][0] = { hpt: 18 }; // metadata row — tipis tapi terlihat
+
+  // Freeze baris 1 & 2 + kolom No, NISN, Nama
+  ws['!freeze'] = { xSplit: 3, ySplit: 2, topLeftCell: 'D3', activeCell: 'D3', sqref: 'D3' };
+
+  /* ─── Komentar peringatan di sel A1 & header ────────── */
+  // Tidak semua format xlsx mendukung comments via SheetJS free,
+  // jadi kita tambahkan teks peringatan di baris metadata yang visible
+
+  // Override A1 dengan teks peringatan yang jelas
+  ws['A1'] = {
+    v: '⚠️ JANGAN UBAH BARIS INI ⚠️  |  Metadata sistem — akan rusak jika diubah  |  ' + JSON.stringify(meta),
+    t: 's',
+  };
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Nilai');
+
+  /* ─── Sheet Panduan ─────────────────────────────────── */
+  const panduan = [
+    ['PANDUAN PENGISIAN TEMPLATE NILAI'],
+    ['SD Muhammadiyah 01 Kukusan — Sistem Penilaian Kurikulum Merdeka'],
+    [''],
+    ['INFORMASI TEMPLATE'],
+    ['Mata Pelajaran', namaMapel],
+    ['Kelas', activeKelas],
+    ['Semester', 'Semester ' + sem + ' · ' + tahun],
+    ['Jumlah TP', allTP.length + ' Tujuan Pembelajaran'],
+    ['Jumlah Siswa', allSiswa.length + ' siswa'],
+    [''],
+    ['ATURAN PENTING — WAJIB DIBACA'],
+    ['1. JANGAN ubah atau hapus Baris 1 (baris metadata/kunci sistem).'],
+    ['2. JANGAN ubah atau hapus Baris 2 (baris header kolom).'],
+    ['3. JANGAN ubah NISN atau Nama Siswa di kolom B dan C.'],
+    ['4. JANGAN tambah atau hapus kolom.'],
+    ['5. JANGAN ubah nama sheet "Nilai".'],
+    ['6. Isi HANYA kolom nilai SLM dan SAS dengan angka 0-100.'],
+    ['7. Nilai SAS boleh dikosongkan (opsional).'],
+    ['8. Jika nilai SAS kosong, nilai akhir TP = nilai SLM.'],
+    [''],
+    ['TUJUAN PEMBELAJARAN DALAM TEMPLATE INI'],
+    ...allTP.map((tp, i) => [
+      'TP ' + (i + 1) + ' — ' + (tp.nama_tp || ''),
+      'Tipe: ' + (tp.tipe || 'pengetahuan'),
+      'Bobot SLM: ' + (tp.bobot_slm || 60) + '%',
+      'Bobot SAS: ' + (tp.bobot_sas || 40) + '%',
+    ]),
+    [''],
+    ['CARA IMPORT KEMBALI'],
+    ['1. Simpan file ini sebagai .xlsx (format Excel).'],
+    ['2. Buka halaman Input Nilai di sistem.'],
+    ['3. Pilih kelas dan mapel yang sama.'],
+    ['4. Klik tombol Import/Export → Import Nilai dari Excel.'],
+    ['5. Upload file yang sudah diisi.'],
+    ['6. Periksa preview, lalu klik Import Sekarang.'],
+  ];
+  const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
+  wsPanduan['!cols'] = [{ wch: 45 }, { wch: 35 }, { wch: 18 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
+
+  /* ─── Download ─────────────────────────────────────── */
+  const fileName = 'Nilai_' + namaMapel.replace(/[^a-zA-Z0-9]/g, '_')
+    + '_Kelas' + activeKelas + '_Sem' + sem + '_' + tahun + '.xlsx';
+  XLSX.writeFile(wb, fileName);
+
+  showFloatStatus('✅ Template berhasil diunduh: ' + fileName);
+}
+
+/* ══════════════════════════════════════════════════════════
+   IMPORT — STEP 1: Baca & parse file
+══════════════════════════════════════════════════════════ */
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) prosesFileImport(file);
+}
+function handleFileSelect(input) {
+  if (input.files[0]) prosesFileImport(input.files[0]);
+}
+
+function prosesFileImport(file) {
+  if (!activeMapel || !allSiswa.length) {
+    showAlert('error', 'Belum Siap', 'Pilih kelas dan mapel yang sesuai sebelum mengimport.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', raw: false });
+      const ws = wb.Sheets['Nilai'];
+      if (!ws) throw new Error('Sheet "Nilai" tidak ditemukan. Pastikan file adalah template yang diekspor dari sistem ini.');
+
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+      if (aoa.length < 3) throw new Error('File terlalu sedikit baris. Pastikan file template yang benar.');
+
+      /* ── Validasi metadata (baris 0) ─────────────────── */
+      const metaCell = String(aoa[0][0] || '');
+      if (!metaCell.includes(META_PREFIX)) {
+        throw new Error(
+          'File ini bukan template resmi dari sistem. ' +
+          'Pastikan Anda menggunakan template yang diunduh dari tombol "Export Template Excel".'
+        );
+      }
+
+      // Extract JSON metadata dari sel A1
+      const jsonStart = metaCell.indexOf('{');
+      const jsonStr   = metaCell.substring(jsonStart);
+      let meta;
+      try { meta = JSON.parse(jsonStr); }
+      catch(_) { throw new Error('Metadata template rusak. Export ulang template dan coba lagi.'); }
+
+      // Cek kesesuaian mapel
+      if (meta.id_mapel !== activeMapel.id) {
+        throw new Error(
+          'Template ini untuk mata pelajaran ' + (meta.nama_mapel || meta.id_mapel) +
+          ', bukan ' + activeMapel.nama + '. ' +
+          'Pilih mapel yang sesuai atau gunakan template yang tepat.'
+        );
+      }
+      // Cek kesesuaian kelas
+      if (meta.kelas !== activeKelas) {
+        throw new Error(
+          'Template ini untuk kelas ' + meta.kelas + ', bukan kelas ' + activeKelas + '. ' +
+          'Pilih kelas yang sesuai.'
+        );
+      }
+      // Cek semester
+      const sem = config['semester_aktif'] || '';
+      if (meta.semester !== sem) {
+        throw new Error(
+          'Template ini untuk Semester ' + meta.semester +
+          ', sistem saat ini di Semester ' + sem + '.'
+        );
+      }
+      // Cek TP IDs
+      const tpIds = meta.tp_ids || [];
+      const currentTpIds = allTP.map(tp => tp.id_tp);
+      const missingTP = tpIds.filter(id => !currentTpIds.includes(id));
+      if (missingTP.length) {
+        throw new Error(
+          missingTP.length + ' TP dalam template tidak ditemukan di database. ' +
+          'Kemungkinan TP sudah dihapus atau diubah. Export ulang template.'
+        );
+      }
+
+      /* ── Parse nilai per baris ──────────────────────── */
+      const headerRow = aoa[1] || [];
+      const dataRows  = aoa.slice(2);
+
+      const parsed = [];
+      dataRows.forEach((row, ri) => {
+        if (!row[2]) return; // skip baris kosong (no name)
+
+        const namaImport = String(row[2] || '').trim();
+        const nisnImport = String(row[1] || '').trim();
+
+        // Cocokkan siswa: cari berdasarkan NISN dulu, lalu nama
+        let siswa = allSiswa.find(s => s.nisn && s.nisn.trim() === nisnImport);
+        if (!siswa) siswa = allSiswa.find(s =>
+          s.nama.toLowerCase().trim() === namaImport.toLowerCase().trim()
+        );
+
+        const result = {
+          rowNo:      ri + 3,  // nomor baris di Excel (1-based, skip 2 header)
+          namaImport,
+          nisnImport,
+          siswa,               // null jika tidak cocok
+          nilai:       [],     // array { id_tp, slm, sas, valid }
+          hasError:    false,
+          hasWarning:  false,
+        };
+
+        // Parse nilai per TP
+        tpIds.forEach((id_tp, tpIdx) => {
+          const colSLM = 3 + tpIdx * 2;
+          const colSAS = 4 + tpIdx * 2;
+          const rawSLM = String(row[colSLM] || '').trim();
+          const rawSAS = String(row[colSAS] || '').trim();
+
+          const nSLM = rawSLM === '' ? null : parseFloat(rawSLM);
+          const nSAS = rawSAS === '' ? null : parseFloat(rawSAS);
+
+          const slmValid = rawSLM === '' || (!isNaN(nSLM) && nSLM >= 0 && nSLM <= 100);
+          const sasValid = rawSAS === '' || (!isNaN(nSAS) && nSAS >= 0 && nSAS <= 100);
+
+          if (!slmValid || !sasValid) result.hasError = true;
+
+          result.nilai.push({
+            id_tp,
+            tp: allTP.find(t => t.id_tp === id_tp),
+            slm:      slmValid ? nSLM : null,
+            sas:      sasValid ? nSAS : null,
+            rawSLM,
+            rawSAS,
+            slmValid,
+            sasValid,
+          });
+        });
+
+        if (!result.siswa) result.hasWarning = true;
+        parsed.push(result);
+      });
+
+      importData = { meta, tpIds, parsed };
+      tampilkanPreview(importData);
+
+    } catch(err) {
+      showAlert('error', '⛔ File Tidak Valid', err.message);
+      resetImportState();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ── Tampilkan preview tabel ──────────────────────────── */
+function tampilkanPreview(data) {
+  const { meta, tpIds, parsed } = data;
+  const errCount  = parsed.filter(r => r.hasError).length;
+  const warnCount = parsed.filter(r => r.hasWarning).length;
+  const okCount   = parsed.filter(r => !r.hasError && !r.hasWarning).length;
+
+  document.getElementById('dropZone').style.display          = 'none';
+  document.getElementById('importPreviewWrap').style.display = 'block';
+
+  document.getElementById('importPreviewTitle').textContent =
+    `Preview: ${parsed.length} baris ditemukan — `
+    + `${okCount} siap, ${warnCount} perlu perhatian, ${errCount} error`;
+
+  // Susun header tabel
+  const thead = document.getElementById('importTableHead');
+  let hrow = '<tr><th>#</th><th>Nama di File</th><th>Nama di DB</th>';
+  tpIds.forEach((id_tp, i) => {
+    const tp = allTP.find(t => t.id_tp === id_tp);
+    const label = 'TP' + (i+1) + '<br><small>' + (tp?.nama_tp || id_tp).substring(0,20) + '</small>';
+    hrow += `<th colspan="2" style="text-align:center">${label}</th>`;
+  });
+  hrow += '</tr>';
+  // Sub-header SLM/SAS
+  hrow += '<tr><th></th><th></th><th></th>';
+  tpIds.forEach(() => {
+    hrow += '<th style="text-align:center;font-size:10px">SLM</th>';
+    hrow += '<th style="text-align:center;font-size:10px;color:var(--gold)">SAS</th>';
+  });
+  hrow += '</tr>';
+  thead.innerHTML = hrow;
+
+  // Susun baris data
+  const tbody = document.getElementById('importTableBody');
+  tbody.innerHTML = parsed.map((r, i) => {
+    const rowCls = r.hasError ? 'row-err' : r.hasWarning ? 'row-warn' : 'row-ok';
+    const namaDB = r.siswa ? r.siswa.nama
+      : '<span style="color:var(--red);font-style:italic">⚠️ Tidak ditemukan</span>';
+
+    let cells = `<td style="color:var(--ink-muted);font-size:11px">${r.rowNo}</td>`;
+    cells += `<td><strong>${r.namaImport}</strong><br><small style="color:var(--ink-muted)">${r.nisnImport}</small></td>`;
+    cells += `<td>${namaDB}</td>`;
+
+    r.nilai.forEach(n => {
+      // SLM
+      if (n.rawSLM === '') {
+        cells += '<td style="text-align:center"><span class="val-badge val-empty">—</span></td>';
+      } else if (!n.slmValid) {
+        cells += `<td style="text-align:center"><span class="val-badge val-err">⛔ ${n.rawSLM}</span></td>`;
+      } else {
+        cells += `<td style="text-align:center"><span class="val-badge val-ok">${n.slm}</span></td>`;
+      }
+      // SAS
+      if (n.rawSAS === '') {
+        cells += '<td style="text-align:center"><span class="val-badge val-empty">—</span></td>';
+      } else if (!n.sasValid) {
+        cells += `<td style="text-align:center"><span class="val-badge val-err">⛔ ${n.rawSAS}</span></td>`;
+      } else {
+        cells += `<td style="text-align:center"><span class="val-badge val-warn">${n.sas}</span></td>`;
+      }
+    });
+
+    return `<tr class="${rowCls}">${cells}</tr>`;
+  }).join('');
+
+  // Summary
+  document.getElementById('importSummary').innerHTML = `
+    <span>✅ <strong>${okCount}</strong> baris siap diimport</span>
+    <span>⚠️ <strong>${warnCount}</strong> nama tidak cocok (akan dilewati)</span>
+    <span>⛔ <strong>${errCount}</strong> nilai tidak valid (akan dilewati)</span>
+  `;
+
+  // Note peringatan
+  const noteEl = document.getElementById('importWarningNote');
+  if (warnCount > 0) {
+    noteEl.textContent = '⚠️ Baris yang namanya tidak cocok dengan database tidak akan diimport.';
+    noteEl.style.color = 'var(--yellow)';
+  } else if (errCount > 0) {
+    noteEl.textContent = '⛔ Baris dengan nilai tidak valid (di luar 0-100) tidak akan diimport.';
+    noteEl.style.color = 'var(--red)';
+  } else {
+    noteEl.textContent = '';
+  }
+
+  // Disable tombol jika tidak ada yang bisa diimport
+  const bisa = parsed.filter(r => !r.hasError && r.siswa).length;
+  document.getElementById('btnEksekusiImport').disabled = bisa === 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   IMPORT — STEP 2: Eksekusi simpan ke Google Sheets
+══════════════════════════════════════════════════════════ */
+async function eksekusiImport() {
+  if (!importData) return;
+
+  const toImport = importData.parsed.filter(r => !r.hasError && r.siswa);
+  if (!toImport.length) {
+    showAlert('warning', 'Tidak ada data', 'Tidak ada baris yang bisa diimport.'); return;
+  }
+
+  const sem   = config['semester_aktif'] || '';
+  const tahun = config['tahun_pelajaran'] || '';
+  const btn   = document.getElementById('btnEksekusiImport');
+  btn.disabled = true; btn.textContent = '⏳ Mengimport…';
+
+  showLoading('Mengimport ' + toImport.length + ' baris nilai…');
+  try {
+    const rows = await SHEETS.read('NILAI!A:K');
+    let saved  = 0;
+
+    for (const item of toImport) {
+      for (const n of item.nilai) {
+        if (n.slm === null) continue; // skip jika SLM kosong
+
+        const tp     = n.tp;
+        const lvSLM  = tentukanLevel(n.slm, tp);
+        const akhir  = hitungAkhirTP(n.slm, n.sas, tp);
+
+        const existIdx = rows.findIndex((r, ri) =>
+          ri > 1 &&
+          r[1] === item.siswa.id &&
+          r[2] === n.id_tp &&
+          r[3] === activeMapel.id &&
+          r[4] === activeKelas &&
+          r[5] === sem &&
+          r[6] === tahun
+        );
+
+        const newId = existIdx > 1
+          ? rows[existIdx][0]
+          : 'NL' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+        const row = [
+          newId, item.siswa.id, n.id_tp, activeMapel.id,
+          activeKelas, sem, tahun,
+          n.slm,
+          n.sas !== null ? n.sas : '',
+          akhir.display,
+          lvSLM.label,
+        ];
+
+        if (existIdx > 1) {
+          await SHEETS.write('NILAI!A' + (existIdx + 1) + ':K' + (existIdx + 1), [row]);
+        } else {
+          await SHEETS.append('NILAI!A:K', [row]);
+          rows.push(row);
+        }
+
+        // Update nilaiDB lokal
+        const key = item.siswa.id + '|' + n.id_tp;
+        nilaiDB[key] = { slm: n.slm, sas: n.sas };
+        saved++;
+      }
+    }
+
+    // Reset import state & reload tampilan
+    resetImportState();
+    document.getElementById('iePanelBody').style.display = 'none';
+
+    // Re-render TP list dengan data baru
+    renderTPList();
+    renderRekapBar();
+
+    showFloatStatus('✅ Import selesai: ' + saved + ' nilai berhasil disimpan');
+    showAlert('success', '✅ Import Berhasil',
+      saved + ' nilai berhasil diimport untuk ' + toImport.length + ' siswa.');
+
+  } catch(e) {
+    console.error(e);
+    showAlert('error', '⛔ Import Gagal', e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '⬆️ Import Nilai Sekarang';
+    hideLoading();
+  }
+}
 </script>
 </body>
 </html>
