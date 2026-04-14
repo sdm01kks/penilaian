@@ -209,7 +209,7 @@ textarea { resize:vertical; min-height:60px; }
         </div>
         <div class="form-group">
           <label>NISN <span class="req">*</span></label>
-          <input type="text" id="f_nisn" placeholder="10 digit NISN">
+          <input type="text" id="f_nisn" placeholder="10 digit NISN" inputmode="numeric" maxlength="10" pattern="\d{10}">
         </div>
         <div class="form-group">
           <label>Kelas <span class="req">*</span></label>
@@ -245,7 +245,7 @@ textarea { resize:vertical; min-height:60px; }
         </div>
         <div class="form-group">
           <label>Nomor HP (Ayah/Ibu)</label>
-          <input type="text" id="f_no_hp" placeholder="08xxxxxxxxxx">
+          <input type="text" id="f_no_hp" placeholder="08xxxxxxxxxx" inputmode="tel" maxlength="15">
         </div>
       </div>
 
@@ -629,7 +629,7 @@ async function simpanSiswa() {
     const data = {
       nama,
       nis:            document.getElementById('f_nis').value.trim(),
-      nisn,
+      nisn:           document.getElementById('f_nisn').value.trim() || nisn,
       kelas,
       agama:          document.getElementById('f_agama').value,
       alamat:         document.getElementById('f_alamat').value.trim(),
@@ -671,10 +671,11 @@ async function updateSiswa(id, data) {
   const idx  = rows.findIndex(r => r[0] === id);
   if (idx < 0) throw new Error('Data siswa tidak ditemukan di database.');
 
+  const fmtNum = (v) => { const s = String(v||'').trim(); return s ? "'"+s : ''; };
   const row = [
-    id, data.nama, data.nis, data.nisn, data.kelas,
+    id, data.nama, fmtNum(data.nis), fmtNum(data.nisn), data.kelas,
     data.agama, data.alamat, data.nama_ayah, data.nama_ibu,
-    data.pekerjaan_ayah, data.pekerjaan_ibu, data.no_hp,
+    data.pekerjaan_ayah, data.pekerjaan_ibu, fmtNum(data.no_hp),
   ];
   await SHEETS.write(`SISWA!A${idx+1}:L${idx+1}`, [row]);
 }
@@ -740,7 +741,8 @@ function prosesFile(file) {
     try {
       const wb   = XLSX.read(e.target.result, {type:'array'});
       const ws   = wb.Sheets[wb.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(ws, {header:1});
+      // raw:false membaca angka sebagai string agar nol di depan tidak hilang
+      const data = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, defval:''});
 
       if (data.length < 2) {
         showAlert('error','File Kosong','File tidak memiliki data siswa.');
@@ -750,19 +752,32 @@ function prosesFile(file) {
       // Skip baris header (baris 0)
       const siswaImport = data.slice(1)
         .filter(r => r[0]) // harus ada nama
-        .map(r => ({
-          nama:            String(r[0]||'').trim(),
-          nis:             String(r[1]||'').trim(),
-          nisn:            String(r[2]||'').trim(),
-          kelas:           String(r[3]||'').trim(),
-          agama:           String(r[4]||'Islam').trim(),
-          alamat:          String(r[5]||'').trim(),
-          nama_ayah:       String(r[6]||'').trim(),
-          nama_ibu:        String(r[7]||'').trim(),
-          pekerjaan_ayah:  String(r[8]||'').trim(),
-          pekerjaan_ibu:   String(r[9]||'').trim(),
-          no_hp:           String(r[10]||'').trim(),
-        }));
+        .map(r => {
+          // SheetJS bisa membaca NISN/HP sebagai angka dan menghilangkan nol di depan.
+          // Fungsi ini memastikan format teks dipertahankan dengan padding jika perlu.
+          const toText = (v, padLen) => {
+            if (v === null || v === undefined || v === '') return '';
+            const s = String(v).trim().replace(/^\.0*$/, ''); // hapus .0 dari angka
+            // Jika panjang kurang dari padLen, tambahkan nol di depan
+            if (padLen && s.length > 0 && s.length < padLen && /^\d+$/.test(s)) {
+              return s.padStart(padLen, '0');
+            }
+            return s;
+          };
+          return {
+            nama:            String(r[0]||'').trim(),
+            nis:             toText(r[1], 0),
+            nisn:            toText(r[2], 10),  // NISN selalu 10 digit
+            kelas:           String(r[3]||'').trim(),
+            agama:           String(r[4]||'Islam').trim(),
+            alamat:          String(r[5]||'').trim(),
+            nama_ayah:       String(r[6]||'').trim(),
+            nama_ibu:        String(r[7]||'').trim(),
+            pekerjaan_ayah:  String(r[8]||'').trim(),
+            pekerjaan_ibu:   String(r[9]||'').trim(),
+            no_hp:           toText(r[10], 0),  // HP: pertahankan nol awal
+          };
+        });
 
       tampilkanPreviewImport(siswaImport);
     } catch(err) {
