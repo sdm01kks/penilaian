@@ -236,11 +236,12 @@ const SHEETS = (() => {
       siswa = siswa.filter(r => (r[4] || '') === kelas);
     }
 
+    const stripNum = (v) => String(v || '').replace(/^'+/, '').trim();  // hapus prefix apostrof
     return siswa.map(r => ({
       id:              r[0]  || '',
       nama:            r[1]  || '',
-      nis:             r[2]  || '',
-      nisn:            r[3]  || '',
+      nis:             stripNum(r[2]),
+      nisn:            stripNum(r[3]),
       kelas:           r[4]  || '',
       agama:           r[5]  || 'Islam',
       alamat:          r[6]  || '',
@@ -258,19 +259,25 @@ const SHEETS = (() => {
    */
   async function addSiswa(siswa) {
     const id = await _generateId('SISWA', 'S');
+    // Prefix NISN dan No HP dengan apostrof agar Google Sheets menyimpan sebagai teks
+    // (mencegah angka nol di depan hilang)
+    const fmtNum = (v) => {
+      const s = String(v || '').trim();
+      return s ? "'" + s : '';   // apostrof di awal = force text di Sheets
+    };
     const row = [
       id,
-      siswa.nama        || '',
-      siswa.nis         || '',
-      siswa.nisn        || '',
-      siswa.kelas       || '',
-      siswa.agama       || 'Islam',
-      siswa.alamat      || '',
-      siswa.nama_ayah   || '',
-      siswa.nama_ibu    || '',
+      siswa.nama           || '',
+      fmtNum(siswa.nis),
+      fmtNum(siswa.nisn),
+      siswa.kelas          || '',
+      siswa.agama          || 'Islam',
+      siswa.alamat         || '',
+      siswa.nama_ayah      || '',
+      siswa.nama_ibu       || '',
       siswa.pekerjaan_ayah || '',
       siswa.pekerjaan_ibu  || '',
-      siswa.no_hp       || '',
+      fmtNum(siswa.no_hp),
     ];
     await append('SISWA', [row]);
     return id;
