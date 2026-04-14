@@ -112,7 +112,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 </style>
 </head>
 <body>
-<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-overlay hidden" id="loadingOverlay">
   <div class="spinner-lg"></div>
   <p id="loadingText">Memuat data…</p>
 </div>
@@ -261,6 +261,7 @@ window.addEventListener('load', async () => {
   if (currentUser.role === 'guru_mapel') {
     document.getElementById('accessBlocked').style.display = 'flex';
     document.getElementById('mainContent').style.display   = 'none';
+    hideLoading(); // pastikan spinner berhenti
     return;
   }
   if (currentUser.role==='admin') document.getElementById('navAdmin').style.display='flex';

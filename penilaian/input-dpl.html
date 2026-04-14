@@ -255,7 +255,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 </head>
 <body>
 
-<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-overlay hidden" id="loadingOverlay">
   <div class="spinner-lg"></div>
   <p id="loadingText">Memuat data…</p>
 </div>
@@ -423,8 +423,7 @@ window.addEventListener('load', async () => {
   if (currentUser.role === 'guru_mapel') {
     document.getElementById('accessBlocked').style.display = 'flex';
     document.getElementById('mainContent').style.display   = 'none';
-    // Tetap tampilkan nav agar bisa navigasi ke halaman lain
-    document.getElementById('navGM') && (document.getElementById('navGM').style.display = 'flex');
+    hideLoading(); // pastikan spinner berhenti
     return; // stop di sini
   }
 
