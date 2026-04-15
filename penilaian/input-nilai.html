@@ -607,7 +607,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
@@ -1320,6 +1320,11 @@ function resetImport() { resetImportState(); }
    EKSPOR TEMPLATE
 ══════════════════════════════════════════════════════════ */
 function eksporTemplate() {
+  if (typeof XLSX === 'undefined') {
+    showAlert('warning', 'Library Belum Siap',
+      'Library Excel sedang dimuat. Tunggu beberapa detik lalu coba lagi.');
+    return;
+  }
   if (!activeMapel || !allTP.length || !allSiswa.length) {
     showAlert('warning', 'Belum Siap',
       'Pilih kelas dan mapel terlebih dahulu, dan pastikan TP & siswa sudah dimuat.');
@@ -1477,6 +1482,11 @@ function handleFileSelect(input) {
 }
 
 function prosesFileImport(file) {
+  if (typeof XLSX === 'undefined') {
+    showAlert('warning', 'Library Belum Siap',
+      'Library Excel sedang dimuat. Tunggu beberapa detik lalu coba lagi.');
+    return;
+  }
   if (!activeMapel || !allSiswa.length) {
     showAlert('error', 'Belum Siap', 'Pilih kelas dan mapel yang sesuai sebelum mengimport.');
     return;
@@ -1787,5 +1797,6 @@ async function eksekusiImport() {
   }
 }
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>
