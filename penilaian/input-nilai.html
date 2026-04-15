@@ -1360,10 +1360,8 @@ function eksporTemplate() {
   const headerRow = ['No', 'NISN', 'Nama Siswa'];
   allTP.forEach((tp, i) => {
     const namaTP = tp.nama_tp || ('TP ' + (i + 1));
-    headerRow.push('TP' + (i+1) + ' — SLM
-' + namaTP);
-    headerRow.push('TP' + (i+1) + ' — SAS (opsional)
-' + namaTP);
+    headerRow.push('TP' + (i+1) + ' - SLM | ' + namaTP);
+    headerRow.push('TP' + (i+1) + ' - SAS (opsional) | ' + namaTP);
   });
   headerRow.push('Keterangan (jangan diisi)');
   aoa.push(headerRow);
