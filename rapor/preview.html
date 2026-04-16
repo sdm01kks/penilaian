@@ -397,10 +397,10 @@ function buildSeksiMapel(nilaiSiswa, isISMUBA) {
   return mapelList.map(mapel => {
     // Seni Budaya: hanya yang aktif
     if (mapel.id === 'MP07' && !seniAktif) return null;
-    const namaMapel = mapel.id === 'MP07' ? 'Seni ' + seniAktif : mapel.nama;
+    const namaMapel = mapel.id === 'MP07' ? 'Seni Budaya' : mapel.nama;
 
     const tpMapel = allTP.filter(tp => tp.id_mapel === mapel.id);
-    if (!tpMapel.length) return { mapel: {...mapel, nama: namaMapel}, nilaiAkhir: null, descBest: '', descWorst: '' };
+    if (!tpMapel.length) return null;  // Mapel belum ada TP untuk tingkatan ini → skip dari rapor
 
     // Nilai akhir per TP
     const tpNilai = tpMapel.map(tp => {
@@ -473,7 +473,8 @@ function buildSeksiEkskul(eksSiswa) {
   });
   const baseNo = hasil.length;
   allEkskul.filter(e => e.jenis === 'ekstrakurikuler').forEach((e, i) => {
-    const row = eksSiswa.find(r => r[3] === e.id && (r[4]==='1' || r[4]==='true'));
+    // Google Sheets may convert '1' to 1, TRUE, 'true', or 'TRUE'
+    const row = eksSiswa.find(r => r[3] === e.id && (r[4]==='1' || r[4]===1 || String(r[4]).toLowerCase()==='true'));
     if (row) hasil.push({ no: baseNo+i+1, nama: e.nama, ket: row[7] || '—' });
   });
   return hasil;
@@ -604,14 +605,11 @@ function buildRaporHTML(d) {
   <div class="rpr-section-title">D. Ketidakhadiran</div>
   <div class="abs-catatan-grid">
     <div>
-      <table class="abs-table">
-        <thead><tr><th colspan="3">Ketidakhadiran</th></tr></thead>
-        <tbody>
-          <tr><td>Sakit</td><td style="text-align:center">:</td><td style="text-align:right;padding-right:8px">${d.absensi.sakit}&nbsp;hari</td></tr>
-          <tr><td>Izin</td><td style="text-align:center">:</td><td style="text-align:right;padding-right:8px">${d.absensi.izin}&nbsp;hari</td></tr>
-          <tr><td>Tanpa Keterangan</td><td style="text-align:center">:</td><td style="text-align:right;padding-right:8px">${d.absensi.tk}&nbsp;hari</td></tr>
-        </tbody>
-      </table>
+      <div style="font-size:12.5px;line-height:2;">
+        <div style="display:flex;gap:0;"><span style="min-width:140px;font-weight:600">Sakit</span><span style="min-width:14px">:</span><span>${d.absensi.sakit}&nbsp;hari</span></div>
+        <div style="display:flex;gap:0;"><span style="min-width:140px;font-weight:600">Izin</span><span style="min-width:14px">:</span><span>${d.absensi.izin}&nbsp;hari</span></div>
+        <div style="display:flex;gap:0;"><span style="min-width:140px;font-weight:600">Tanpa Keterangan</span><span style="min-width:14px">:</span><span>${d.absensi.tk}&nbsp;hari</span></div>
+      </div>
     </div>
     <div class="catatan-box">
       <div class="catatan-header">Catatan Wali</div>
@@ -638,24 +636,26 @@ function buildRaporHTML(d) {
 
   // ── TANDA TANGAN ─────────────────────────────────────
   const tanda = d.kota_rapor + ', ' + (d.tgl_rapor || '……………………');
-  html += `<div class="rpr-ttd" style="margin-top:28px">
-    <div class="rpr-ttd-col">
-      <div>Orang Tua/Wali</div>
-      <div class="rpr-ttd-space"></div>
-      <div class="rpr-ttd-name">(………………………………)</div>
-    </div>
-    <div class="rpr-ttd-col">
-      <div>Kepala Sekolah,</div>
-      <div class="rpr-ttd-space"></div>
-      <div class="rpr-ttd-name">${d.kepsek || '—'}</div>
-      ${d.nbm_kepsek ? `<div class="rpr-ttd-nbm">NBM. ${d.nbm_kepsek}</div>` : ''}
-    </div>
-    <div class="rpr-ttd-col">
-      <div>${tanda}</div>
-      <div style="margin-top:4px">Wali Kelas,</div>
-      <div class="rpr-ttd-space"></div>
-      <div class="rpr-ttd-name">${d.wali_kelas}</div>
-      ${d.nbm_wali ? `<div class="rpr-ttd-nbm">NBM. ${d.nbm_wali}</div>` : ''}
+  html += `<div style="margin-top:28px">
+    <div style="text-align:right;font-size:12.5px;margin-bottom:4px">${tanda}</div>
+    <div class="rpr-ttd">
+      <div class="rpr-ttd-col">
+        <div>Orang Tua/Wali</div>
+        <div class="rpr-ttd-space"></div>
+        <div class="rpr-ttd-name">(………………………………)</div>
+      </div>
+      <div class="rpr-ttd-col">
+        <div>Kepala Sekolah,</div>
+        <div class="rpr-ttd-space"></div>
+        <div class="rpr-ttd-name">${d.kepsek || '—'}</div>
+        ${d.nbm_kepsek ? `<div class="rpr-ttd-nbm">NBM. ${d.nbm_kepsek}</div>` : ''}
+      </div>
+      <div class="rpr-ttd-col">
+        <div>Wali Kelas,</div>
+        <div class="rpr-ttd-space"></div>
+        <div class="rpr-ttd-name">${d.wali_kelas}</div>
+        ${d.nbm_wali ? `<div class="rpr-ttd-nbm">NBM. ${d.nbm_wali}</div>` : ''}
+      </div>
     </div>
   </div>`;
 
@@ -873,14 +873,11 @@ function buildBodyPrint(d) {
 <div class="rpr-section-title">D. Ketidakhadiran</div>
 <div class="abs-catatan-grid">
   <div>
-    <table class="abs-table">
-      <thead><tr><th colspan="3">Ketidakhadiran</th></tr></thead>
-      <tbody>
-        <tr><td>Sakit</td><td style="text-align:center">:</td><td style="text-align:right;padding-right:6pt">${d.absensi.sakit}&nbsp;hari</td></tr>
-        <tr><td>Izin</td><td style="text-align:center">:</td><td style="text-align:right;padding-right:6pt">${d.absensi.izin}&nbsp;hari</td></tr>
-        <tr><td>Tanpa Keterangan</td><td style="text-align:center">:</td><td style="text-align:right;padding-right:6pt">${d.absensi.tk}&nbsp;hari</td></tr>
-      </tbody>
-    </table>
+    <div style="font-size:10.5pt;line-height:2;">
+      <div style="display:flex;"><span style="min-width:130pt;font-weight:bold">Sakit</span><span style="min-width:12pt">:</span><span>${d.absensi.sakit}&nbsp;hari</span></div>
+      <div style="display:flex;"><span style="min-width:130pt;font-weight:bold">Izin</span><span style="min-width:12pt">:</span><span>${d.absensi.izin}&nbsp;hari</span></div>
+      <div style="display:flex;"><span style="min-width:130pt;font-weight:bold">Tanpa Keterangan</span><span style="min-width:12pt">:</span><span>${d.absensi.tk}&nbsp;hari</span></div>
+    </div>
   </div>
   <div class="catatan-box">
     <div class="catatan-header">Catatan Wali</div>
@@ -907,24 +904,26 @@ function buildBodyPrint(d) {
 
   // TTD — urutan: Orang Tua/Wali | Kepala Sekolah | (kota-tgl) Wali Kelas
   const tanda = d.kota_rapor + ', ' + (d.tgl_rapor || '……………………');
-  html += `<div class="rpr-ttd">
-  <div class="rpr-ttd-col">
-    <div>Orang Tua/Wali</div>
-    <div class="rpr-ttd-space"></div>
-    <div class="rpr-ttd-name">(………………………………)</div>
-  </div>
-  <div class="rpr-ttd-col">
-    <div>Kepala Sekolah,</div>
-    <div class="rpr-ttd-space"></div>
-    <div class="rpr-ttd-name">${d.kepsek||'—'}</div>
-    ${d.nbm_kepsek?`<div class="rpr-ttd-nbm">NBM. ${d.nbm_kepsek}</div>`:''}
-  </div>
-  <div class="rpr-ttd-col">
-    <div>${tanda}</div>
-    <div style="margin-top:3pt">Wali Kelas,</div>
-    <div class="rpr-ttd-space"></div>
-    <div class="rpr-ttd-name">${d.wali_kelas}</div>
-    ${d.nbm_wali?`<div class="rpr-ttd-nbm">NBM. ${d.nbm_wali}</div>`:''}
+  html += `<div style="margin-top:20pt">
+  <div style="text-align:right;font-size:10.5pt;margin-bottom:3pt">${tanda}</div>
+  <div class="rpr-ttd">
+    <div class="rpr-ttd-col">
+      <div>Orang Tua/Wali</div>
+      <div class="rpr-ttd-space"></div>
+      <div class="rpr-ttd-name">(………………………………)</div>
+    </div>
+    <div class="rpr-ttd-col">
+      <div>Kepala Sekolah,</div>
+      <div class="rpr-ttd-space"></div>
+      <div class="rpr-ttd-name">${d.kepsek||'—'}</div>
+      ${d.nbm_kepsek?`<div class="rpr-ttd-nbm">NBM. ${d.nbm_kepsek}</div>`:''}
+    </div>
+    <div class="rpr-ttd-col">
+      <div>Wali Kelas,</div>
+      <div class="rpr-ttd-space"></div>
+      <div class="rpr-ttd-name">${d.wali_kelas}</div>
+      ${d.nbm_wali?`<div class="rpr-ttd-nbm">NBM. ${d.nbm_wali}</div>`:''}
+    </div>
   </div>
 </div>`;
 
