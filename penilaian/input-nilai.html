@@ -1463,7 +1463,7 @@ function eksporTemplate() {
     + '_Kelas' + activeKelas + '_Sem' + sem + '_' + tahun + '.xlsx';
   XLSX.writeFile(wb, fileName);
 
-  showFloatStatus('✅ Template berhasil diunduh: ' + fileName);
+  showAlert('success', '✅ Template Diunduh', 'File ' + fileName + ' berhasil diunduh.');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1782,7 +1782,7 @@ async function eksekusiImport() {
     renderTPList();
     renderRekapBar();
 
-    showFloatStatus('✅ Import selesai: ' + saved + ' nilai berhasil disimpan');
+    // showAlert sudah dipanggil di bawah — tidak perlu float status
     showAlert('success', '✅ Import Berhasil',
       saved + ' nilai berhasil diimport untuk ' + toImport.length + ' siswa.');
 
