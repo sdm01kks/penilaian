@@ -432,6 +432,12 @@ function toggleChip(id_ekskul, id_siswa) {
   document.getElementById('chip-'+id_ekskul+'-'+id_siswa)?.classList.toggle('selected',next);
   const wrap = document.getElementById('desc-wrap-'+id_ekskul+'-'+id_siswa);
   if (wrap) wrap.style.display = next?'block':'none';
+  // Update save button to show there are unsaved changes
+  const btn = document.querySelector('#sectionEks .btn-primary');
+  if (btn) {
+    const cnt = Object.values(bufEks).filter(v=>v.diikuti===true).length;
+    btn.textContent = cnt > 0 ? '💾 Simpan Ekstrakurikuler (' + cnt + ' dipilih)' : '💾 Simpan Ekstrakurikuler';
+  }
 }
 
 async function simpanSatuKok(id_ekskul, nama) {
