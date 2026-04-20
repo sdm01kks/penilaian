@@ -706,7 +706,11 @@ function isiDropdownMapel() {
   const sel = document.getElementById('selMapel');
   let mapel = allMapel;
   if (currentUser.role === 'guru_mapel') {
-    mapel = allMapel.filter(m => m.id === currentUser.mapel);
+    const mapelDiampu = currentUser.mapelList || 
+      (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
+      mapel = allMapel.filter(m => mapelDiampu.includes(m.id));
+    }
   }
   sel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
     mapel.map(m => {
@@ -1144,7 +1148,13 @@ async function simpanTP(tpIdx) {
     const curSLM = buf.slm !== undefined ? buf.slm : (saved.slm ?? '');
     const curSAS = buf.sas !== undefined ? buf.sas : (saved.sas ?? '');
 
-    if (curSLM === '') return; // SLM kosong → tidak simpan
+    // Jika SLM dikosongkan dan sebelumnya ada nilai → tandai untuk dihapus
+    if (curSLM === '') {
+      if (saved.slm !== undefined && saved.slm !== '') {
+        toSave.push({ id_siswa: s.id, hapus: true });
+      }
+      return;
+    }
 
     const lvSLM  = tentukanLevel(curSLM, tp);
     const akhir  = hitungAkhirTP(curSLM, curSAS, tp);
@@ -1172,20 +1182,6 @@ async function simpanTP(tpIdx) {
     const rows = await SHEETS.read('NILAI!A:K');
 
     for (const item of toSave) {
-      const row = [
-        '',              // id — diisi di bawah
-        item.id_siswa,
-        tp.id_tp,
-        activeMapel.id,
-        activeKelas,
-        sem,
-        tahun,
-        item.slm,        // nilai_slm
-        item.sas,        // nilai_sas ('' jika tidak ada)
-        item.akhir_tp,   // nilai_akhir TP
-        item.level,      // level_kktp
-      ];
-
       // Cek apakah sudah ada baris ini
       const existIdx = rows.findIndex((r, ri) =>
         ri > 1 &&
@@ -1196,6 +1192,32 @@ async function simpanTP(tpIdx) {
         r[5] === sem &&
         r[6] === tahun
       );
+
+      // Handle hapus (nilai dikosongkan)
+      if (item.hapus) {
+        if (existIdx > 1) {
+          await SHEETS.write('NILAI!A' + (existIdx+1) + ':K' + (existIdx+1),
+            [Array(11).fill('')]);
+          rows[existIdx] = Array(11).fill('');
+        }
+        delete nilaiDB[item.id_siswa + '|' + tp.id_tp];
+        continue;
+      }
+
+      // Build row for new/update
+      const row = [
+        '',
+        item.id_siswa,
+        tp.id_tp,
+        activeMapel.id,
+        activeKelas,
+        sem,
+        tahun,
+        item.slm,
+        item.sas,
+        item.akhir_tp,
+        item.level,
+      ];
 
       if (existIdx > 1) {
         row[0] = rows[existIdx][0]; // pertahankan ID
