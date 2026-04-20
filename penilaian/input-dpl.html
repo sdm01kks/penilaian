@@ -694,6 +694,7 @@ function pilihDPL(id_dpl) {
 ════════════════════════════════════════════════════════ */
 function pilihLevel(id_dpl, id_siswa, level, btnEl) {
   const key = id_siswa + '|' + id_dpl;
+  // Always record in buffer, even level=0 (clearing), so simpanDPL knows to delete
   buffer[key] = level;
 
   // Update button states dalam row ini
@@ -747,13 +748,15 @@ async function simpanDPL(id_dpl) {
   // Kumpulkan yang perlu disimpan
   const toSave = [];
   allSiswa.forEach(s => {
-    const key = s.id + '|' + id_dpl;
-    if (buffer[key] === undefined) return;
-    const level = buffer[key];
-    if (level === 0) return; // tidak simpan "kosong"
+    const key      = s.id + '|' + id_dpl;
+    if (buffer[key] === undefined) return;   // tidak ada perubahan untuk siswa ini
+    const level    = buffer[key];
+    const wasInDB  = kokDB[key] && kokDB[key] > 0;  // sebelumnya ada nilai di DB
 
-    const desc = generateDesc(s.nama, dpl, level);
-    toSave.push({ id_siswa: s.id, level, desc });
+    if (level === 0 && !wasInDB) return;  // dikosongkan tapi memang belum ada → skip
+
+    const desc = level > 0 ? generateDesc(s.nama, dpl, level) : '';
+    toSave.push({ id_siswa: s.id, level, desc, hapus: level === 0 });
   });
 
   if (!toSave.length) {
@@ -783,15 +786,26 @@ async function simpanDPL(id_dpl) {
         ? rows[existIdx][0]
         : 'KOK' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
+      // Hapus (level dikosongkan ke 0): kosongkan baris di Sheets
+      if (item.hapus) {
+        if (existIdx > 1) {
+          await SHEETS.write('KOKURIKULER!A' + (existIdx+1) + ':H' + (existIdx+1),
+            [Array(8).fill('')]);
+          rows[existIdx] = Array(8).fill('');
+        }
+        delete kokDB[item.id_siswa + '|' + id_dpl];
+        continue;
+      }
+
       const row = [
         newId,
         item.id_siswa,
         activeKelas,
         id_dpl,
-        item.level,      // level_capaian (1-4)
+        item.level,
         sem,
         tahun,
-        item.desc,       // deskripsi_auto
+        item.desc,
       ];
 
       if (existIdx > 1) {
