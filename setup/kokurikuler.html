@@ -368,6 +368,20 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:#f4f6f4; color:var
     </div>
   </div>
 
+  <!-- Tingkatan selector -->
+  <div style="background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <label style="font-size:12px;font-weight:700;color:var(--ink-mid);">Tingkatan Kelas</label>
+    <select id="selTingkatanDPL" onchange="gantiTingkatanDPL()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;">
+      <option value="1">Kelas 1</option>
+      <option value="2">Kelas 2</option>
+      <option value="3">Kelas 3</option>
+      <option value="4" selected>Kelas 4</option>
+      <option value="5">Kelas 5</option>
+      <option value="6">Kelas 6</option>
+    </select>
+    <span id="dplTingkatanInfo" style="font-size:12px;color:var(--ink-muted);">KKTP berlaku untuk tingkatan yang dipilih</span>
+  </div>
+
   <!-- 8 DPL cards -->
   <div class="section-title">B. KKTP per Dimensi Profil Lulusan</div>
   <div class="dpl-grid" id="dplGrid">
@@ -660,7 +674,53 @@ function bukaCard(id) {
 }
 
 /* ── Simpan KKTP satu DPL ─────────────────────────────── */
+function gantiTingkatanDPL() {
+  const t = document.getElementById('selTingkatanDPL')?.value || '1';
+  document.getElementById('dplTingkatanInfo').textContent =
+    'KKTP untuk Kelas ' + t + ' — klik Simpan setelah mengisi';
+  // Re-load existing KKTP for this tingkatan
+  muatKKTPTingkatan(t);
+}
+
+async function muatKKTPTingkatan(tingkatan) {
+  try {
+    showFloatMsg('Memuat KKTP tingkatan ' + tingkatan + '…');
+    const rows = await SHEETS.read('DPL!A:O');
+    DPL_DATA.forEach(d => {
+      const row = rows.slice(2).find(r =>
+        r[0] === d.id && String(r[14]||'').replace(/[^0-9]/g,'') === tingkatan
+      );
+      if (!row) {
+        // Clear fields to empty for this tingkatan
+        [0,1,2,3].forEach(li => {
+          const def = li===0?[0,60]:li===1?[61,75]:li===2?[76,85]:[86,100];
+          const minEl  = document.getElementById(`dpl-min-${d.id}-${li}`);
+          const maksEl = document.getElementById(`dpl-maks-${d.id}-${li}`);
+          const descEl = document.getElementById(`dpl-desc-${d.id}-${li}`);
+          if (minEl)  minEl.value  = def[0];
+          if (maksEl) maksEl.value = def[1];
+          if (descEl) descEl.value = '';
+        });
+      } else {
+        [0,1,2,3].forEach(li => {
+          const base = 2 + li*3;
+          const minEl  = document.getElementById(`dpl-min-${d.id}-${li}`);
+          const maksEl = document.getElementById(`dpl-maks-${d.id}-${li}`);
+          const descEl = document.getElementById(`dpl-desc-${d.id}-${li}`);
+          if (minEl)  minEl.value  = row[base]   || 0;
+          if (maksEl) maksEl.value = row[base+1] || 100;
+          if (descEl) descEl.value = row[base+2] || '';
+        });
+      }
+    });
+    showFloatMsg('✅ KKTP Kelas ' + tingkatan + ' dimuat');
+  } catch(e) {
+    console.error(e);
+  }
+}
+
 async function simpanDPL(id) {
+  const tingkatan = document.getElementById('selTingkatanDPL')?.value || '1';
   const level = [0,1,2,3].map(li => ({
     min:       parseInt(document.getElementById(`dpl-min-${id}-${li}`)?.value) || 0,
     maks:      parseInt(document.getElementById(`dpl-max-${id}-${li}`)?.value) || 0,
@@ -670,8 +730,12 @@ async function simpanDPL(id) {
   showLoading('Menyimpan KKTP ' + id + '…');
   try {
     // Cari baris DPL di sheet
-    const rows = await SHEETS.read('DPL!A:N');
-    const idx  = rows.findIndex(r => r[0] === id);
+    const tingkatanRows = await SHEETS.read('DPL!A:O');
+    // Find existing row: match id AND tingkatan (so each tingkatan has its own row)
+    const idx  = tingkatanRows.findIndex((r, ri) =>
+      ri > 1 && r[0] === id && String(r[14]||'').replace(/[^0-9]/g,'') === tingkatan
+    );
+    const rows = tingkatanRows;;
 
     const row = [
       id,
@@ -680,12 +744,13 @@ async function simpanDPL(id) {
       level[1].min, level[1].maks, level[1].deskripsi,
       level[2].min, level[2].maks, level[2].deskripsi,
       level[3].min, level[3].maks, level[3].deskripsi,
+      tingkatan,   // col O: tingkatan kelas (1-6)
     ];
 
     if (idx > 0) {
-      await SHEETS.write(`DPL!A${idx+1}:N${idx+1}`, [row]);
+      await SHEETS.write(`DPL!A${idx+1}:O${idx+1}`, [row]);
     } else {
-      await SHEETS.append('DPL', [row]);
+      await SHEETS.append('DPL!A:O', [row]);
     }
 
     // Update badge
