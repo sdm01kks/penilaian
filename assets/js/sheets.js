@@ -237,6 +237,13 @@ const SHEETS = (() => {
     }
 
     const stripNum = (v) => String(v || '').replace(/^'+/, '').trim();  // hapus prefix apostrof
+
+    // Deduplikasi: jika ada ID yang sama (akibat race condition lama),
+    // ambil baris TERAKHIR (yang paling baru) untuk setiap ID
+    const seenIds = new Map();
+    siswa.forEach((r, i) => { if (r[0]) seenIds.set(r[0], r); });
+    siswa = [...seenIds.values()];
+
     return siswa.map(r => ({
       id:              r[0]  || '',
       nama:            r[1]  || '',
@@ -403,20 +410,30 @@ const SHEETS = (() => {
   /**
    * Ambil data 8 DPL dari sheet DPL.
    */
-  async function getDPL() {
-    const rows = await read('DPL!A:N');
-    return rows.slice(2)
-      .filter(r => r[0] && r[1] && r[0] !== 'id_dpl')
-      .map(r => ({
-        id:    r[0] || '',
-        nama:  r[1] || '',
-        level: [
-          { min: parseInt(r[2])||0,  maks: parseInt(r[3])||60, deskripsi: r[4]||'' },
-          { min: parseInt(r[5])||61, maks: parseInt(r[6])||75, deskripsi: r[7]||'' },
-          { min: parseInt(r[8])||76, maks: parseInt(r[9])||85, deskripsi: r[10]||'' },
-          { min: parseInt(r[11])||86,maks: parseInt(r[12])||100,deskripsi: r[13]||'' },
-        ],
-      }));
+  async function getDPL({ tingkatan } = {}) {
+    const rows = await read('DPL!A:O');
+    let data = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_dpl');
+
+    // Col O (index 14) = tingkatan. Kosong = berlaku semua (backward compat)
+    if (tingkatan) {
+      const t = String(tingkatan).replace(/[^0-9]/g, '');
+      data = data.filter(r => {
+        const rowT = String(r[14] || '').replace(/[^0-9]/g, '');
+        return rowT === '' || rowT === t;
+      });
+    }
+
+    return data.map(r => ({
+      id:        r[0] || '',
+      nama:      r[1] || '',
+      tingkatan: r[14] || '',
+      level: [
+        { min: parseInt(r[2])||0,   maks: parseInt(r[3])||60,  deskripsi: r[4]||'' },
+        { min: parseInt(r[5])||61,  maks: parseInt(r[6])||75,  deskripsi: r[7]||'' },
+        { min: parseInt(r[8])||76,  maks: parseInt(r[9])||85,  deskripsi: r[10]||'' },
+        { min: parseInt(r[11])||86, maks: parseInt(r[12])||100, deskripsi: r[13]||'' },
+      ],
+    }));
   }
 
   /**
@@ -609,15 +626,10 @@ const SHEETS = (() => {
    * @param {string} prefix - Misal 'S' → S001, S002, ...
    */
   async function _generateId(sheetName, prefix) {
-    try {
-      const rows  = await read(`${sheetName}!A:A`);
-      const count = rows.slice(2).filter(r => r[0] && !r[0].startsWith('id_')).length;
-      const num   = String(count + 1).padStart(3, '0');
-      return `${prefix}${num}`;
-    } catch (_) {
-      // Fallback: gunakan timestamp
-      return `${prefix}${Date.now()}`;
-    }
+    // Gunakan timestamp + random agar tidak ada duplikasi saat import massal
+    const ts  = Date.now().toString(36);
+    const rnd = Math.random().toString(36).slice(2, 6);
+    return `${prefix}${ts}${rnd}`;
   }
 
   /* ── Expose publik API ───────────────────────────────── */
