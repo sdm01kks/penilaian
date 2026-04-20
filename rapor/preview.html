@@ -884,35 +884,33 @@ function buildBodyPrint(d) {
   // Section D Absensi + Catatan + Tanggapan
   html += `<div class="rpr-section">
 <div class="rpr-section-title">D. Ketidakhadiran</div>
-<table style="width:100%;border-collapse:collapse;margin-top:4pt">
-  <tr style="vertical-align:top">
-    <td style="width:1%;padding:0;padding-right:10pt;white-space:nowrap">
-      <table style="border-collapse:collapse;font-size:10.5pt;">
-        <tr>
-          <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none;min-width:95pt">Sakit</td>
-          <td style="padding:3pt 5pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
-          <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.sakit}&nbsp;hari</td>
-        </tr>
-        <tr>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none">Izin</td>
-          <td style="padding:3pt 5pt;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.izin}&nbsp;hari</td>
-        </tr>
-        <tr>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:1pt solid #000;border-right:none">Tanpa Keterangan</td>
-          <td style="padding:3pt 5pt;border-bottom:1pt solid #000;border-left:none;border-right:none">:</td>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.tk}&nbsp;hari</td>
-        </tr>
-      </table>
-    </td>
-    <td style="padding:0;width:100%">
-      <div style="border:1pt solid #000;min-height:60pt">
-        <div style="padding:3pt 7pt;border-bottom:1pt solid #000;font-weight:bold;font-size:10pt;text-align:center">Catatan Wali</div>
-        <div style="padding:6pt 8pt;font-size:10.5pt;line-height:1.6;min-height:48pt">${d.absensi.catatan||''}</div>
-      </div>
-    </td>
-  </tr>
-</table>
+<div style="display:flex;gap:10pt;align-items:flex-start;margin-top:4pt;">
+  <!-- Tabel absensi: flex-shrink:0 agar tidak melebar -->
+  <div style="flex-shrink:0;">
+    <table style="border-collapse:collapse;font-size:10.5pt;border:none;">
+      <tr>
+        <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none;min-width:90pt">Sakit</td>
+        <td style="padding:3pt 5pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
+        <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.sakit}&nbsp;hari</td>
+      </tr>
+      <tr>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none">Izin</td>
+        <td style="padding:3pt 5pt;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.izin}&nbsp;hari</td>
+      </tr>
+      <tr>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:1pt solid #000;border-right:none">Tanpa Keterangan</td>
+        <td style="padding:3pt 5pt;border-bottom:1pt solid #000;border-left:none;border-right:none">:</td>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.tk}&nbsp;hari</td>
+      </tr>
+    </table>
+  </div>
+  <!-- Catatan Wali: flex:1 mengisi sisa lebar -->
+  <div style="flex:1;border:1pt solid #000;min-height:60pt;">
+    <div style="padding:3pt 7pt;border-bottom:1pt solid #000;font-weight:bold;font-size:10pt;text-align:center;">Catatan Wali</div>
+    <div style="padding:6pt 8pt;font-size:10.5pt;line-height:1.6;min-height:48pt;">${d.absensi.catatan||''}</div>
+  </div>
+</div>
 <div class="tanggapan-box">
   <div class="tanggapan-header">Tanggapan Orang Tua/Wali Murid</div>
   <div class="tanggapan-body"></div>
