@@ -436,11 +436,11 @@ window.addEventListener('load', async () => {
 
   showLoading('Memuat konfigurasi…');
   try {
-    [config, allKelas, allDPL] = await Promise.all([
+    [config, allKelas] = await Promise.all([
       SHEETS.getConfig(),
       SHEETS.getKelas(),
-      SHEETS.getDPL(),
     ]);
+    // allDPL loaded per tingkatan after kelas is selected
 
     const sem = config['semester_aktif'] || '?';
     const tp  = config['tahun_pelajaran'] || '?';
@@ -504,8 +504,10 @@ async function gantiKelas() {
     const sem = config['semester_aktif'] || '';
     const tp  = config['tahun_pelajaran'] || '';
 
-    [allSiswa] = await Promise.all([
+    const tingkatan = activeKelas.replace(/[^0-9]/g, '');
+    [allSiswa, allDPL] = await Promise.all([
       SHEETS.getSiswa(activeKelas),
+      SHEETS.getDPL({ tingkatan }),
     ]);
 
     // Muat data kokurikuler yang sudah ada
