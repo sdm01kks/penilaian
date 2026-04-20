@@ -468,15 +468,26 @@ async function simpanSemuaEkskul() {
   const all   = [];
   eks.forEach(e => {
     allSiswa.forEach(s => {
-      const key  = s.id+'|'+e.id;
-      const dik  = bufEks[key]?.diikuti ?? (ekskulDB[key]?.diikuti||false);
+      const key     = s.id+'|'+e.id;
+      const bufVal  = bufEks[key];
+      const dbVal   = ekskulDB[key];
+
+      // Tentukan status akhir diikuti
+      const dik = bufVal !== undefined ? bufVal.diikuti : (dbVal?.diikuti || false);
+
+      // Simpan jika:
+      // 1. Diikuti (dik === true) — tambah/perbarui, atau
+      // 2. Sebelumnya diikuti di DB tapi sekarang di-uncheck (dik === false) — hapus (set '0')
+      const perluDisimpan = dik || (bufVal !== undefined && !dik && dbVal?.diikuti);
+      if (!perluDisimpan) return;
+
       const desc = document.getElementById('eks-desc-'+e.id+'-'+s.id)?.value.trim()
-                || bufEks[key]?.deskripsi
-                || ekskulDB[key]?.deskripsi||'';
-      if (dik) all.push({ id_siswa:s.id, id_ekskul:e.id, diikuti:true, deskripsi:desc });
+                || bufVal?.deskripsi
+                || dbVal?.deskripsi || '';
+      all.push({ id_siswa:s.id, id_ekskul:e.id, diikuti:dik, deskripsi:desc });
     });
   });
-  if (!all.length) { showStatusEks('eks','Belum ada kegiatan yang dipilih.'); return; }
+  if (!all.length) { showStatusEks('eks','Tidak ada perubahan yang perlu disimpan.'); return; }
 
   const btn = document.querySelector('#sectionEks .btn-primary');
   if (btn) { btn.disabled=true; btn.textContent='⏳'; }
@@ -486,8 +497,15 @@ async function simpanSemuaEkskul() {
     for (const item of all) {
       await simpanBaris(rows,item.id_siswa,item.id_ekskul,true,item.deskripsi,sem,tahun);
     }
-    showStatusEks('eks','✅ '+all.length+' data tersimpan');
+    showStatusEks('eks','✅ Tersimpan');
+    // Update ekskulDB lokal agar chip state konsisten
+    all.forEach(item => {
+      const key = item.id_siswa+'|'+item.id_ekskul;
+      ekskulDB[key] = { diikuti: item.diikuti, deskripsi: item.deskripsi };
+    });
     bufEks = {};
+    // Re-render ekskul agar chip yang di-uncheck benar-benar hilang
+    renderEkstrakurikuler();
   } catch(e) { showAlert('error','⛔ Gagal',e.message); }
   finally {
     if (btn) { btn.disabled=false; btn.textContent='💾 Simpan Ekstrakurikuler'; }
