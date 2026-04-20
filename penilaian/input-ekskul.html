@@ -495,7 +495,7 @@ async function simpanSemuaEkskul() {
   try {
     const rows = await SHEETS.read('EKSKUL_SISWA!A:H');
     for (const item of all) {
-      await simpanBaris(rows,item.id_siswa,item.id_ekskul,true,item.deskripsi,sem,tahun);
+      await simpanBaris(rows,item.id_siswa,item.id_ekskul,item.diikuti,item.deskripsi,sem,tahun);
     }
     showStatusEks('eks','✅ Tersimpan');
     // Update ekskulDB lokal agar chip state konsisten
