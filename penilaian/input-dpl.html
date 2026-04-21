@@ -513,17 +513,22 @@ async function gantiKelas() {
     // Muat data kokurikuler yang sudah ada
     const kokRaw = await SHEETS.read('KOKURIKULER!A:H');
     kokDB = {};
+    // Last-write-wins: baca semua baris (semua semester), 
+    // baris terakhir untuk setiap key menentukan nilai akhir.
+    // Level=0 = dihapus → kunci dihapus dari kokDB.
     kokRaw.slice(2).forEach(r => {
       if (!r[0] || r[0] === 'id_kok') return;
       if (r[2] !== activeKelas) return;
-      if (r[5] !== sem || r[6] !== tp) return;
+      // Tidak filter semester: agar bisa membaca level=0 (penanda hapus) dari manapun
       const key = (r[1]||'') + '|' + (r[3]||'');
-      const lv = parseInt(r[4]) || 0;
+      const lv  = parseInt(r[4]) || 0;
       if (lv > 0) {
-        kokDB[key] = lv; // hanya simpan level yang valid (1-4)
+        kokDB[key] = lv;   // nilai valid: simpan (overwrite jika ada entry lebih lama)
+      } else if (lv === 0 && r[0]) {
+        delete kokDB[key]; // level 0 = dihapus: pastikan tidak ada di kokDB
       }
-      // level=0 = dihapus → tidak masuk kokDB → tampil sebagai '—'
     });
+    // Filter akhir: kokDB sekarang hanya berisi nilai yang valid untuk kelas ini
 
     if (!allSiswa.length) {
       showAlert('warning','Data Siswa Kosong',
@@ -753,11 +758,11 @@ async function simpanDPL(id_dpl) {
   const toSave = [];
   allSiswa.forEach(s => {
     const key      = s.id + '|' + id_dpl;
-    if (buffer[key] === undefined) return;   // tidak ada perubahan untuk siswa ini
+    if (buffer[key] === undefined) return;
     const level    = buffer[key];
-    const wasInDB  = kokDB[key] && kokDB[key] > 0;  // sebelumnya ada nilai di DB
+    const wasInDB  = kokDB[key] && kokDB[key] > 0;
 
-    if (level === 0 && !wasInDB) return;  // dikosongkan tapi memang belum ada → skip
+    if (level === 0 && !wasInDB) return;  // belum ada nilai, tidak perlu dihapus
 
     const desc = level > 0 ? generateDesc(s.nama, dpl, level) : '';
     toSave.push({ id_siswa: s.id, level, desc, hapus: level === 0 });
@@ -776,32 +781,30 @@ async function simpanDPL(id_dpl) {
     const rows = await SHEETS.read('KOKURIKULER!A:H');
 
     for (const item of toSave) {
-      // Cek apakah sudah ada baris untuk siswa+DPL+semester ini
-      const existIdx = rows.findIndex((r, ri) =>
-        ri > 1 &&
-        r[1] === item.id_siswa &&
-        r[3] === id_dpl &&
-        r[2] === activeKelas &&
-        r[5] === sem &&
-        r[6] === tahun
-      );
+      // Cari baris: untuk simpan baru → filter sem+tahun
+      //             untuk hapus     → TANPA filter sem+tahun (agar bisa hapus data lama)
+      const existIdx = item.hapus
+        ? rows.findIndex((r, ri) =>
+            ri > 1 && r[1] === item.id_siswa && r[3] === id_dpl && r[2] === activeKelas
+            && r[0] && r[0] !== 'id_kok')  // hapus: cari row apapun yang cocok
+        : rows.findIndex((r, ri) =>
+            ri > 1 && r[1] === item.id_siswa && r[3] === id_dpl && r[2] === activeKelas
+            && r[5] === sem && r[6] === tahun);  // simpan baru: harus semester yang sama
 
       const newId = existIdx > 1
         ? rows[existIdx][0]
         : 'KOK' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
-      // Hapus (level dikosongkan ke 0): tulis level=0 sebagai penanda dihapus
+      // Hapus: kosongkan baris di Sheets dengan level=0
       if (item.hapus) {
         if (existIdx > 1) {
-          // Update baris yang ada: set level_capaian ke 0
           const clearRow = [
             rows[existIdx][0], item.id_siswa, activeKelas, id_dpl,
-            0, sem, tahun, '',
+            0, rows[existIdx][5] || sem, rows[existIdx][6] || tahun, '',
           ];
           await SHEETS.write('KOKURIKULER!A' + (existIdx+1) + ':H' + (existIdx+1), [clearRow]);
           rows[existIdx] = clearRow;
         }
-        // Hapus dari kokDB lokal agar UI menampilkan '—'
         delete kokDB[item.id_siswa + '|' + id_dpl];
         continue;
       }
