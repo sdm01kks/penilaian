@@ -493,6 +493,9 @@ window.addEventListener('load', async () => {
     renderDPLSelector();
     renderDPLCards();
     hideLoading();
+    // Auto-load KKTP untuk tingkatan yang sedang dipilih di dropdown
+    const tingkatanAwal = document.getElementById('selTingkatanDPL')?.value || '1';
+    muatKKTPTingkatan(tingkatanAwal);
   } catch(e) {
     showAlert('error','⛔ Gagal memuat data', e.message);
     hideLoading();
@@ -684,7 +687,7 @@ function gantiTingkatanDPL() {
 
 async function muatKKTPTingkatan(tingkatan) {
   try {
-    showFloatMsg('Memuat KKTP tingkatan ' + tingkatan + '…');
+    showFloatStatus('Memuat KKTP tingkatan ' + tingkatan + '…');
     const rows = await SHEETS.read('DPL!A:O');
     DPL_DATA.forEach(d => {
       const row = rows.slice(2).find(r =>
@@ -695,7 +698,7 @@ async function muatKKTPTingkatan(tingkatan) {
         [0,1,2,3].forEach(li => {
           const def = li===0?[0,60]:li===1?[61,75]:li===2?[76,85]:[86,100];
           const minEl  = document.getElementById(`dpl-min-${d.id}-${li}`);
-          const maksEl = document.getElementById(`dpl-maks-${d.id}-${li}`);
+          const maksEl = document.getElementById(`dpl-max-${d.id}-${li}`);
           const descEl = document.getElementById(`dpl-desc-${d.id}-${li}`);
           if (minEl)  minEl.value  = def[0];
           if (maksEl) maksEl.value = def[1];
@@ -705,7 +708,7 @@ async function muatKKTPTingkatan(tingkatan) {
         [0,1,2,3].forEach(li => {
           const base = 2 + li*3;
           const minEl  = document.getElementById(`dpl-min-${d.id}-${li}`);
-          const maksEl = document.getElementById(`dpl-maks-${d.id}-${li}`);
+          const maksEl = document.getElementById(`dpl-max-${d.id}-${li}`);
           const descEl = document.getElementById(`dpl-desc-${d.id}-${li}`);
           if (minEl)  minEl.value  = row[base]   || 0;
           if (maksEl) maksEl.value = row[base+1] || 100;
@@ -713,7 +716,7 @@ async function muatKKTPTingkatan(tingkatan) {
         });
       }
     });
-    showFloatMsg('✅ KKTP Kelas ' + tingkatan + ' dimuat');
+    showFloatStatus('✅ KKTP Kelas ' + tingkatan + ' dimuat');
   } catch(e) {
     console.error(e);
   }
