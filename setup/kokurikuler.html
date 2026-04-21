@@ -731,10 +731,14 @@ async function simpanDPL(id) {
   try {
     // Cari baris DPL di sheet
     const tingkatanRows = await SHEETS.read('DPL!A:O');
-    // Find existing row: match id AND tingkatan (so each tingkatan has its own row)
-    const idx  = tingkatanRows.findIndex((r, ri) =>
-      ri > 1 && r[0] === id && String(r[14]||'').replace(/[^0-9]/g,'') === tingkatan
-    );
+    // Find existing row: EXACT match on id AND tingkatan
+    // Do NOT match empty tingkatan rows (those are legacy/global, don't overwrite them)
+    const idx  = tingkatanRows.findIndex((r, ri) => {
+      if (ri < 2) return false;
+      const rowId = r[0] || '';
+      const rowT  = String(r[14] || '').replace(/[^0-9]/g, '');
+      return rowId === id && rowT === tingkatan;  // exact match only
+    });
     const rows = tingkatanRows;;
 
     const row = [
