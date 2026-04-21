@@ -632,7 +632,62 @@ const SHEETS = (() => {
     return `${prefix}${ts}${rnd}`;
   }
 
-  /* ── Expose publik API ───────────────────────────────── */
+  /**
+   * Ambil data setoran Tahsin-Tahfizh dari sheet SETORAN_TT.
+   * @param {{ kelas, semester, tahun, id_siswa }} filter
+   */
+  async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
+    const rows = await read('SETORAN_TT!A:L');
+    let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id');
+
+    if (kelas)    data = data.filter(r => r[2] === kelas);
+    if (semester) data = data.filter(r => r[3] === semester);
+    if (tahun)    data = data.filter(r => r[4] === tahun);
+    if (id_siswa) data = data.filter(r => r[1] === id_siswa);
+
+    return data.map(r => ({
+      id:              r[0]  || '',
+      id_siswa:        r[1]  || '',
+      kelas:           r[2]  || '',
+      semester:        r[3]  || '',
+      tahun_pelajaran: r[4]  || '',
+      tanggal:         r[5]  || '',
+      jenis:           r[6]  || '',   // 'iqro' | 'quran'
+      materi:          r[7]  || '',   // key segmen e.g. "114-1-6"
+      materi_label:    r[8]  || '',   // label tampilan
+      nilai_tahsin:    parseInt(r[9])  || 0,
+      status_hafalan:  r[10] || '',   // 'lulus' | 'ulang'
+      catatan:         r[11] || '',
+    }));
+  }
+
+  /**
+   * Simpan satu setoran Tahsin-Tahfizh baru ke sheet SETORAN_TT.
+   * @param {Object} setoran
+   * @returns {string} id yang dihasilkan
+   */
+  async function saveSetoranTT(setoran) {
+    const id  = 'ST' + Date.now().toString(36).toUpperCase()
+                     + Math.random().toString(36).slice(2,5).toUpperCase();
+    const row = [
+      id,
+      setoran.id_siswa        || '',
+      setoran.kelas           || '',
+      setoran.semester        || '',
+      setoran.tahun_pelajaran || '',
+      setoran.tanggal         || new Date().toLocaleDateString('id-ID'),
+      setoran.jenis           || 'quran',
+      setoran.materi          || '',
+      setoran.materi_label    || '',
+      setoran.nilai_tahsin    ?? '',
+      setoran.status_hafalan  || '',
+      setoran.catatan         || '',
+    ];
+    await append('SETORAN_TT', [row]);
+    return id;
+  }
+
+  // ── Expose publik API ───────────────────────────────── 
   return {
     // CRUD dasar
     read,
@@ -656,6 +711,8 @@ const SHEETS = (() => {
     saveNilai,
     getEkskul,
     getAbsensi,
+    getSetoranTT,
+    saveSetoranTT,
 
     // Kalkulasi
     hitungNilaiAkhir,
