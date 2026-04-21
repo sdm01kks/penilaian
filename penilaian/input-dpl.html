@@ -518,7 +518,11 @@ async function gantiKelas() {
       if (r[2] !== activeKelas) return;
       if (r[5] !== sem || r[6] !== tp) return;
       const key = (r[1]||'') + '|' + (r[3]||'');
-      kokDB[key] = parseInt(r[4]) || 0; // level_capaian (1-4, simpan sebagai 1-based)
+      const lv = parseInt(r[4]) || 0;
+      if (lv > 0) {
+        kokDB[key] = lv; // hanya simpan level yang valid (1-4)
+      }
+      // level=0 = dihapus → tidak masuk kokDB → tampil sebagai '—'
     });
 
     if (!allSiswa.length) {
@@ -786,13 +790,18 @@ async function simpanDPL(id_dpl) {
         ? rows[existIdx][0]
         : 'KOK' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
-      // Hapus (level dikosongkan ke 0): kosongkan baris di Sheets
+      // Hapus (level dikosongkan ke 0): tulis level=0 sebagai penanda dihapus
       if (item.hapus) {
         if (existIdx > 1) {
-          await SHEETS.write('KOKURIKULER!A' + (existIdx+1) + ':H' + (existIdx+1),
-            [Array(8).fill('')]);
-          rows[existIdx] = Array(8).fill('');
+          // Update baris yang ada: set level_capaian ke 0
+          const clearRow = [
+            rows[existIdx][0], item.id_siswa, activeKelas, id_dpl,
+            0, sem, tahun, '',
+          ];
+          await SHEETS.write('KOKURIKULER!A' + (existIdx+1) + ':H' + (existIdx+1), [clearRow]);
+          rows[existIdx] = clearRow;
         }
+        // Hapus dari kokDB lokal agar UI menampilkan '—'
         delete kokDB[item.id_siswa + '|' + id_dpl];
         continue;
       }
