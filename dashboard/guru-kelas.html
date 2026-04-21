@@ -386,11 +386,14 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
-let currentUser = null;
-let allSiswa    = [];
-let allNilai    = [];
-let allMapel    = [];
-let config      = {};
+let currentUser  = null;
+let allSiswa     = [];
+let allNilai     = [];
+let allNilaiSem  = [];
+let allMapel     = [];
+let allTP        = [];
+let activeKelas  = '';
+let config       = {};
 
 window.addEventListener('load', async () => {
   AUTH.init();
@@ -413,19 +416,39 @@ window.addEventListener('load', async () => {
 });
 
 async function loadAll() {
-  const kelas = currentUser.kelas;
+  // Support multiple kelas (comma-separated)
+  const kelasList = (currentUser.kelasList && currentUser.kelasList.length)
+    ? currentUser.kelasList
+    : (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()).filter(Boolean) : []);
+  const kelas = kelasList[0] || currentUser.kelas || '';
+  activeKelas = kelas;
 
-  [config, allMapel, allSiswa, allNilai] = await Promise.all([
+  [config, allMapel, allSiswa, allNilai, allTP] = await Promise.all([
     SHEETS.getConfig(),
     SHEETS.getMapel(),
     SHEETS.getSiswa(kelas),
-    SHEETS.getNilai({ kelas, semester: null }),
+    SHEETS.getNilai({ kelas }),
+    SHEETS.getTPKKTP({ kelas }),
   ]);
 
-  const sem = config['semester_aktif'] || '?';
-  const tp  = config['tahun_pelajaran'] || '?';
+  const sem   = config['semester_aktif'] || '?';
+  const tahun = config['tahun_pelajaran'] || '?';
+
+  // Filter nilai by current semester
+  const nilaiSem = allNilai.filter(n =>
+    n.semester === (config['semester_aktif']||'') &&
+    n.tahun    === (config['tahun_pelajaran']||'')
+  );
+  allNilaiSem = nilaiSem;
+
   document.getElementById('kelasBadge').textContent =
-    `📚 Kelas ${kelas} · Semester ${sem} · TP ${tp}`;
+    kelasList.length > 1
+      ? `📚 ${kelasList.map(k=>'Kelas '+k).join(' & ')} · Semester ${sem} · TP ${tahun}`
+      : `📚 Kelas ${kelas} · Semester ${sem} · TP ${tahun}`;
+
+  // Kelas selector if multiple kelas
+  if (kelasList.length > 1) renderKelasSelector(kelasList, kelas);
+
   document.getElementById('tableSiswaTitle').textContent =
     `Siswa Kelas ${kelas} (${allSiswa.length} siswa)`;
 
@@ -433,61 +456,132 @@ async function loadAll() {
   renderMapelGrid();
   renderSiswaTable(allSiswa);
 
-  // Cek kelengkapan data
   if (allSiswa.length === 0) {
     showAlert('warning', '⚠️ Data siswa belum tersedia',
       'Data siswa kelas ini belum diinput oleh admin. Hubungi Wakasek Kurikulum.');
   }
 }
 
+function renderKelasSelector(kelasList, activeK) {
+  const badge = document.getElementById('kelasBadge');
+  const extra = document.createElement('div');
+  extra.style.cssText = 'display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;';
+  kelasList.forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm ' + (k===activeK?'btn-primary':'btn-secondary');
+    btn.textContent = 'Kelas ' + k;
+    btn.onclick = () => gantiKelas(k);
+    extra.appendChild(btn);
+  });
+  badge.parentNode?.insertBefore(extra, badge.nextSibling);
+}
+
+async function gantiKelas(kelas) {
+  activeKelas = kelas;
+  showLoading('Memuat kelas ' + kelas + '…');
+  try {
+    [allSiswa, allNilai, allTP] = await Promise.all([
+      SHEETS.getSiswa(kelas),
+      SHEETS.getNilai({ kelas }),
+      SHEETS.getTPKKTP({ kelas }),
+    ]);
+    allNilaiSem = allNilai.filter(n =>
+      n.semester === (config['semester_aktif']||'') &&
+      n.tahun    === (config['tahun_pelajaran']||'')
+    );
+    document.getElementById('tableSiswaTitle').textContent =
+      `Siswa Kelas ${kelas} (${allSiswa.length} siswa)`;
+    renderStats();
+    renderMapelGrid();
+    renderSiswaTable(allSiswa);
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+}
+
 function renderStats() {
-  const mapelCount  = allMapel.length;
-  const nilaiCount  = allNilai.length;
-  // Hitung mapel yang sudah ada nilainya
-  const mapelDone   = allMapel.filter(m =>
-    allNilai.some(n => n.id_mapel === m.id)
+  // Hanya mapel yang memiliki TP untuk kelas ini
+  const mapelAktif  = allMapel.filter(m => allTP.some(tp => tp.id_mapel === m.id));
+  const mapelCount  = mapelAktif.length;
+
+  // Nilai semester aktif
+  const nilaiCount  = allNilaiSem.length;
+  const mapelDone   = mapelAktif.filter(m =>
+    allNilaiSem.some(n => n.id_mapel === m.id)
   ).length;
 
-  document.getElementById('statSiswa').textContent   = allSiswa.length || '0';
-  document.getElementById('statSelesai').textContent  = mapelDone;
-  document.getElementById('statNilai').textContent    = nilaiCount;
-  document.getElementById('statBelum').textContent    = mapelCount - mapelDone;
+  // Persentase kelengkapan: siswa × mapel = total TP yang harus ada
+  const totalTP     = allTP.length;
+  const nilaiTP     = new Set(allNilaiSem.map(n => n.id_siswa + '|' + n.id_tp)).size;
+  const pctLen      = totalTP > 0 ? Math.round(nilaiTP / (allSiswa.length * totalTP) * 100) : 0;
+
+  document.getElementById('statSiswa').textContent    = allSiswa.length || '0';
+  document.getElementById('statSelesai').textContent  = mapelDone + '/' + mapelCount;
+  document.getElementById('statNilai').textContent    = nilaiTP + '/' + (allSiswa.length * totalTP);
+  document.getElementById('statBelum').textContent    = (mapelCount - mapelDone);
+
+  // Progress bar jika ada
+  const pb = document.getElementById('progressBar');
+  if (pb) pb.style.width = pctLen + '%';
+  const pbt = document.getElementById('progressText');
+  if (pbt) pbt.textContent = pctLen + '% nilai terisi';
 
   // Badge sidebar
   const badge = document.getElementById('badgeNilai');
-  if (mapelDone >= mapelCount) {
-    badge.textContent = '✓';
-    badge.className   = 'nav-badge';
+  if (badge) {
+    if (mapelDone >= mapelCount && mapelCount > 0) {
+      badge.textContent = '✓'; badge.className = 'nav-badge done';
+    } else if (mapelDone > 0) {
+      badge.textContent = mapelDone; badge.className = 'nav-badge partial';
+    }
   }
 }
 
 function renderMapelGrid() {
   const grid = document.getElementById('mapelGrid');
   grid.innerHTML = '';
-  const seni = config['semester_aktif'] === 'I'
+  const sem  = config['semester_aktif'] || '';
+  const seni = sem === 'I'
     ? config['seni_semester_ganjil']
     : config['seni_semester_genap'];
 
-  allMapel.forEach(m => {
-    // Skip seni yang tidak aktif semester ini
-    if (m.nama === 'Seni Budaya') {
-      // tampilkan dengan label seni aktif
-    }
-    const adaNilai = allNilai.some(n => n.id_mapel === m.id);
-    const status   = adaNilai ? 'done' : 'empty';
-    const icon     = adaNilai ? '✅' : '🔴';
-    const desc     = adaNilai
-      ? `${allNilai.filter(n => n.id_mapel === m.id).length} entri nilai`
-      : 'Belum ada nilai';
+  // Hanya tampilkan mapel yang sudah ada TP-nya untuk kelas ini
+  const mapelAktif = allMapel.filter(m => allTP.some(tp => tp.id_mapel === m.id));
+
+  if (!mapelAktif.length) {
+    grid.innerHTML = '<div style="padding:20px;color:var(--ink-muted);font-size:13px;">' +
+      '⚠️ Belum ada TP yang dibuat untuk kelas ini. Setup TP/KKTP terlebih dahulu.</div>';
+    return;
+  }
+
+  mapelAktif.forEach(m => {
+    const namaMapel  = m.id === 'MP07' ? 'Seni Budaya' : m.nama;
+    const tpMapel    = allTP.filter(tp => tp.id_mapel === m.id);
+    const nilaiMapel = allNilaiSem.filter(n => n.id_mapel === m.id);
+
+    // Hitung siswa yang sudah ada nilai SLM untuk mapel ini
+    const siswaSelesai = new Set(nilaiMapel.map(n => n.id_siswa)).size;
+    const pct = allSiswa.length > 0
+      ? Math.round(siswaSelesai / allSiswa.length * 100) : 0;
+
+    const status = pct === 100 ? 'done' : pct > 0 ? 'partial' : 'empty';
+    const icon   = pct === 100 ? '✅' : pct > 0 ? '🟡' : '🔴';
+    const desc   = pct === 100
+      ? `Lengkap · ${allSiswa.length} siswa`
+      : pct > 0
+        ? `${siswaSelesai}/${allSiswa.length} siswa · ${tpMapel.length} TP`
+        : `Belum ada nilai · ${tpMapel.length} TP`;
 
     const card = document.createElement('a');
     card.className = `mapel-card ${status}`;
-    card.href = `../penilaian/input-nilai.html?mapel=${m.id}&kelas=${currentUser.kelas}`;
+    card.href = `../penilaian/input-nilai.html?mapel=${m.id}&kelas=${activeKelas}`;
     card.innerHTML = `
       <div class="mapel-icon">📚</div>
       <div class="mapel-body">
-        <div class="mapel-name">${m.id === 'MP07' ? 'Seni Budaya (' + (seni||'—') + ')' : m.nama}</div>
+        <div class="mapel-name">${namaMapel}</div>
         <div class="mapel-desc">${m.kelompok} · ${desc}</div>
+        <div class="mapel-progress">
+          <div class="mapel-bar" style="width:${pct}%"></div>
+        </div>
       </div>
       <div class="mapel-status">${icon}</div>
     `;
@@ -502,7 +596,7 @@ function renderSiswaTable(siswa) {
     return;
   }
   tbody.innerHTML = siswa.map((s, i) => {
-    const punya = allNilai.some(n => n.id_siswa === s.id);
+    const punya = allNilaiSem.some(n => n.id_siswa === s.id);
     const badge = punya
       ? '<span class="badge done">Ada Nilai</span>'
       : '<span class="badge empty">Belum Ada</span>';
