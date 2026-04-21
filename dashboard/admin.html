@@ -692,6 +692,49 @@ body {
   .kelas-name { font-size: 13px; }
   .page-header h1 { font-size: 20px; }
 }
+
+/* ── Kelas Status Cards ──────────────────────────────── */
+.kelas-status-card{
+  background:var(--white);border-radius:var(--radius);
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  overflow:hidden;transition:box-shadow .2s;
+}
+.kelas-status-card:hover{box-shadow:var(--shadow-card)}
+.kelas-status-card.ready  {border-left:4px solid var(--green-mid)}
+.kelas-status-card.partial{border-left:4px solid var(--gold)}
+.kelas-status-card.not-ready{border-left:4px solid var(--red)}
+
+.ksc-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:12px 14px 8px;border-bottom:1px solid var(--border);
+  background:var(--green-ghost);
+}
+.ksc-name{font-size:15px;font-weight:700;color:var(--green-deep)}
+.ksc-fase{font-size:11.5px;color:var(--ink-muted);margin-top:2px}
+
+.ksc-badge{
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
+  white-space:nowrap;flex-shrink:0;
+}
+.ksc-badge.ready     {background:var(--green-pale);color:var(--green-dark)}
+.ksc-badge.partial   {background:var(--gold-light);color:#7a4a00}
+.ksc-badge.not-ready {background:var(--red-light);color:var(--red)}
+
+.ksc-checks{padding:10px 14px;display:flex;flex-direction:column;gap:5px}
+.ksc-row{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;gap:8px;
+}
+.ksc-row span{font-size:11.5px;color:var(--ink-muted);text-align:right}
+.ksc-row.ok  {color:var(--green-dark)}
+.ksc-row.warn{color:#7a4a00}
+.ksc-row.fail{color:var(--red)}
+
+.ksc-footer{
+  padding:8px 14px;border-top:1px solid var(--border);
+  background:#fafafa;display:flex;gap:8px;flex-wrap:wrap;
+}
+
 </style>
 </head>
 <body>
@@ -765,8 +808,8 @@ body {
   <a class="nav-item" href="#kelas-section" onclick="closeSidebarMobile()">
     <span class="nav-icon">📊</span> Status Per Kelas
   </a>
-  <a class="nav-item" href="../rapor/validasi.html">
-    <span class="nav-icon">✅</span> Validasi Rapor
+  <a class="nav-item" href="#kelas-section" onclick="closeSidebarMobile()">
+    <span class="nav-icon">✅</span> Validasi & Status Kelas
   </a>
 
   <div class="sidebar-section-label">Log</div>
@@ -830,7 +873,7 @@ body {
   </div>
 
   <!-- Status per kelas -->
-  <div class="section-title" id="kelas-section">Status Per Kelas</div>
+  <div class="section-title" id="kelas-section">Status & Validasi Per Kelas — Semester Aktif</div>
   <div class="kelas-grid" id="kelasGrid">
     <!-- diisi oleh JS -->
   </div>
@@ -940,9 +983,13 @@ async function loadDashboard() {
       loadSiswa(),
       loadGuru(),
       loadKelas(),
+      loadNilai(),
+      loadKokurikuler(),
+      loadAbsensi(),
       loadSyncLog(),
     ]);
     buildChecklist();
+    renderKelasStatusDetail();
     hideLoading();
   } catch (err) {
     console.error(err);
@@ -1055,6 +1102,142 @@ function renderKelasGrid(kelas) {
       <div class="kelas-fase">Fase ${fase}</div>
       <div class="kelas-siswa">${jumlah > 0 ? jumlah + ' siswa' : 'Belum ada'}</div>
       <div class="kelas-status">${icon}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+/* ── Load Nilai (untuk status kelas) ───────────────── */
+async function loadNilai() {
+  const cfg = sheetsData.config || {};
+  const sem   = cfg['semester_aktif'] || '';
+  const tahun = cfg['tahun_pelajaran'] || '';
+  const rows = await fetchSheet('NILAI!A:G');
+  // Filter semester aktif: col F=semester, col G=tahun
+  sheetsData.nilai = rows.slice(1).filter(r =>
+    r[0] && r[4] && r[5] === sem && r[6] === tahun
+  );
+}
+
+/* ── Load Kokurikuler ───────────────────────────────── */
+async function loadKokurikuler() {
+  const cfg = sheetsData.config || {};
+  const sem   = cfg['semester_aktif'] || '';
+  const tahun = cfg['tahun_pelajaran'] || '';
+  const rows = await fetchSheet('KOKURIKULER!A:H');
+  sheetsData.kokurikuler = rows.slice(1).filter(r =>
+    r[0] && r[1] && r[5] === sem && r[6] === tahun && parseInt(r[4]) > 0
+  );
+}
+
+/* ── Load Absensi ───────────────────────────────────── */
+async function loadAbsensi() {
+  const cfg = sheetsData.config || {};
+  const sem   = cfg['semester_aktif'] || '';
+  const tahun = cfg['tahun_pelajaran'] || '';
+  const rows = await fetchSheet('ABSENSI!A:J');
+  sheetsData.absensi = rows.slice(1).filter(r =>
+    r[0] && r[1] && r[8] === sem && r[9] === tahun
+  );
+}
+
+/* ── Render Status Detail Per Kelas ─────────────────── */
+function renderKelasStatusDetail() {
+  const grid   = document.getElementById('kelasGrid');
+  const kelas  = sheetsData.kelas  || [];
+  const cfg    = sheetsData.config || {};
+  const sem    = cfg['semester_aktif'] || '?';
+  const tahun  = cfg['tahun_pelajaran'] || '?';
+
+  grid.innerHTML = '';
+
+  // Build wali kelas map from USERS
+  const waliMap = {};
+  (sheetsData.guru || []).forEach(g => {
+    if (g[3] === 'guru_kelas') {
+      (g[4] || '').split(',').map(s=>s.trim()).filter(Boolean).forEach(k => {
+        waliMap[k] = g[2]; // nama guru
+      });
+    }
+  });
+
+  kelas.forEach(k => {
+    const namaKelas = k[1];
+    const fase      = k[3] || '?';
+    const siswas    = (sheetsData.siswa || []).filter(s => s[4] === namaKelas);
+    const jmlSiswa  = siswas.length;
+    const siswaCond = jmlSiswa > 0;
+
+    // Wali kelas
+    const wali     = waliMap[namaKelas];
+    const waliCond = !!wali;
+
+    // Nilai: hitung siswa yang sudah ada nilai untuk kelas ini
+    const nilaiKelas    = (sheetsData.nilai || []).filter(n => n[4] === namaKelas);
+    const siswaAdaNilai = new Set(nilaiKelas.map(n => n[1])).size;
+    const pctNilai      = jmlSiswa > 0 ? Math.round(siswaAdaNilai / jmlSiswa * 100) : 0;
+    const nilaiCond     = pctNilai >= 80;
+
+    // Kokurikuler: cek apakah sudah ada entry untuk kelas ini
+    const kokKelas = (sheetsData.kokurikuler || []).filter(r => r[2] === namaKelas);
+    const siswaKok = new Set(kokKelas.map(r => r[1])).size;
+    const pctKok   = jmlSiswa > 0 ? Math.round(siswaKok / jmlSiswa * 100) : 0;
+    const kokCond  = pctKok >= 50;
+
+    // Absensi: cek apakah sudah diisi untuk kelas ini
+    const absKelas  = (sheetsData.absensi || []).filter(r => r[2] === namaKelas);
+    const absCond   = absKelas.length >= jmlSiswa * 0.8;
+
+    // Overall readiness
+    const checks    = [siswaCond, waliCond, nilaiCond, kokCond, absCond];
+    const doneCount = checks.filter(Boolean).length;
+    const allReady  = checks.every(Boolean);
+    const statusCls = allReady ? 'ready' : doneCount >= 3 ? 'partial' : 'not-ready';
+
+    const card = document.createElement('div');
+    card.className = 'kelas-status-card ' + statusCls;
+    card.innerHTML = `
+      <div class="ksc-header">
+        <div>
+          <div class="ksc-name">Kelas ${namaKelas}</div>
+          <div class="ksc-fase">Fase ${fase} · ${jmlSiswa} siswa</div>
+        </div>
+        <div class="ksc-badge ${statusCls}">
+          ${allReady ? '✅ Siap Cetak' : doneCount + '/5 Lengkap'}
+        </div>
+      </div>
+      <div class="ksc-checks">
+        <div class="ksc-row ${siswaCond?'ok':'fail'}">
+          ${siswaCond?'✅':'⛔'} Data Siswa
+          <span>${jmlSiswa > 0 ? jmlSiswa + ' siswa' : 'Belum ada siswa'}</span>
+        </div>
+        <div class="ksc-row ${waliCond?'ok':'fail'}">
+          ${waliCond?'✅':'⛔'} Wali Kelas
+          <span>${wali || 'Belum ada wali kelas'}</span>
+        </div>
+        <div class="ksc-row ${nilaiCond?'ok':pctNilai>0?'warn':'fail'}">
+          ${nilaiCond?'✅':pctNilai>0?'🟡':'⛔'} Input Nilai
+          <span>${pctNilai}% siswa sudah ada nilai (${siswaAdaNilai}/${jmlSiswa})</span>
+        </div>
+        <div class="ksc-row ${kokCond?'ok':pctKok>0?'warn':'fail'}">
+          ${kokCond?'✅':pctKok>0?'🟡':'⛔'} Kokurikuler / DPL
+          <span>${pctKok}% siswa sudah diisi (${siswaKok}/${jmlSiswa})</span>
+        </div>
+        <div class="ksc-row ${absCond?'ok':absKelas.length>0?'warn':'fail'}">
+          ${absCond?'✅':absKelas.length>0?'🟡':'⛔'} Absensi & Catatan Wali
+          <span>${absKelas.length}/${jmlSiswa} siswa sudah diisi</span>
+        </div>
+      </div>
+      <div class="ksc-footer">
+        <a class="btn btn-sm ${allReady?'btn-primary':'btn-secondary'}"
+           href="../rapor/preview.html?kelas=${namaKelas}">
+          🖨️ ${allReady ? 'Cetak Rapor' : 'Preview Rapor'}
+        </a>
+        <a class="btn btn-sm btn-secondary"
+           href="../penilaian/input-nilai.html?kelas=${namaKelas}">
+          📝 Input Nilai
+        </a>
+      </div>
     `;
     grid.appendChild(card);
   });
