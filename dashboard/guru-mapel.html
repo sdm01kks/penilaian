@@ -247,10 +247,16 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" href="../penilaian/input-nilai.html">
     <span class="nav-icon">📝</span> Input Nilai SLM & SAS
   </a>
+  <a class="nav-item" id="navSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none;">
+    <span class="nav-icon">📖</span> Setoran Tahsin-Tahfizh
+  </a>
 
   <div class="sidebar-section-label">Kurikulum</div>
   <a class="nav-item" href="../setup/mapel-tp.html">
     <span class="nav-icon">📚</span> Setup TP & KKTP
+  </a>
+  <a class="nav-item" id="navSetupTT" href="../setup/tahsin-tahfizh.html" style="display:none;">
+    <span class="nav-icon">📖</span> Setup Tahsin-Tahfizh
   </a>
 </nav>
 
@@ -308,6 +314,11 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
       <div class="action-icon blue">📊</div>
       <div class="action-label">Lihat Semua Kelas</div>
       <div class="action-desc">Pantau status pengisian nilai untuk semua kelas yang Anda ampu.</div>
+    </a>
+    <a class="action-card" id="btnSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none;">
+      <div class="action-icon" style="background:var(--gold-light);color:var(--gold);">📖</div>
+      <div class="action-label">Setoran Tahsin-Tahfizh</div>
+      <div class="action-desc">Catat setoran hafalan dan bacaan Al-Quran / Iqro siswa per pertemuan.</div>
     </a>
   </div>
 
@@ -383,6 +394,17 @@ window.addEventListener('load', async () => {
 
   document.getElementById('userName').textContent  = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
+
+  // Tampilkan menu Tahsin-Tahfizh jika guru ini mengampu mapel TT
+  const mapelUser = (currentUser.mapel || '').toLowerCase();
+  const isTTGuru  = mapelUser.includes('tahsin') || mapelUser.includes('tahfizh')
+                    || mapelUser.includes(' tt') || mapelUser === 'tt';
+  if (isTTGuru) {
+    ['navSetoranTT','navSetupTT','btnSetoranTT'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'flex';
+    });
+  }
 
   showLoading('Memuat data mapel dan kelas…');
   try {
