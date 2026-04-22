@@ -333,8 +333,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
     <!-- Aspek cards -->
     <div id="aspekGrid"></div>
 
-    <!-- Simpan KKTP -->
-    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
+    <!-- Tambah aspek + Simpan -->
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="tambahAspek()">➕ Tambah Aspek</button>
       <button class="btn btn-primary" onclick="simpanKKTP()">💾 Simpan KKTP Jenjang Ini</button>
     </div>
   </div>
@@ -735,11 +736,16 @@ function renderAspekGrid() {
   const data = dapatDataKKTP();
   grid.innerHTML = data.aspek.map((asp, ai) => `
     <div class="aspek-card" id="aspek-${ai}">
-      <div class="aspek-header" onclick="toggleAspek(${ai})">
-        <div class="aspek-num">${ai+1}</div>
-        <div class="aspek-nama" id="aspek-nama-display-${ai}">${asp.nama}</div>
-        <span class="aspek-bobot-badge" id="aspek-bobot-badge-${ai}">${asp.bobot}%</span>
-        <span class="aspek-chevron">▾</span>
+      <div class="aspek-header">
+        <div onclick="toggleAspek(${ai})" style="display:flex;align-items:center;gap:12px;flex:1;cursor:pointer;">
+          <div class="aspek-num">${ai+1}</div>
+          <div class="aspek-nama" id="aspek-nama-display-${ai}">${asp.nama}</div>
+          <span class="aspek-bobot-badge" id="aspek-bobot-badge-${ai}">${asp.bobot}%</span>
+          <span class="aspek-chevron">▾</span>
+        </div>
+        <button onclick="hapusAspek(${ai})" title="Hapus aspek ini"
+          style="background:none;border:none;color:var(--red);font-size:14px;cursor:pointer;padding:2px 6px;border-radius:5px;flex-shrink:0;"
+          ${data.aspek.length<=1?'disabled title="Minimal 1 aspek"':''}>🗑</button>
       </div>
       <div class="aspek-body">
         <div class="aspek-bobot-row">
@@ -796,6 +802,37 @@ function updateBobotBar() {
 /* ════════════════════════════════════════════════════
    SIMPAN KKTP
 ════════════════════════════════════════════════════ */
+function tambahAspek() {
+  const data = dapatDataKKTP();
+  data.aspek.push({
+    nama:  'Aspek Baru',
+    bobot: 0,
+    desc:  ['','','','',''],
+  });
+  // Buka card yang baru
+  renderAspekGrid();
+  const newIdx = data.aspek.length - 1;
+  document.getElementById('aspek-' + newIdx)?.classList.add('open');
+  document.getElementById('aspek-nama-' + newIdx)?.focus();
+}
+
+function hapusAspek(ai) {
+  const data = dapatDataKKTP();
+  if (data.aspek.length <= 1) { return; }
+  if (!confirm(`Hapus aspek "${data.aspek[ai].nama}"?`)) return;
+  // Ambil nilai form sebelum hapus
+  const saved = data.aspek.map((_,i) => ({
+    nama:  document.getElementById('aspek-nama-' + i)?.value.trim() || '',
+    bobot: parseInt(document.getElementById('aspek-bobot-' + i)?.value) || 0,
+    desc:  [0,1,2,3,4].map(li => document.getElementById(`desc-${i}-${li}`)?.value.trim() || ''),
+  }));
+  saved.splice(ai, 1);
+  // Update kktpData dan re-render
+  if (!kktpData[activeJenjang]) kktpData[activeJenjang] = { aspek: saved };
+  else kktpData[activeJenjang].aspek = saved;
+  renderAspekGrid();
+}
+
 async function simpanKKTP() {
   const data   = dapatDataKKTP();
   const total  = data.aspek.reduce((sum, _, ai) => {
