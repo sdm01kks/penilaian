@@ -642,7 +642,7 @@ const SHEETS = (() => {
    * @param {{ kelas, semester, tahun, id_siswa }} filter
    */
   async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
-    const rows = await read('SETORAN_TT!A:M');
+    const rows = await read('SETORAN_TT!A:L');
     let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id');
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
@@ -663,7 +663,6 @@ const SHEETS = (() => {
       nilai_tahsin:    parseInt(r[9])  || 0,
       status_hafalan:  r[10] || '',   // 'lulus' | 'ulang'
       catatan:         r[11] || '',
-      nilai_aspek:     r[12] ? JSON.parse(r[12] || '{}') : {},
     }));
   }
 
@@ -688,7 +687,6 @@ const SHEETS = (() => {
       setoran.nilai_tahsin    ?? '',
       setoran.status_hafalan  || '',
       setoran.catatan         || '',
-      setoran.nilai_aspek     ? JSON.stringify(setoran.nilai_aspek) : '',
     ];
     await append('SETORAN_TT', [row]);
     return id;
@@ -720,8 +718,6 @@ const SHEETS = (() => {
     getAbsensi,
     getSetoranTT,
     saveSetoranTT,
-    updateSetoranTT,
-    deleteSetoranTT,
 
     // Kalkulasi
     hitungNilaiAkhir,
