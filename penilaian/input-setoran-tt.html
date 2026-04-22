@@ -330,20 +330,46 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 
             <!-- Mode Iqro -->
             <div id="modeIqro" style="display:none;">
-              <div class="form-group">
-                <label class="form-label">📗 Buku & Halaman Iqro</label>
-                <div style="display:flex;gap:8px;">
-                  <select class="form-input form-select" id="inputIqroBuku" style="width:120px;">
-                    <option value="1">Iqro 1</option>
-                    <option value="2">Iqro 2</option>
-                    <option value="3">Iqro 3</option>
-                    <option value="4">Iqro 4</option>
-                    <option value="5">Iqro 5</option>
-                    <option value="6">Iqro 6</option>
-                  </select>
-                  <input type="number" class="form-input" id="inputIqroHal"
-                    placeholder="Halaman" min="1" max="100" style="flex:1;">
-                  <span style="align-self:center;font-size:12px;color:var(--ink-muted);white-space:nowrap;">hal.</span>
+              <!-- Status tamat Iqro per siswa -->
+              <div style="background:var(--yellow-light);border:1px solid rgba(243,156,18,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:#7a4a00;">📗 Status Iqro Siswa Ini</div>
+                  <div id="iqroStatusText" style="font-size:11px;color:#7a4a00;margin-top:2px;">Masih belajar Iqro</div>
+                </div>
+                <button id="btnToggleTamat" onclick="toggleTamatIqro()"
+                  style="padding:5px 10px;border-radius:7px;border:1px solid rgba(243,156,18,.5);background:rgba(243,156,18,.15);font-size:11px;font-weight:700;color:#7a4a00;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+                  Tandai Tamat Iqro ▸
+                </button>
+              </div>
+              <!-- Input halaman Iqro (muncul jika belum tamat) -->
+              <div id="iqroInputBiasa">
+                <div class="form-group">
+                  <label class="form-label">📗 Buku & Halaman Iqro</label>
+                  <div style="display:flex;gap:8px;">
+                    <select class="form-input form-select" id="inputIqroBuku" style="width:120px;">
+                      <option value="1">Iqro 1</option>
+                      <option value="2">Iqro 2</option>
+                      <option value="3">Iqro 3</option>
+                      <option value="4">Iqro 4</option>
+                      <option value="5">Iqro 5</option>
+                      <option value="6">Iqro 6</option>
+                    </select>
+                    <input type="number" class="form-input" id="inputIqroHal"
+                      placeholder="Halaman" min="1" max="100" style="flex:1;">
+                    <span style="align-self:center;font-size:12px;color:var(--ink-muted);white-space:nowrap;">hal.</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Input Al-Quran (muncul jika sudah tamat Iqro) -->
+              <div id="iqroLanjutQuran" style="display:none;">
+                <div class="alert info" style="padding:10px 14px;margin-bottom:10px;">
+                  <div class="alert-icon" style="font-size:14px;">📘</div>
+                  <div class="alert-text" style="font-size:12px;">Siswa ini sudah tamat Iqro. Setoran dinilai sebagai <strong>Tahsin Al-Quran</strong> (membaca, belum hafalan).</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">📘 Materi Bacaan Al-Quran</label>
+                  <input type="text" class="form-input" id="inputIqroLanjutMateri"
+                    placeholder="cth: Al-Fatihah, An-Nas, Al-Ikhlas…">
                 </div>
               </div>
             </div>
@@ -461,6 +487,7 @@ let statusHafalan = 'lulus';
 let selectedMateri= null;   // key segmen terpilih
 let targetKeys    = [];     // Array of keys dari target kelas ini
 let setoranHariIni= [];     // Setoran yang sudah diinput hari ini (session)
+let tamatIqroSet  = new Set(); // id_siswa yang sudah tamat Iqro (in-session)
 
 /* ════════════════════════════════════════════════════
    INIT
@@ -656,6 +683,9 @@ function pilihSiswa(id) {
   document.getElementById('modeIqro').style.display  = modeJenis === 'iqro'  ? 'block' : 'none';
   document.getElementById('modeQuran').style.display = modeJenis === 'quran' ? 'block' : 'none';
 
+  // Update status tamat Iqro untuk siswa ini
+  if (modeJenis === 'iqro') updateIqroUI();
+
   // Render materi list (Al-Quran mode)
   if (modeJenis === 'quran') renderMateriList();
 
@@ -677,16 +707,21 @@ function renderMateriList() {
   el.innerHTML = targetKeys.map(key => {
     const label = labelFromKey(key);
     const isSel = selectedMateri === key;
+    const safeId = 'mat-' + key.replace(/[^a-z0-9]/gi,'_');
     return `
-      <div class="materi-item ${isSel?'selected':''}" id="mat-${key.replace(/[^a-z0-9]/gi,'_')}"
-           onclick="pilihMateri('${key}', '${label.replace(/'/g,'&#39;')}')">
+      <div class="materi-item ${isSel?'selected':''}" id="${safeId}"
+           data-key="${key}" onclick="pilihMateriById('${safeId}')">
         <div class="materi-check">${isSel?'✓':''}</div>
         <span class="materi-text">${label}</span>
       </div>`;
   }).join('');
 }
 
-function pilihMateri(key, label) {
+function pilihMateriById(elId) {
+  const key = document.getElementById(elId)?.dataset?.key || '';
+  pilihMateri(key);
+}
+function pilihMateri(key) {
   selectedMateri = (selectedMateri === key) ? null : key;
   if (selectedMateri) {
     document.getElementById('inputMateriCustom').value = '';
@@ -717,19 +752,57 @@ function pilihStatus(status) {
 /* ════════════════════════════════════════════════════
    SIMPAN SETORAN
 ════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════
+   TOGGLE TAMAT IQRO (per siswa, disimpan ke catatan CONFIG)
+════════════════════════════════════════════════════ */
+function toggleTamatIqro() {
+  if (!activeSiswa) return;
+  const id = activeSiswa.id;
+  if (tamatIqroSet.has(id)) {
+    tamatIqroSet.delete(id);
+  } else {
+    tamatIqroSet.add(id);
+  }
+  updateIqroUI();
+}
+
+function updateIqroUI() {
+  if (!activeSiswa) return;
+  const tamat = tamatIqroSet.has(activeSiswa.id);
+  document.getElementById('iqroInputBiasa').style.display   = tamat ? 'none'  : 'block';
+  document.getElementById('iqroLanjutQuran').style.display  = tamat ? 'block' : 'none';
+  document.getElementById('iqroStatusText').textContent     = tamat
+    ? '✅ Sudah tamat Iqro — lanjut Al-Quran'
+    : 'Masih belajar Iqro';
+  document.getElementById('btnToggleTamat').textContent     = tamat
+    ? '↩ Batalkan Tamat Iqro'
+    : 'Tandai Tamat Iqro ▸';
+  document.getElementById('btnToggleTamat').style.background = tamat
+    ? 'rgba(30,77,59,.1)' : 'rgba(243,156,18,.15)';
+}
+
 async function simpanSetoran() {
   if (!activeSiswa) { showAlert('warning','Pilih Siswa','Pilih siswa dari daftar terlebih dahulu.'); return; }
 
   // Tentukan materi
   let materi = '', materiLabel = '';
   if (modeJenis === 'iqro') {
-    const buku = document.getElementById('inputIqroBuku').value;
-    const hal  = document.getElementById('inputIqroHal').value;
-    if (!hal || isNaN(parseInt(hal)) || parseInt(hal) < 1) {
-      showAlert('error','Validasi','Isi halaman Iqro yang disetor.'); return;
+    const tamat = activeSiswa && tamatIqroSet.has(activeSiswa.id);
+    if (tamat) {
+      // Mode lanjut: baca Al-Quran tapi bukan hafalan
+      const mat = document.getElementById('inputIqroLanjutMateri').value.trim();
+      if (!mat) { showAlert('error','Validasi','Isi materi bacaan Al-Quran.'); return; }
+      materi      = 'lanjut-quran';
+      materiLabel = mat;
+    } else {
+      const buku = document.getElementById('inputIqroBuku').value;
+      const hal  = document.getElementById('inputIqroHal').value;
+      if (!hal || isNaN(parseInt(hal)) || parseInt(hal) < 1) {
+        showAlert('error','Validasi','Isi halaman Iqro yang disetor.'); return;
+      }
+      materi      = `iqro-${buku}-${hal}`;
+      materiLabel = `Iqro ${buku} hal. ${hal}`;
     }
-    materi      = `iqro-${buku}-${hal}`;
-    materiLabel = `Iqro ${buku} hal. ${hal}`;
   } else {
     const custom = document.getElementById('inputMateriCustom').value.trim();
     if (selectedMateri) {
@@ -784,6 +857,7 @@ async function simpanSetoran() {
     document.getElementById('inputCatatan').value = '';
     document.getElementById('inputMateriCustom').value = '';
     document.getElementById('inputIqroHal').value = '';
+    document.getElementById('inputIqroLanjutMateri').value = '';
     selectedMateri = null;
     pilihStatus('lulus');
     document.getElementById('inputNilai').value = 80;
