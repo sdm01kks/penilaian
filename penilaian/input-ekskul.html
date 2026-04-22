@@ -370,8 +370,9 @@ function renderKokurikuler() {
   }).join('');
 }
 
-const EKS_LV = ['','Layak','Cakap','Mahir'];
-const EKS_LV_CLS = ['','lv1','lv2','lv3'];
+// Level: 0=clear(internal), 1=Layak, 2=Cakap, 3=Mahir, 4=Tidak Ikut
+const EKS_LV     = ['', 'Layak', 'Cakap', 'Mahir', 'Tidak Ikut'];
+const EKS_LV_CLS = ['', 'lv1',   'lv2',   'lv3',   'lv4'];
 
 function renderEkstrakurikuler() {
   const eks = allEkskul.filter(e=>e.jenis==='ekstrakurikuler');
@@ -383,12 +384,16 @@ function renderEkstrakurikuler() {
     const rows = eks.map(e => {
       const key = s.id+'|'+e.id;
       const cur = bufEks[key]?.level ?? (ekskulDB[key]?.level ?? 0);
-      const btns = [0,1,2,3].map(lv => {
+      // Urutan tombol: — (clear) | Tidak Ikut (4) | Layak (1) | Cakap (2) | Mahir (3)
+      const btnOrder = [0, 4, 1, 2, 3];
+      const btns = btnOrder.map(lv => {
         const label = lv===0 ? '—' : EKS_LV[lv];
         const cls   = cur===lv ? 'lv-btn active' : 'lv-btn';
-        return `<button class="${cls} ${lv>0?EKS_LV_CLS[lv]:''}"
+        const lvCls = lv>0 ? EKS_LV_CLS[lv] : '';
+        const title = lv===0 ? 'Hapus pilihan' : EKS_LV[lv];
+        return `<button class="${cls} ${lvCls}"
           onclick="pilihLevelEks('${e.id}','${s.id}',${lv},this)"
-          title="${lv===0?'Tidak mengikuti':EKS_LV[lv]}">${label}</button>`;
+          title="${title}">${label}</button>`;
       }).join('');
       return `<tr class="eks-row">
         <td style="font-size:12px;color:var(--ink-muted);padding:6px 8px;">${e.nama}</td>
@@ -446,7 +451,7 @@ async function simpanSatuKok(id_ekskul, nama) {
   try {
     const rows = await SHEETS.read('EKSKUL_SISWA!A:H');
     for (const item of toSave) {
-      await simpanBaris(rows,item.id_siswa,id_ekskul,true,item.deskripsi,sem,tahun);
+      await simpanBaris(rows,item.id_siswa,id_ekskul,1,item.deskripsi,sem,tahun); // kokurikuler wajib = level 1
     }
     showStatusEks('kok-'+id_ekskul,'✅ Tersimpan');
   } catch(e) { showAlert('error','⛔ Gagal',e.message); }
@@ -458,28 +463,35 @@ async function simpanSemuaEkskul() {
   const tahun = config['tahun_pelajaran']||'';
   const eks   = allEkskul.filter(e=>e.jenis==='ekstrakurikuler');
   const all   = [];
+
   eks.forEach(e => {
     allSiswa.forEach(s => {
-      const key     = s.id+'|'+e.id;
-      const bufVal  = bufEks[key];
-      const dbVal   = ekskulDB[key];
+      const key    = s.id+'|'+e.id;
+      const bufVal = bufEks[key];
+      const dbVal  = ekskulDB[key];
+      if (bufVal === undefined) return;  // tidak ada perubahan
 
-      // Tentukan status akhir diikuti
-      const dik = bufVal !== undefined ? bufVal.diikuti : (dbVal?.diikuti || false);
+      const level   = bufVal.level ?? 0;
+      const wasInDB = dbVal && dbVal.level > 0;
+      // level 0 = clear: hanya perlu simpan jika sebelumnya ada data
+      if (level === 0 && !wasInDB) return;
 
-      // Simpan jika:
-      // 1. Diikuti (dik === true) — tambah/perbarui, atau
-      // 2. Sebelumnya diikuti di DB tapi sekarang di-uncheck (dik === false) — hapus (set '0')
-      const perluDisimpan = dik || (bufVal !== undefined && !dik && dbVal?.diikuti);
-      if (!perluDisimpan) return;
+      // level: 1=Layak→e.level[0], 2=Cakap→e.level[1], 3=Mahir→e.level[2], 4=TidakIkut→e.level[3]
+      const kktpIdx = level === 4 ? 3 : level - 1;
+      const kktp    = e.level?.[kktpIdx];
+      const lvName  = EKS_LV[level] || '';
+      const desc = level > 0 && kktp?.deskripsi
+        ? kktp.deskripsi
+        : level > 0
+          ? (s.nama.split(' ')[0] + ' ' + lvName.toLowerCase() + ' dalam kegiatan ' + e.nama + '.')
+          : '';
 
-      const desc = document.getElementById('eks-desc-'+e.id+'-'+s.id)?.value.trim()
-                || bufVal?.deskripsi
-                || dbVal?.deskripsi || '';
-      all.push({ id_siswa:s.id, id_ekskul:e.id, diikuti:dik, deskripsi:desc });
+      all.push({ id_siswa: s.id, id_ekskul: e.id, level, deskripsi: desc,
+                 hapus: level === 0 });
     });
   });
-  if (!all.length) { showStatusEks('eks','Tidak ada perubahan yang perlu disimpan.'); return; }
+
+  if (!all.length) { showStatusEks('eks','Tidak ada perubahan.'); return; }
 
   const btn = document.querySelector('#sectionEks .btn-primary');
   if (btn) { btn.disabled=true; btn.textContent='⏳'; }
@@ -487,16 +499,16 @@ async function simpanSemuaEkskul() {
   try {
     const rows = await SHEETS.read('EKSKUL_SISWA!A:H');
     for (const item of all) {
-      await simpanBaris(rows,item.id_siswa,item.id_ekskul,item.diikuti,item.deskripsi,sem,tahun);
+      await simpanBaris(rows, item.id_siswa, item.id_ekskul,
+                        item.hapus ? 0 : item.level, item.deskripsi, sem, tahun);
     }
     showStatusEks('eks','✅ Tersimpan');
-    // Update ekskulDB lokal agar chip state konsisten
     all.forEach(item => {
       const key = item.id_siswa+'|'+item.id_ekskul;
-      ekskulDB[key] = { diikuti: item.diikuti, deskripsi: item.deskripsi };
+      if (item.hapus) delete ekskulDB[key];
+      else ekskulDB[key] = { level: item.level, deskripsi: item.deskripsi };
     });
     bufEks = {};
-    // Re-render ekskul agar chip yang di-uncheck benar-benar hilang
     renderEkstrakurikuler();
   } catch(e) { showAlert('error','⛔ Gagal',e.message); }
   finally {
@@ -504,6 +516,7 @@ async function simpanSemuaEkskul() {
     hideLoading();
   }
 }
+
 
 async function simpanBaris(rows,id_siswa,id_ekskul,level,deskripsi,sem,tahun) {
   // level: 0=tidak ikut, 1=Layak, 2=Cakap, 3=Mahir
