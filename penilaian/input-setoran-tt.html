@@ -165,7 +165,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .siswa-progress-text{font-size:10px;color:var(--ink-muted);white-space:nowrap}
 
 /* Aspek scoring grid */
-.aspek-score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.aspek-score-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px}
 .aspek-score-item{background:#f8faf8;border:1px solid var(--border);border-radius:7px;padding:8px 10px}
 .aspek-score-label{font-size:10.5px;font-weight:700;color:var(--ink-mid);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
 .aspek-score-bobot{font-size:9.5px;color:var(--ink-muted)}
@@ -1133,7 +1133,7 @@ async function updateSetoran() {
   try {
     const updated = { ...st, tanggal, materi, materi_label: materiLabel,
       nilai_tahsin: nilai, status_hafalan: statusHafalan, catatan, nilai_aspek: nilaiAspek };
-    await SHEETS.updateSetoranTT(updated);
+    await SHEETS.updateSetoranTT(editingId, updated);
     // update local caches
     const dbIdx = setoranDB.findIndex(x => x.id === editingId);
     if (dbIdx >= 0) setoranDB[dbIdx] = updated;
@@ -1156,7 +1156,11 @@ async function updateSetoran() {
 async function hapusSetoran(id) {
   if (!confirm('Hapus setoran ini? Data akan dihapus permanen.')) return;
   try {
-    await SHEETS.deleteSetoranTT(id);
+    // Blank the row (avoids needing numeric sheetId)
+    const allRows = await SHEETS.read('SETORAN_TT!A:A');
+    const rowIdx  = allRows.findIndex((r, i) => i >= 2 && r[0] === id);
+    if (rowIdx < 2) throw new Error('Data tidak ditemukan di sheet');
+    await SHEETS.write(`SETORAN_TT!A${rowIdx + 1}:M${rowIdx + 1}`, [Array(13).fill('')]);
     setoranDB = setoranDB.filter(x => x.id !== id);
     const i = setoranHariIni.findIndex(x => x.id === id);
     if (i >= 0) setoranHariIni.splice(i, 1);
