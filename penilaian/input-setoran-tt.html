@@ -158,6 +158,38 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .btn-block{width:100%;justify-content:center}
 .btn:disabled{opacity:.6;cursor:not-allowed}
 
+/* Progress mini */
+.siswa-progress{flex:1;min-width:0;margin-top:2px;}
+.progress-mini-bar{background:#e9ecef;border-radius:10px;height:5px;overflow:hidden;margin:2px 0}
+.progress-mini-fill{height:100%;border-radius:10px;background:var(--green-mid)}
+.siswa-progress-text{font-size:10px;color:var(--ink-muted);white-space:nowrap}
+
+/* Aspek scoring grid */
+.aspek-score-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.aspek-score-item{background:#f8faf8;border:1px solid var(--border);border-radius:7px;padding:8px 10px}
+.aspek-score-label{font-size:10.5px;font-weight:700;color:var(--ink-mid);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.aspek-score-bobot{font-size:9.5px;color:var(--ink-muted)}
+.aspek-score-input{display:flex;align-items:center;gap:6px}
+.aspek-input-num{width:48px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:700;text-align:center;font-family:inherit;outline:none}
+.aspek-input-num:focus{border-color:var(--green-light)}
+.aspek-input-range{flex:1;accent-color:var(--green-dark)}
+
+/* Riwayat siswa ini (di form kanan) */
+.riwayat-siswa{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
+.riwayat-siswa-title{font-size:11.5px;font-weight:700;color:var(--green-deep);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.riwayat-siswa-list{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.riwayat-siswa-item{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;background:#f8faf8;border:1px solid var(--border);font-size:11.5px}
+.riwayat-siswa-item.lulus{background:var(--green-pale);border-color:rgba(30,77,59,.15)}
+.riwayat-siswa-item.ulang{background:var(--red-light);border-color:rgba(192,57,43,.1)}
+.riwayat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.riwayat-siswa-item.lulus .riwayat-dot{background:var(--green-dark)}
+.riwayat-siswa-item.ulang .riwayat-dot{background:var(--red)}
+.riwayat-materi-text{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riwayat-tgl{font-size:10px;color:var(--ink-muted);flex-shrink:0}
+.riwayat-nilai-num{font-weight:700;width:24px;text-align:right;flex-shrink:0}
+.btn-icon{background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:4px;font-size:12px;transition:background .15s}
+.btn-icon:hover{background:rgba(0,0,0,.08)}
+
 /* Empty state */
 .empty-state{padding:48px 24px;text-align:center}
 .empty-state .icon{font-size:44px;margin-bottom:12px}
@@ -390,15 +422,19 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
               </div>
             </div>
 
-            <!-- Nilai Tahsin -->
+            <!-- Nilai Tahsin: per aspek (jika ada KKTP) + nilai akhir -->
+            <div class="form-group" id="aspekScoringArea"></div>
             <div class="form-group">
-              <label class="form-label">🎯 Nilai Tahsin</label>
+              <label class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>🎯 Nilai Tahsin Akhir</span>
+                <span id="nilaiAutoNote" style="font-size:10px;color:var(--ink-muted);font-weight:400;"></span>
+              </label>
               <div class="nilai-wrap">
                 <input type="number" class="nilai-display" id="inputNilai"
-                  value="80" min="0" max="100" oninput="updatePredikat()">
+                  value="80" min="0" max="100" oninput="syncNilaiFromManual()">
                 <input type="range" id="nilaiSlider" value="80" min="0" max="100"
                   style="flex:1;accent-color:var(--green-dark);"
-                  oninput="document.getElementById('inputNilai').value=this.value;updatePredikat()">
+                  oninput="document.getElementById('inputNilai').value=this.value;syncNilaiFromManual()">
                 <span class="predikat-pill" id="predikatPill">Jayyid Jiddan</span>
               </div>
             </div>
@@ -426,6 +462,19 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
               onclick="simpanSetoran()">
               💾 Simpan Setoran
             </button>
+            <button class="btn btn-secondary btn-block" id="btnBatalEdit"
+              onclick="batalEdit()" style="display:none;margin-top:6px;">
+              ✕ Batal Edit
+            </button>
+
+            <!-- Riwayat setoran siswa ini -->
+            <div class="riwayat-siswa" id="riwayatSiswaForm" style="display:none;">
+              <div class="riwayat-siswa-title">
+                📋 Riwayat Siswa Ini
+                <span id="riwayatSiswaCount" style="font-weight:400;color:var(--ink-muted);font-size:11px;"></span>
+              </div>
+              <div class="riwayat-siswa-list" id="riwayatSiswaList"></div>
+            </div>
 
           </div>
         </div>
@@ -487,7 +536,10 @@ let statusHafalan = 'lulus';
 let selectedMateri= null;   // key segmen terpilih
 let targetKeys    = [];     // Array of keys dari target kelas ini
 let setoranHariIni= [];     // Setoran yang sudah diinput hari ini (session)
+let setoranDB     = [];     // Semua setoran semester ini dari sheet
 let tamatIqroSet  = new Set(); // id_siswa yang sudah tamat Iqro (in-session)
+let editingId     = null;   // ID setoran yang sedang diedit
+let kktpAspek     = [];     // Aspek dari KKTP config
 
 /* ════════════════════════════════════════════════════
    INIT
@@ -609,6 +661,15 @@ async function gantiKelas() {
       try { targetKeys = JSON.parse(raw); } catch(e) {}
     }
 
+    // Muat semua setoran semester ini dari sheet
+    setoranDB = await SHEETS.getSetoranTT({ kelas: activeKelas, semester: activeSem, tahun });
+
+    // Muat KKTP aspek dari config
+    const jenjang   = modeJenis === 'iqro' ? 'iqro' : 'quran';
+    const rawKKTP   = config[`tahsin_kktp_${jenjang}`] || '';
+    kktpAspek = [];
+    if (rawKKTP) { try { kktpAspek = JSON.parse(rawKKTP).aspek || []; } catch(e) {} }
+
     filteredSiswa = [...allSiswa];
     document.getElementById('jumlahSiswa').textContent = allSiswa.length;
 
@@ -636,17 +697,26 @@ function renderSiswaList() {
   }
   el.innerHTML = filteredSiswa.map(s => {
     const isActive = activeSiswa?.id === s.id;
-    // Hitung setoran hari ini untuk siswa ini
-    const todaySt = setoranHariIni.filter(st => st.id_siswa === s.id);
-    const lulusCount = setoranHariIni.filter(st => st.id_siswa === s.id && st.status_hafalan === 'lulus').length;
+    // Progress dari setoranDB (semua semester ini)
+    const allSt   = setoranDB.filter(st => st.id_siswa === s.id);
+    const lulusSet= new Set(allSt.filter(x=>x.status_hafalan==='lulus').map(x=>x.materi));
+    const total   = targetKeys.length;
+    const lulus   = total ? targetKeys.filter(k => lulusSet.has(k)).length : lulusSet.size;
+    const pct     = total ? Math.round(lulus/total*100) : 0;
+    const avgN    = allSt.length ? Math.round(allSt.reduce((a,b)=>a+(b.nilai_tahsin||0),0)/allSt.length) : 0;
     return `
       <div class="siswa-row ${isActive?'active':''}" id="srow-${s.id}" onclick="pilihSiswa('${s.id}')">
         <div class="siswa-avatar">${s.nama.charAt(0).toUpperCase()}</div>
         <div class="siswa-info">
           <div class="siswa-nama">${s.nama}</div>
-          <div class="siswa-stat">${todaySt.length ? `${todaySt.length} setoran hari ini` : 'Belum ada setoran'}</div>
+          <div class="siswa-stat">
+            ${total
+              ? `${lulus}/${total} target · ${avgN||'—'} rata-rata`
+              : allSt.length ? `${allSt.length} setoran · ${avgN||'—'} rata-rata` : 'Belum ada setoran'}
+          </div>
+          ${total ? `<div class="progress-mini-bar"><div class="progress-mini-fill" style="width:${pct}%"></div></div>` : ''}
         </div>
-        ${todaySt.length ? `<span class="siswa-lulus-badge">${lulusCount} Lulus</span>` : ''}
+        ${total ? `<span class="siswa-lulus-badge" style="font-size:10px;">${pct}%</span>` : ''}
         <button class="btn-setoran" onclick="event.stopPropagation();pilihSiswa('${s.id}')">+ Setoran</button>
       </div>`;
   }).join('');
@@ -685,6 +755,12 @@ function pilihSiswa(id) {
 
   // Update status tamat Iqro untuk siswa ini
   if (modeJenis === 'iqro') updateIqroUI();
+
+  // Render aspek scoring
+  renderAspekScoring();
+
+  // Render riwayat setoran siswa ini
+  renderRiwayatSiswa();
 
   // Render materi list (Al-Quran mode)
   if (modeJenis === 'quran') renderMateriList();
@@ -732,6 +808,81 @@ function pilihMateri(key) {
 /* ════════════════════════════════════════════════════
    PREDIKAT & STATUS
 ════════════════════════════════════════════════════ */
+/* ── Aspek scoring ─────────────────────────────── */
+function renderAspekScoring() {
+  const area = document.getElementById('aspekScoringArea');
+  if (!area) return;
+  if (!kktpAspek.length) { area.innerHTML = ''; return; }
+
+  area.innerHTML = `
+    <label class="form-label" style="margin-bottom:8px;">📝 Nilai per Aspek Tahsin</label>
+    <div class="aspek-score-grid">
+      ${kktpAspek.map((a, i) => `
+        <div class="aspek-score-item">
+          <div class="aspek-score-label">
+            <span>${a.nama}</span>
+            <span class="aspek-bobot">${a.bobot}%</span>
+          </div>
+          <div class="aspek-score-input">
+            <input type="number" class="aspek-input-num" id="aspek-score-${i}"
+              value="80" min="0" max="100"
+              oninput="syncAspekRange(${i});hitungNilaiOtomatis()">
+            <input type="range" class="aspek-input-range" id="aspek-range-${i}"
+              value="80" min="0" max="100"
+              oninput="document.getElementById('aspek-score-${i}').value=this.value;hitungNilaiOtomatis()">
+          </div>
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('nilaiAutoNote').textContent = '(dihitung otomatis dari aspek)';
+  hitungNilaiOtomatis();
+}
+
+function syncAspekRange(i) {
+  const v = parseInt(document.getElementById('aspek-score-' + i)?.value) || 0;
+  const r = document.getElementById('aspek-range-' + i);
+  if (r) r.value = v;
+}
+
+function hitungNilaiOtomatis() {
+  if (!kktpAspek.length) return;
+  let total = 0, totalBobot = 0;
+  kktpAspek.forEach((a, i) => {
+    const v = parseInt(document.getElementById('aspek-score-' + i)?.value) || 0;
+    total += v * (a.bobot || 0);
+    totalBobot += (a.bobot || 0);
+  });
+  const avg = totalBobot > 0 ? Math.round(total / totalBobot) : 0;
+  const inp = document.getElementById('inputNilai');
+  const sl  = document.getElementById('nilaiSlider');
+  if (inp) inp.value = avg;
+  if (sl)  sl.value  = avg;
+  updatePredikat();
+}
+
+function getAspekValues() {
+  const hasil = {};
+  kktpAspek.forEach((a, i) => {
+    hasil[a.nama] = parseInt(document.getElementById('aspek-score-' + i)?.value) || 0;
+  });
+  return hasil;
+}
+
+function setAspekValues(obj) {
+  kktpAspek.forEach((a, i) => {
+    const v = obj[a.nama] || 80;
+    const inp = document.getElementById('aspek-score-' + i);
+    const rng = document.getElementById('aspek-range-' + i);
+    if (inp) inp.value = v;
+    if (rng) rng.value = v;
+  });
+}
+
+function syncNilaiFromManual() {
+  const v = parseInt(document.getElementById('inputNilai').value) || 0;
+  document.getElementById('nilaiSlider').value = v;
+  updatePredikat();
+}
+
 function updatePredikat() {
   const v   = parseInt(document.getElementById('inputNilai').value) || 0;
   document.getElementById('nilaiSlider').value = v;
@@ -783,6 +934,7 @@ function updateIqroUI() {
 
 async function simpanSetoran() {
   if (!activeSiswa) { showAlert('warning','Pilih Siswa','Pilih siswa dari daftar terlebih dahulu.'); return; }
+  if (editingId) { await updateSetoran(); return; }
 
   // Tentukan materi
   let materi = '', materiLabel = '';
@@ -825,6 +977,7 @@ async function simpanSetoran() {
   btn.disabled = true; btn.textContent = '⏳ Menyimpan…';
 
   try {
+    const nilaiAspek = getAspekValues();
     const id = await SHEETS.saveSetoranTT({
       id_siswa:        activeSiswa.id,
       kelas:           activeKelas,
@@ -837,18 +990,23 @@ async function simpanSetoran() {
       nilai_tahsin:    nilai,
       status_hafalan:  statusHafalan,
       catatan,
+      nilai_aspek:     nilaiAspek,
     });
 
-    // Simpan ke cache lokal untuk riwayat hari ini
-    setoranHariIni.push({
+    // Simpan ke cache lokal
+    const newEntry = {
       id,
       id_siswa:       activeSiswa.id,
       nama_siswa:     activeSiswa.nama,
       materi_label:   materiLabel,
+      materi,
       nilai_tahsin:   nilai,
+      nilai_aspek:    nilaiAspek,
       status_hafalan: statusHafalan,
       tanggal,
-    });
+    };
+    setoranHariIni.push(newEntry);
+    setoranDB.push(newEntry);
 
     renderSiswaList();
     renderRiwayat();
@@ -864,6 +1022,9 @@ async function simpanSetoran() {
     document.getElementById('nilaiSlider').value = 80;
     updatePredikat();
     if (modeJenis === 'quran') renderMateriList();
+    if (kktpAspek.length) setAspekValues(kktpAspek.reduce((o,a,i)=>{o[a.nama]=80;return o},{}));
+    renderRiwayatSiswa();
+    renderSiswaList();
 
     showFloatStatus(`✅ Setoran ${activeSiswa.nama.split(' ')[0]} tersimpan`);
   } catch(e) {
@@ -876,6 +1037,164 @@ async function simpanSetoran() {
 /* ════════════════════════════════════════════════════
    RIWAYAT HARI INI
 ════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   EDIT / HAPUS / RIWAYAT SISWA
+═══════════════════════════════════════════════════ */
+function editSetoran(id) {
+  const st = setoranDB.find(x => x.id === id);
+  if (!st) return;
+  editingId = id;
+
+  // Pre-fill form
+  document.getElementById('inputTanggal').value = st.tanggal || '';
+  pilihStatus(st.status_hafalan || 'lulus');
+  document.getElementById('inputNilai').value   = st.nilai_tahsin || 80;
+  document.getElementById('nilaiSlider').value  = st.nilai_tahsin || 80;
+  document.getElementById('inputCatatan').value = st.catatan || '';
+  updatePredikat();
+
+  if (modeJenis === 'iqro') {
+    const parts = (st.materi || '').split('-');
+    if (parts[0] === 'iqro') {
+      document.getElementById('inputIqroBuku').value = parts[1] || '1';
+      document.getElementById('inputIqroHal').value  = parts[2] || '';
+    } else if (st.materi === 'lanjut-quran') {
+      tamatIqroSet.add(activeSiswa.id);
+      updateIqroUI();
+      document.getElementById('inputIqroLanjutMateri').value = st.materi_label || '';
+    }
+  } else {
+    selectedMateri = st.materi && st.materi !== 'custom' ? st.materi : null;
+    if (st.materi === 'custom') {
+      document.getElementById('inputMateriCustom').value = st.materi_label || '';
+    }
+    renderMateriList();
+  }
+
+  if (kktpAspek.length && st.nilai_aspek && Object.keys(st.nilai_aspek).length) {
+    setAspekValues(st.nilai_aspek);
+  }
+
+  document.getElementById('btnSimpan').textContent    = '✏️ Update Setoran';
+  document.getElementById('btnBatalEdit').style.display = 'flex';
+  document.getElementById('formCard').scrollIntoView({behavior:'smooth'});
+  showFloatStatus('Mode edit — ubah nilai lalu klik Update Setoran');
+}
+
+function batalEdit() {
+  editingId = null;
+  document.getElementById('btnSimpan').textContent    = '💾 Simpan Setoran';
+  document.getElementById('btnBatalEdit').style.display = 'none';
+  document.getElementById('inputCatatan').value = '';
+  document.getElementById('inputMateriCustom').value = '';
+  document.getElementById('inputIqroHal').value = '';
+  document.getElementById('inputIqroLanjutMateri').value = '';
+  selectedMateri = null;
+  pilihStatus('lulus');
+  document.getElementById('inputNilai').value = 80;
+  document.getElementById('nilaiSlider').value = 80;
+  updatePredikat();
+  if (kktpAspek.length) setAspekValues(kktpAspek.reduce((o,a)=>{o[a.nama]=80;return o},{}));
+  if (modeJenis === 'quran') renderMateriList();
+}
+
+async function updateSetoran() {
+  if (!editingId || !activeSiswa) return;
+  const st = setoranDB.find(x => x.id === editingId);
+  if (!st) return;
+
+  let materi = st.materi, materiLabel = st.materi_label;
+  if (modeJenis === 'iqro') {
+    const tamat = tamatIqroSet.has(activeSiswa.id);
+    if (tamat) {
+      const mat = document.getElementById('inputIqroLanjutMateri').value.trim();
+      if (!mat) { showAlert('error','Validasi','Isi materi bacaan.'); return; }
+      materi = 'lanjut-quran'; materiLabel = mat;
+    } else {
+      const buku = document.getElementById('inputIqroBuku').value;
+      const hal  = document.getElementById('inputIqroHal').value;
+      if (!hal) { showAlert('error','Validasi','Isi halaman Iqro.'); return; }
+      materi = `iqro-${buku}-${hal}`; materiLabel = `Iqro ${buku} hal. ${hal}`;
+    }
+  } else {
+    const custom = document.getElementById('inputMateriCustom').value.trim();
+    if (selectedMateri) { materi = selectedMateri; materiLabel = labelFromKey(selectedMateri); }
+    else if (custom)    { materi = 'custom'; materiLabel = custom; }
+    else { showAlert('error','Validasi','Pilih materi.'); return; }
+  }
+
+  const nilai     = parseInt(document.getElementById('inputNilai').value) || 0;
+  const tanggal   = document.getElementById('inputTanggal').value;
+  const catatan   = document.getElementById('inputCatatan').value.trim();
+  const nilaiAspek = getAspekValues();
+
+  const btn = document.getElementById('btnSimpan');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const updated = { ...st, tanggal, materi, materi_label: materiLabel,
+      nilai_tahsin: nilai, status_hafalan: statusHafalan, catatan, nilai_aspek: nilaiAspek };
+    await SHEETS.updateSetoranTT(updated);
+    // update local caches
+    const dbIdx = setoranDB.findIndex(x => x.id === editingId);
+    if (dbIdx >= 0) setoranDB[dbIdx] = updated;
+    const hiIdx = setoranHariIni.findIndex(x => x.id === editingId);
+    if (hiIdx >= 0) setoranHariIni[hiIdx] = { ...updated, nama_siswa: activeSiswa.nama };
+
+    showFloatStatus('✅ Setoran berhasil diupdate');
+    batalEdit();
+    renderRiwayatSiswa();
+    renderRiwayat();
+    renderSiswaList();
+  } catch(e) {
+    showAlert('error','⛔ Gagal update', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingId ? '✏️ Update Setoran' : '💾 Simpan Setoran';
+  }
+}
+
+async function hapusSetoran(id) {
+  if (!confirm('Hapus setoran ini? Data akan dihapus permanen.')) return;
+  try {
+    await SHEETS.deleteSetoranTT(id);
+    setoranDB = setoranDB.filter(x => x.id !== id);
+    const i = setoranHariIni.findIndex(x => x.id === id);
+    if (i >= 0) setoranHariIni.splice(i, 1);
+    if (editingId === id) batalEdit();
+    renderRiwayatSiswa();
+    renderRiwayat();
+    renderSiswaList();
+    showFloatStatus('🗑 Setoran dihapus');
+  } catch(e) {
+    showAlert('error','⛔ Gagal hapus', e.message);
+  }
+}
+
+function renderRiwayatSiswa() {
+  const wrap = document.getElementById('riwayatSiswaForm');
+  const list = document.getElementById('riwayatSiswaList');
+  const cnt  = document.getElementById('riwayatSiswaCount');
+  if (!wrap || !list) return;
+  if (!activeSiswa) { wrap.style.display = 'none'; return; }
+
+  const items = setoranDB.filter(x => x.id_siswa === activeSiswa.id)
+    .sort((a,b) => (b.tanggal||'') > (a.tanggal||'') ? 1 : -1);
+
+  if (!items.length) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'block';
+  cnt.textContent    = items.length + ' catatan';
+  list.innerHTML     = items.map(st => `
+    <div class="riwayat-siswa-item ${st.status_hafalan||''}">
+      <div class="riwayat-dot"></div>
+      <div class="riwayat-materi-text" title="${st.materi_label||st.materi}">${st.materi_label||st.materi}</div>
+      <div class="riwayat-tgl">${st.tanggal||''}</div>
+      <div class="riwayat-nilai-num">${st.nilai_tahsin||'—'}</div>
+      <button class="btn-icon" title="Edit" onclick="editSetoran('${st.id}')">✏️</button>
+      <button class="btn-icon" title="Hapus" onclick="hapusSetoran('${st.id}')">🗑️</button>
+    </div>`).join('');
+}
+
 function renderRiwayat() {
   const el = document.getElementById('riwayatList');
   document.getElementById('riwayatCount').textContent = setoranHariIni.length + ' setoran';
