@@ -314,7 +314,10 @@ async function gantiKelas() {
       if (r[2]!==activeKelas) return;
       if (r[5]!==sem||r[6]!==tahun) return;
       const key = (r[1]||'')+'|'+(r[3]||'');
-      ekskulDB[key] = { diikuti: r[4]==='1'||r[4]==='true', deskripsi: r[7]||'' };
+      // Level: 0=tidak ikut, 1=Layak, 2=Cakap, 3=Mahir
+      const lv = parseInt(r[4]) || 0;
+      if (lv > 0) ekskulDB[key] = { level: lv, deskripsi: r[7]||'' };
+      else if (lv === 0 && r[0]) delete ekskulDB[key]; // soft-delete
     });
 
     renderKokurikuler();
@@ -367,6 +370,9 @@ function renderKokurikuler() {
   }).join('');
 }
 
+const EKS_LV = ['','Layak','Cakap','Mahir'];
+const EKS_LV_CLS = ['','lv1','lv2','lv3'];
+
 function renderEkstrakurikuler() {
   const eks = allEkskul.filter(e=>e.jenis==='ekstrakurikuler');
   const sec = document.getElementById('sectionEks');
@@ -374,37 +380,28 @@ function renderEkstrakurikuler() {
   sec.style.display = 'block';
 
   document.getElementById('tbodyEks').innerHTML = allSiswa.map((s,si) => {
-    const chips = eks.map(e => {
+    const rows = eks.map(e => {
       const key = s.id+'|'+e.id;
-      const sel = bufEks[key]?.diikuti ?? (ekskulDB[key]?.diikuti||false);
-      return `<span class="ekskul-chip ${sel?'selected':''}"
-        id="chip-${e.id}-${s.id}"
-        onclick="toggleChip('${e.id}','${s.id}')">
-        ${e.nama}
-      </span>`;
-    }).join('');
-
-    const descFields = eks.map(e => {
-      const key  = s.id+'|'+e.id;
-      const sel  = bufEks[key]?.diikuti ?? (ekskulDB[key]?.diikuti||false);
-      const desc = bufEks[key]?.deskripsi ?? (ekskulDB[key]?.deskripsi||'');
-      return `<div id="desc-wrap-${e.id}-${s.id}" style="display:${sel?'block':'none'};margin-top:6px;">
-        <label style="font-size:11px;font-weight:700;color:var(--ink-muted);display:block;margin-bottom:3px;">
-          Deskripsi ${e.nama}:
-        </label>
-        <textarea class="desc-input" id="eks-desc-${e.id}-${s.id}"
-          placeholder="Deskripsi capaian ${s.nama.split(' ')[0]} dalam ${e.nama}…"
-          oninput="onDescEks('${e.id}','${s.id}',this)">${desc}</textarea>
-      </div>`;
+      const cur = bufEks[key]?.level ?? (ekskulDB[key]?.level ?? 0);
+      const btns = [0,1,2,3].map(lv => {
+        const label = lv===0 ? '—' : EKS_LV[lv];
+        const cls   = cur===lv ? 'lv-btn active' : 'lv-btn';
+        return `<button class="${cls} ${lv>0?EKS_LV_CLS[lv]:''}"
+          onclick="pilihLevelEks('${e.id}','${s.id}',${lv},this)"
+          title="${lv===0?'Tidak mengikuti':EKS_LV[lv]}">${label}</button>`;
+      }).join('');
+      return `<tr class="eks-row">
+        <td style="font-size:12px;color:var(--ink-muted);padding:6px 8px;">${e.nama}</td>
+        <td><div class="lv-sel" id="lv-eks-${e.id}-${s.id}">${btns}</div></td>
+      </tr>`;
     }).join('');
 
     const bg = si%2===1?'background:var(--green-ghost)':'';
     return `<tr style="${bg}">
-      <td style="color:var(--ink-muted);font-size:12px;width:36px">${si+1}</td>
-      <td><strong>${s.nama}</strong></td>
-      <td>
-        <div class="ekskul-chips">${chips}</div>
-        ${descFields}
+      <td style="color:var(--ink-muted);font-size:12px;width:36px;vertical-align:top;padding-top:10px">${si+1}</td>
+      <td style="vertical-align:top;padding-top:10px"><strong>${s.nama}</strong></td>
+      <td style="padding:4px 0">
+        <table style="width:100%;border-collapse:collapse">${rows}</table>
       </td>
     </tr>`;
   }).join('');
@@ -417,26 +414,21 @@ function onDescKok(id_ekskul, id_siswa, el) {
   bufEks[key].diikuti   = true;
 }
 
-function onDescEks(id_ekskul, id_siswa, el) {
+function pilihLevelEks(id_ekskul, id_siswa, level, btnEl) {
   const key = id_siswa+'|'+id_ekskul;
   if (!bufEks[key]) bufEks[key] = {};
-  bufEks[key].deskripsi = el.value;
-}
-
-function toggleChip(id_ekskul, id_siswa) {
-  const key  = id_siswa+'|'+id_ekskul;
-  const cur  = bufEks[key]?.diikuti ?? (ekskulDB[key]?.diikuti||false);
-  const next = !cur;
-  if (!bufEks[key]) bufEks[key] = {};
-  bufEks[key].diikuti = next;
-  document.getElementById('chip-'+id_ekskul+'-'+id_siswa)?.classList.toggle('selected',next);
-  const wrap = document.getElementById('desc-wrap-'+id_ekskul+'-'+id_siswa);
-  if (wrap) wrap.style.display = next?'block':'none';
-  // Update save button to show there are unsaved changes
+  bufEks[key].level = level;
+  // Update button states
+  const wrap = document.getElementById('lv-eks-'+id_ekskul+'-'+id_siswa);
+  wrap?.querySelectorAll('.lv-btn').forEach(b => b.classList.remove('active'));
+  btnEl?.classList.add('active');
+  // Update save button counter
   const btn = document.querySelector('#sectionEks .btn-primary');
   if (btn) {
-    const cnt = Object.values(bufEks).filter(v=>v.diikuti===true).length;
-    btn.textContent = cnt > 0 ? '💾 Simpan Ekstrakurikuler (' + cnt + ' dipilih)' : '💾 Simpan Ekstrakurikuler';
+    const cnt = Object.values(bufEks).filter(v => v.level > 0).length;
+    btn.textContent = cnt > 0
+      ? '💾 Simpan Ekstrakurikuler (' + cnt + ' dipilih)'
+      : '💾 Simpan Ekstrakurikuler';
   }
 }
 
@@ -513,19 +505,20 @@ async function simpanSemuaEkskul() {
   }
 }
 
-async function simpanBaris(rows,id_siswa,id_ekskul,diikuti,deskripsi,sem,tahun) {
+async function simpanBaris(rows,id_siswa,id_ekskul,level,deskripsi,sem,tahun) {
+  // level: 0=tidak ikut, 1=Layak, 2=Cakap, 3=Mahir
   const existIdx = rows.findIndex((r,ri)=>
     ri>1&&r[1]===id_siswa&&r[3]===id_ekskul&&r[2]===activeKelas&&r[5]===sem&&r[6]===tahun
   );
   const newId = existIdx>1?rows[existIdx][0]:'ES'+Date.now().toString(36)+Math.random().toString(36).slice(2,4);
-  const row   = [newId,id_siswa,activeKelas,id_ekskul,diikuti?'1':'0',sem,tahun,deskripsi];
+  const row   = [newId,id_siswa,activeKelas,id_ekskul,level,sem,tahun,deskripsi];
   if (existIdx>1) {
     await SHEETS.write('EKSKUL_SISWA!A'+(existIdx+1)+':H'+(existIdx+1),[row]);
-  } else {
+    rows[existIdx] = row;
+  } else if (level > 0) {
     await SHEETS.append('EKSKUL_SISWA!A:H',[row]);
     rows.push(row);
   }
-  ekskulDB[id_siswa+'|'+id_ekskul] = {diikuti,deskripsi};
 }
 
 function showStatusEks(id,msg) {
