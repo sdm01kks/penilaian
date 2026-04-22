@@ -504,14 +504,19 @@ const SHEETS = (() => {
    * Ambil ekskul dari sheet EKSKUL.
    */
   async function getEkskul() {
-    const rows = await read('EKSKUL!A:D');
+    const rows = await read('EKSKUL!A:N');
     return rows.slice(2)
-      .filter(r => r[0] && r[1] && r[0] !== 'id_dpl')
+      .filter(r => r[0] && r[1] && r[0] !== 'id_ekskul')
       .map(r => ({
         id:          r[0] || '',
         nama:        r[1] || '',
         jenis:       r[2] || '',
         keterangan:  r[3] || '',
+        level: [
+          { min: parseInt(r[4])||0,  maks: parseInt(r[5])||60,  deskripsi: r[6]||'' },
+          { min: parseInt(r[7])||61, maks: parseInt(r[8])||85,  deskripsi: r[9]||'' },
+          { min: parseInt(r[10])||86,maks: parseInt(r[11])||100, deskripsi: r[12]||'' },
+        ],
       }));
   }
 
