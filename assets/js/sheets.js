@@ -512,10 +512,13 @@ const SHEETS = (() => {
         nama:        r[1] || '',
         jenis:       r[2] || '',
         keterangan:  r[3] || '',
+        // level[0]=Layak(1), level[1]=Cakap(2), level[2]=Mahir(3), level[3]=TidakIkut(4)
+        // Col N (r[13]) = deskripsi Tidak Ikut (tanpa rentang nilai)
         level: [
-          { min: parseInt(r[4])||0,  maks: parseInt(r[5])||60,  deskripsi: r[6]||'' },
-          { min: parseInt(r[7])||61, maks: parseInt(r[8])||85,  deskripsi: r[9]||'' },
-          { min: parseInt(r[10])||86,maks: parseInt(r[11])||100, deskripsi: r[12]||'' },
+          { min: parseInt(r[4])||0,  maks: parseInt(r[5])||60,  deskripsi: r[6]||''  },  // Layak
+          { min: parseInt(r[7])||61, maks: parseInt(r[8])||85,  deskripsi: r[9]||''  },  // Cakap
+          { min: parseInt(r[10])||86,maks: parseInt(r[11])||100, deskripsi: r[12]||'' }, // Mahir
+          { deskripsi: r[13]||'' },                                                        // Tidak Ikut
         ],
       }));
   }
