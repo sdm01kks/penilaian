@@ -642,7 +642,7 @@ const SHEETS = (() => {
    * @param {{ kelas, semester, tahun, id_siswa }} filter
    */
   async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
-    const rows = await read('SETORAN_TT!A:L');
+    const rows = await read('SETORAN_TT!A:M');
     let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id');
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
@@ -663,6 +663,7 @@ const SHEETS = (() => {
       nilai_tahsin:    parseInt(r[9])  || 0,
       status_hafalan:  r[10] || '',   // 'lulus' | 'ulang'
       catatan:         r[11] || '',
+      nilai_aspek:     r[12] ? JSON.parse(r[12] || '{}') : {},
     }));
   }
 
@@ -687,9 +688,57 @@ const SHEETS = (() => {
       setoran.nilai_tahsin    ?? '',
       setoran.status_hafalan  || '',
       setoran.catatan         || '',
+      setoran.nilai_aspek     ? JSON.stringify(setoran.nilai_aspek) : '',
     ];
     await append('SETORAN_TT', [row]);
     return id;
+  }
+
+  /**
+   * Update setoran Tahsin-Tahfizh yang sudah ada (partial update).
+   * @param {string} id      - ID setoran yang akan diupdate
+   * @param {Object} setoran - Field yang akan diperbarui
+   */
+  async function updateSetoranTT(id, setoran) {
+    const rows = await read('SETORAN_TT!A:M');
+    const idx  = rows.findIndex((r, i) => i >= 2 && r[0] === id);
+    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id}`);
+
+    const ex = rows[idx];  // data existing sebagai fallback
+    const row = [
+      id,
+      setoran.id_siswa        !== undefined ? setoran.id_siswa        : (ex[1]  || ''),
+      setoran.kelas           !== undefined ? setoran.kelas           : (ex[2]  || ''),
+      setoran.semester        !== undefined ? setoran.semester        : (ex[3]  || ''),
+      setoran.tahun_pelajaran !== undefined ? setoran.tahun_pelajaran : (ex[4]  || ''),
+      setoran.tanggal         !== undefined ? setoran.tanggal         : (ex[5]  || ''),
+      setoran.jenis           !== undefined ? setoran.jenis           : (ex[6]  || ''),
+      setoran.materi          !== undefined ? setoran.materi          : (ex[7]  || ''),
+      setoran.materi_label    !== undefined ? setoran.materi_label    : (ex[8]  || ''),
+      setoran.nilai_tahsin    !== undefined ? setoran.nilai_tahsin    : (ex[9]  || ''),
+      setoran.status_hafalan  !== undefined ? setoran.status_hafalan  : (ex[10] || ''),
+      setoran.catatan         !== undefined ? setoran.catatan         : (ex[11] || ''),
+      setoran.nilai_aspek     !== undefined
+        ? JSON.stringify(setoran.nilai_aspek)
+        : (ex[12] || ''),
+    ];
+
+    // idx = index 0-based di array rows; baris sheet = idx + 1 (1-based)
+    await write(`SETORAN_TT!A${idx + 1}:M${idx + 1}`, [row]);
+  }
+
+  /**
+   * Hapus setoran Tahsin-Tahfizh berdasarkan ID.
+   * @param {number} sheetId - Numeric ID tab SETORAN_TT (dari Google Sheets)
+   * @param {string} id      - ID setoran yang akan dihapus
+   */
+  async function deleteSetoranTT(sheetId, id) {
+    const rows = await read('SETORAN_TT!A:A');
+    const idx  = rows.findIndex((r, i) => i >= 2 && r[0] === id);
+    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id}`);
+
+    // idx sudah 0-based, sesuai dengan format yang diharapkan deleteRow
+    await deleteRow(sheetId, idx);
   }
 
   // ── Expose publik API ───────────────────────────────── 
@@ -718,6 +767,8 @@ const SHEETS = (() => {
     getAbsensi,
     getSetoranTT,
     saveSetoranTT,
+    updateSetoranTT,
+    deleteSetoranTT,
 
     // Kalkulasi
     hitungNilaiAkhir,
