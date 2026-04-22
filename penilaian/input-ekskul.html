@@ -109,6 +109,32 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   .main{margin-left:0;padding:20px 12px 80px}
   .brand-sub,.user-info{display:none}
 }
+
+/* ── Level selector — ekskul (DPL-style) ─────────────── */
+.level-selector-eks { display:flex; gap:5px; flex-wrap:wrap; }
+.lv-btn {
+  padding:5px 11px; border-radius:8px; font-size:11.5px; font-weight:700;
+  cursor:pointer; border:2px solid transparent; transition:all .15s;
+  white-space:nowrap; background:var(--white); font-family:inherit;
+}
+.lv-btn.none { border-color:var(--border); color:var(--ink-muted); }
+.lv-btn.none:hover,.lv-btn.none.selected { background:#f0f0f0; border-color:var(--ink-muted); }
+.lv-btn.l4 { border-color:rgba(150,150,150,.3); color:#666; }
+.lv-btn.l4:hover,.lv-btn.l4.selected { background:#f0f0f0; border-color:#888; color:#333; }
+.lv-btn.l1 { border-color:rgba(243,156,18,.3); color:#7a4a00; }
+.lv-btn.l1:hover,.lv-btn.l1.selected { background:var(--yellow-light); border-color:var(--yellow); }
+.lv-btn.l2 { border-color:rgba(41,128,185,.3); color:var(--blue); }
+.lv-btn.l2:hover,.lv-btn.l2.selected { background:var(--blue-light); border-color:var(--blue); }
+.lv-btn.l3 { border-color:rgba(30,77,59,.3); color:var(--green-dark); }
+.lv-btn.l3:hover,.lv-btn.l3.selected { background:var(--green-pale); border-color:var(--green-dark); }
+.auto-desc-eks {
+  font-size:11.5px; color:var(--ink-mid); line-height:1.5;
+  padding:5px 10px; background:var(--green-ghost); border-radius:6px;
+  border-left:3px solid var(--green-light); min-width:200px; max-width:300px;
+}
+.auto-desc-eks.empty { color:var(--ink-muted); font-style:italic;
+  background:#f5f5f5; border-left-color:#ddd; }
+.eks-row td { padding: 6px 8px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -372,7 +398,7 @@ function renderKokurikuler() {
 
 // Level: 0=clear(internal), 1=Layak, 2=Cakap, 3=Mahir, 4=Tidak Ikut
 const EKS_LV     = ['', 'Layak', 'Cakap', 'Mahir', 'Tidak Ikut'];
-const EKS_LV_CLS = ['', 'lv1',   'lv2',   'lv3',   'lv4'];
+const EKS_LV_CLS = ['', 'l1', 'l2', 'l3', 'l4']; // DPL-style classes
 
 function renderEkstrakurikuler() {
   const eks = allEkskul.filter(e=>e.jenis==='ekstrakurikuler');
@@ -381,34 +407,48 @@ function renderEkstrakurikuler() {
   sec.style.display = 'block';
 
   document.getElementById('tbodyEks').innerHTML = allSiswa.map((s,si) => {
-    const rows = eks.map(e => {
-      const key = s.id+'|'+e.id;
-      const cur = bufEks[key]?.level ?? (ekskulDB[key]?.level ?? 0);
-      // Urutan tombol: — (clear) | Tidak Ikut (4) | Layak (1) | Cakap (2) | Mahir (3)
+    const eksRows = eks.map(e => {
+      const key   = s.id+'|'+e.id;
+      const curLv = bufEks[key]?.level ?? (ekskulDB[key]?.level ?? 0);
+      const desc  = bufEks[key]?.deskripsi ?? (ekskulDB[key]?.deskripsi || '');
+
+      // Tombol: — | Tidak Ikut | Layak | Cakap | Mahir
       const btnOrder = [0, 4, 1, 2, 3];
       const btns = btnOrder.map(lv => {
-        const label = lv===0 ? '—' : EKS_LV[lv];
-        const cls   = cur===lv ? 'lv-btn active' : 'lv-btn';
-        const lvCls = lv>0 ? EKS_LV_CLS[lv] : '';
-        const title = lv===0 ? 'Hapus pilihan' : EKS_LV[lv];
-        return `<button class="${cls} ${lvCls}"
+        if (lv === 0) {
+          return `<button class="lv-btn none ${curLv===0?'selected':''}"
+            onclick="pilihLevelEks('${e.id}','${s.id}',0,this)"
+            title="Hapus pilihan">—</button>`;
+        }
+        return `<button class="lv-btn ${EKS_LV_CLS[lv]} ${curLv===lv?'selected':''}"
           onclick="pilihLevelEks('${e.id}','${s.id}',${lv},this)"
-          title="${title}">${label}</button>`;
+          title="${EKS_LV[lv]}">${EKS_LV[lv]}</button>`;
       }).join('');
-      return `<tr class="eks-row">
-        <td style="font-size:12px;color:var(--ink-muted);padding:6px 8px;">${e.nama}</td>
-        <td><div class="lv-sel" id="lv-eks-${e.id}-${s.id}">${btns}</div></td>
+
+      const bgRow = si%2===1 ? 'style="background:var(--green-ghost)"' : '';
+      return `<tr ${bgRow}>
+        <td style="font-size:12px;color:var(--ink-muted);width:36px;padding:7px 8px">${''}</td>
+        <td style="padding:7px 8px;font-size:12.5px">${e.nama}</td>
+        <td style="padding:5px 8px">
+          <div class="level-selector-eks" id="lv-eks-${e.id}-${s.id}">${btns}</div>
+        </td>
+        <td style="padding:5px 8px">
+          <div class="auto-desc-eks ${curLv?'':'empty'}" id="desc-eks-${e.id}-${s.id}">
+            ${curLv ? (desc || EKS_LV[curLv]) : 'Pilih level terlebih dahulu'}
+          </div>
+        </td>
       </tr>`;
     }).join('');
 
-    const bg = si%2===1?'background:var(--green-ghost)':'';
-    return `<tr style="${bg}">
-      <td style="color:var(--ink-muted);font-size:12px;width:36px;vertical-align:top;padding-top:10px">${si+1}</td>
-      <td style="vertical-align:top;padding-top:10px"><strong>${s.nama}</strong></td>
-      <td style="padding:4px 0">
-        <table style="width:100%;border-collapse:collapse">${rows}</table>
+    const bgHeader = si%2===1 ? 'style="background:var(--green-ghost)"' : '';
+    return `<tr ${bgHeader}>
+      <td style="color:var(--ink-muted);font-size:12px;width:36px;vertical-align:top;padding:10px 8px;font-weight:700">${si+1}</td>
+      <td colspan="3" style="vertical-align:top;padding:10px 8px">
+        <strong style="font-size:13px">${s.nama}</strong>
+        <br><span style="font-size:11px;color:var(--ink-muted)">${s.nisn||''}</span>
       </td>
-    </tr>`;
+    </tr>
+    ${eksRows}`;
   }).join('');
 }
 
@@ -423,10 +463,34 @@ function pilihLevelEks(id_ekskul, id_siswa, level, btnEl) {
   const key = id_siswa+'|'+id_ekskul;
   if (!bufEks[key]) bufEks[key] = {};
   bufEks[key].level = level;
-  // Update button states
+
+  // Update button selected state
   const wrap = document.getElementById('lv-eks-'+id_ekskul+'-'+id_siswa);
-  wrap?.querySelectorAll('.lv-btn').forEach(b => b.classList.remove('active'));
-  btnEl?.classList.add('active');
+  wrap?.querySelectorAll('.lv-btn').forEach(b => b.classList.remove('selected'));
+  btnEl?.classList.add('selected');
+
+  // Update auto-desc preview
+  const descEl = document.getElementById('desc-eks-'+id_ekskul+'-'+id_siswa);
+  if (descEl) {
+    if (level === 0) {
+      descEl.textContent = 'Pilih level terlebih dahulu';
+      descEl.className = 'auto-desc-eks empty';
+    } else {
+      // Ambil deskripsi dari KKTP ekskul ini
+      const eks = allEkskul.find(e => e.id === id_ekskul);
+      const kktpIdx = level === 4 ? 3 : level - 1;
+      const kktp = eks?.level?.[kktpIdx];
+      const lvName = EKS_LV[level] || '';
+      const siswa  = allSiswa.find(s => s.id === id_siswa);
+      const namaDepan = siswa?.nama?.split(' ')[0] || '';
+      const desc = kktp?.deskripsi
+        || (namaDepan + ' ' + lvName.toLowerCase() + ' dalam kegiatan ' + (eks?.nama||'') + '.');
+      descEl.textContent = desc;
+      descEl.className = 'auto-desc-eks';
+      bufEks[key].deskripsi = desc;
+    }
+  }
+
   // Update save button counter
   const btn = document.querySelector('#sectionEks .btn-primary');
   if (btn) {
