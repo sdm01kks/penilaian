@@ -491,9 +491,8 @@ function buildSeksiEkskul(eksSiswa) {
     const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
     if (!row) return;
     const lv     = parseInt(row[4]) || 0;
-    const lvName = ['','Layak','Cakap','Mahir'][lv] || '';
-    // Pakai deskripsi auto dari col H jika ada, fallback ke KKTP label
-    const ket = row[7] || (lvName ? lvName : '—');
+    const lvName = ['','Layak','Cakap','Mahir','Tidak Ikut'][lv] || '';
+    const ket    = row[7] || (lvName ? lvName : '—');
     no++;
     hasil.push({ no, nama: e.nama, ket });
   });
