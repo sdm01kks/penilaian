@@ -250,6 +250,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" id="navSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none;">
     <span class="nav-icon">📖</span> Setoran Tahsin-Tahfizh
   </a>
+  <a class="nav-item" id="navLaporanTT" href="../rapor/laporan-tt.html" style="display:none;">
+    <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
+  </a>
 
   <div class="sidebar-section-label">Kurikulum</div>
   <a class="nav-item" href="../setup/mapel-tp.html">
@@ -400,7 +403,7 @@ window.addEventListener('load', async () => {
   const isTTGuru  = mapelUser.includes('tahsin') || mapelUser.includes('tahfizh')
                     || mapelUser.includes(' tt') || mapelUser === 'tt';
   if (isTTGuru) {
-    ['navSetoranTT','navSetupTT','btnSetoranTT'].forEach(id => {
+    ['navSetoranTT','navSetupTT','btnSetoranTT','navLaporanTT'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'flex';
     });
