@@ -480,17 +480,22 @@ function buildSeksiKok(kokSiswa, namaSiswa) {
 function buildSeksiEkskul(eksSiswa) {
   const hasil = [];
   let no = 0;
-  // Kokurikuler wajib — semua siswa
+  // Kokurikuler wajib — semua siswa (gunakan deskripsi dari col H)
   allEkskul.filter(e => e.jenis === 'kokurikuler').forEach(e => {
     no++;
     const row = eksSiswa.find(r => r[3] === e.id);
     hasil.push({ no, nama: e.nama, ket: row?.[7] || '—' });
   });
-  // Ekstrakurikuler pilihan — hanya yang diikuti
+  // Ekstrakurikuler pilihan — hanya yang levelnya > 0
   allEkskul.filter(e => e.jenis === 'ekstrakurikuler').forEach(e => {
-    const row = eksSiswa.find(r => r[3] === e.id &&
-      (r[4]==='1' || r[4]===1 || String(r[4]).toLowerCase()==='true'));
-    if (row) { no++; hasil.push({ no, nama: e.nama, ket: row[7] || '—' }); }
+    const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
+    if (!row) return;
+    const lv     = parseInt(row[4]) || 0;
+    const lvName = ['','Layak','Cakap','Mahir'][lv] || '';
+    // Pakai deskripsi auto dari col H jika ada, fallback ke KKTP label
+    const ket = row[7] || (lvName ? lvName : '—');
+    no++;
+    hasil.push({ no, nama: e.nama, ket });
   });
   return hasil;
 }
