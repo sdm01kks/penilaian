@@ -399,9 +399,12 @@ window.addEventListener('load', async () => {
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
 
   // Tampilkan menu Tahsin-Tahfizh jika guru ini mengampu mapel TT
+  // isTTGuru: cocokkan berdasarkan nama mapel ATAU ID mapel (cth: MP_TT, TT, TAHSIN)
   const mapelUser = (currentUser.mapel || '').toLowerCase();
   const isTTGuru  = mapelUser.includes('tahsin') || mapelUser.includes('tahfizh')
-                    || mapelUser.includes(' tt') || mapelUser === 'tt';
+                    || mapelUser === 'tt' || mapelUser.endsWith('_tt')
+                    || mapelUser.startsWith('tt_') || mapelUser.includes(' tt ')
+                    || mapelUser.endsWith(' tt');
   if (isTTGuru) {
     ['navSetoranTT','navSetupTT','btnSetoranTT','navLaporanTT'].forEach(id => {
       const el = document.getElementById(id);
