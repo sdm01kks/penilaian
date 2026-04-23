@@ -650,6 +650,8 @@ async function gantiKelas() {
 
   showLoading('Memuat siswa & target kelas ' + activeKelas + '…');
   try {
+    // Refresh config untuk memastikan kunci tamat_iqro terbaru tersedia
+    config = await SHEETS.getConfig();
     const tahun = config['tahun_pelajaran'] || '';
     allSiswa = await SHEETS.getSiswa(activeKelas);
 
@@ -663,6 +665,15 @@ async function gantiKelas() {
 
     // Muat semua setoran semester ini dari sheet
     setoranDB = await SHEETS.getSetoranTT({ kelas: activeKelas, semester: activeSem, tahun });
+
+    // Rekonstruksi tamatIqroSet dari CONFIG (permanen) + setoranDB (fallback)
+    const rawTamat = config[`tamat_iqro_${activeKelas}`] || '';
+    let savedTamat = [];
+    if (rawTamat) { try { savedTamat = JSON.parse(rawTamat); } catch(e) {} }
+    const fromSetoran = setoranDB
+      .filter(s => s.jenis === 'lanjut-quran' || s.materi === 'lanjut-quran')
+      .map(s => s.id_siswa);
+    tamatIqroSet = new Set([...savedTamat, ...fromSetoran]);
 
     // Muat KKTP aspek dari config
     const jenjang   = modeJenis === 'iqro' ? 'iqro' : 'quran';
@@ -906,7 +917,7 @@ function pilihStatus(status) {
 /* ════════════════════════════════════════════════════
    TOGGLE TAMAT IQRO (per siswa, disimpan ke catatan CONFIG)
 ════════════════════════════════════════════════════ */
-function toggleTamatIqro() {
+async function toggleTamatIqro() {
   if (!activeSiswa) return;
   const id = activeSiswa.id;
   if (tamatIqroSet.has(id)) {
@@ -915,6 +926,11 @@ function toggleTamatIqro() {
     tamatIqroSet.add(id);
   }
   updateIqroUI();
+  // Simpan ke CONFIG agar bertahan setelah refresh
+  try {
+    const cfgKey = `tamat_iqro_${activeKelas}`;
+    await SHEETS.setConfig(cfgKey, JSON.stringify([...tamatIqroSet]));
+  } catch(e) { /* non-critical */ }
 }
 
 function updateIqroUI() {
