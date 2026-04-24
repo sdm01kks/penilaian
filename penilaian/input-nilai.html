@@ -461,8 +461,10 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   <a class="nav-item" href="input-dpl.html"><span class="nav-icon">🌱</span> Input Kokurikuler</a>
   <a class="nav-item" href="input-ekskul.html"><span class="nav-icon">🏆</span> Input Ekstrakurikuler</a>
   <a class="nav-item" href="input-absensi.html"><span class="nav-icon">📋</span> Input Absensi & Catatan</a>
-  <div class="sidebar-section-label">Rapor</div>
-  <a class="nav-item" href="../rapor/preview.html"><span class="nav-icon">🖨️</span> Preview & Cetak Rapor</a>
+  <div class="sidebar-section-label">Rapor & Leger</div>
+  <a class="nav-item" id="navPreviewRapor" href="../rapor/preview.html" style="display:none"><span class="nav-icon">🖨️</span> Preview & Cetak Rapor</a>
+  <a class="nav-item" id="navLegerMapel" href="../rapor/leger-mapel.html" style="display:none"><span class="nav-icon">📊</span> Leger Nilai</a>
+  <a class="nav-item" id="navLegerKelas" href="../rapor/leger-kelas.html" style="display:none"><span class="nav-icon">📊</span> Leger Nilai Kelas</a>
   <div class="sidebar-section-label">Setup</div>
   <a class="nav-item" href="../setup/mapel-tp.html"><span class="nav-icon">📚</span> TP & KKTP Mapel</a>
 </nav>
@@ -685,9 +687,20 @@ window.addEventListener('load', async () => {
 
 function aturNav() {
   const r = currentUser.role;
-  if (r === 'admin')       document.getElementById('navAdmin').style.display = 'flex';
-  else if (r==='guru_kelas') document.getElementById('navGK').style.display = 'flex';
-  else                     document.getElementById('navGM').style.display = 'flex';
+  if (r === 'admin') {
+    document.getElementById('navAdmin').style.display = 'flex';
+    document.getElementById('navPreviewRapor').style.display = 'flex';
+    document.getElementById('navLegerKelas').style.display   = 'flex';
+    document.getElementById('navLegerMapel').style.display   = 'flex';
+  } else if (r === 'guru_kelas') {
+    document.getElementById('navGK').style.display           = 'flex';
+    document.getElementById('navPreviewRapor').style.display = 'flex';
+    document.getElementById('navLegerKelas').style.display   = 'flex';
+  } else {
+    // guru_mapel: hanya leger bidang studi, tidak ada akses preview rapor
+    document.getElementById('navGM').style.display         = 'flex';
+    document.getElementById('navLegerMapel').style.display = 'flex';
+  }
 }
 
 /* ── Dropdown ─────────────────────────────────────────── */
