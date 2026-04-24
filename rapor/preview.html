@@ -395,10 +395,13 @@ function buildSeksiMapel(nilaiSiswa, isISMUBA) {
   const URUTAN_ISMUBA = ['MP12','MP13'];
   const urutanRef = isISMUBA ? URUTAN_ISMUBA : URUTAN_WAJIB;
 
-  // Filter mapel: hanya yang sesuai kelompok
-  const mapelFiltered = allMapel.filter(m => isISMUBA
-    ? ISMUBA_IDS.includes(m.id)
-    : !ISMUBA_IDS.includes(m.id));
+  // Tahsin-Tahfizh memiliki laporan sendiri (Laporan TT), tidak dimasukkan ke rapor
+  const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
+  // Filter mapel: hanya yang sesuai kelompok, kecualikan Tahsin-Tahfizh
+  const mapelFiltered = allMapel.filter(m =>
+    !isTahsin(m) &&
+    (isISMUBA ? ISMUBA_IDS.includes(m.id) : !ISMUBA_IDS.includes(m.id))
+  );
 
   // Urutkan berdasarkan urutan baku, sisipkan yang tidak ada di urutan di akhir
   const mapelList = [
