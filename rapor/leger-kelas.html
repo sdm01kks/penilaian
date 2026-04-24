@@ -358,16 +358,18 @@ async function tampilkanLeger() {
     document.getElementById('printSub').textContent   =
       `Wali Kelas: ${currentUser.nama} · Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
 
-    // Thead — No | Nama | Mapel1…MapelN | Rata | Rank
-    const thMapel = mapelList.map(m =>
-      `<th style="min-width:56px;font-size:10px" title="${m.nama}">${m.nama.length>10?m.nama.slice(0,9)+'…':m.nama}</th>`
+    // Thead — No | Nama Siswa | NISN | Mapel1…MapelN (nama penuh) | Rata-rata | Peringkat
+    // Gunakan 2 baris header agar nama mapel bisa wrap lebih rapi
+    const thMapelTop = mapelList.map(m =>
+      `<th style="min-width:64px;font-size:10.5px;white-space:normal;line-height:1.3;max-width:80px">${m.nama}</th>`
     ).join('');
     document.getElementById('tblHead').innerHTML = `<tr>
       <th class="left" style="min-width:32px">No</th>
       <th class="left" style="min-width:160px">Nama Siswa</th>
-      ${thMapel}
-      <th style="min-width:60px">Rata²</th>
-      <th style="min-width:48px">Rank</th>
+      <th style="min-width:110px">NISN</th>
+      ${thMapelTop}
+      <th style="min-width:70px">Rata-rata</th>
+      <th style="min-width:62px">Peringkat</th>
     </tr>`;
 
     // Tbody
@@ -382,6 +384,7 @@ async function tampilkanLeger() {
       html += `<tr>
         <td>${i+1}</td>
         <td class="left nama" title="${r.siswa.nama}">${r.siswa.nama}</td>
+        <td style="font-size:11px;color:var(--ink-muted)">${r.siswa.nisn||'—'}</td>
         ${tdMapel}
         <td class="${nilaiColor(r.rata)}" style="font-weight:700">${rataStr}</td>
         <td>${rankBadge(rank)}</td>
@@ -395,7 +398,7 @@ async function tampilkanLeger() {
       return `<td style="font-size:11px;color:var(--green-dark)">${v}</td>`;
     }).join('');
     html += `<tr class="stat-row-tbl">
-      <td colspan="2" class="left">Rata-rata Kelas</td>
+      <td colspan="3" class="left">Rata-rata Kelas</td>
       ${tpRata}
       <td>${rataKelas}</td>
       <td>—</td>
