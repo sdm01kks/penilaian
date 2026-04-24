@@ -441,19 +441,22 @@ async function tampilkanLeger() {
     document.getElementById('printTitle').textContent = 'Leger Nilai ' + (mapelObj?.nama||'') + ' · ' + kelasLabel;
     document.getElementById('printSub').textContent   = `Semester ${semester} · ${tahun} · Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
 
-    // Build thead — kolom: No | Nama | Kelas | TP1…TPn | Total | Rata | Rank
+    // Build thead — kolom: No | Nama Siswa | NISN | Kelas | TP1…TPn | Jumlah | Rata-rata | Peringkat
     const thTP = allTP.map((tp,i) =>
       `<th class="tp-group" title="${tp.nama_tp||''}">TP ${tp.nomor_tp||i+1}</th>`
     ).join('');
+    const nisisnCol  = '<th rowspan="2" style="min-width:110px">NISN</th>';
+    const kelasCol   = !kelas ? '<th rowspan="2" style="min-width:60px">Kelas</th>' : '';
     document.getElementById('tblHead').innerHTML = `
       <tr>
         <th rowspan="2" class="left" style="min-width:32px">No</th>
         <th rowspan="2" class="left" style="min-width:160px">Nama Siswa</th>
-        ${!kelas ? '<th rowspan="2" style="min-width:60px">Kelas</th>' : ''}
+        ${nisisnCol}
+        ${kelasCol}
         <th colspan="${allTP.length}" class="tp-group">Nilai Akhir per TP</th>
-        <th rowspan="2" style="min-width:54px">Total</th>
-        <th rowspan="2" style="min-width:58px">Rata²</th>
-        <th rowspan="2" style="min-width:48px">Rank</th>
+        <th rowspan="2" style="min-width:60px">Jumlah</th>
+        <th rowspan="2" style="min-width:70px">Rata-rata</th>
+        <th rowspan="2" style="min-width:62px">Peringkat</th>
       </tr>
       <tr>${thTP}</tr>`;
 
@@ -474,6 +477,7 @@ async function tampilkanLeger() {
       html += `<tr>
         <td>${i+1}</td>
         <td class="nama" title="${r.siswa.nama}">${r.siswa.nama}</td>
+        <td style="font-size:11px;color:var(--ink-muted)">${r.siswa.nisn||'—'}</td>
         ${!kelas ? `<td>${r.siswa.kelas}</td>` : ''}
         ${tdTP}
         <td style="font-weight:600">${totalStr}</td>
@@ -488,9 +492,10 @@ async function tampilkanLeger() {
       return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
     }).map(v => `<td style="font-size:11px;color:var(--green-dark)">${v}</td>`).join('');
 
+    // colspan: No + Nama + NISN = 3, + Kelas jika multi-kelas
+    const statColspan = !kelas ? 4 : 3;
     html += `<tr class="stat-row-tbl">
-      <td colspan="2" class="left">Rata-rata Kelas</td>
-      ${!kelas ? '<td></td>' : ''}
+      <td colspan="${statColspan}" class="left">Rata-rata Kelas</td>
       ${tpRata}
       <td>—</td>
       <td>${rataKelas}</td>
