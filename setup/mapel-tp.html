@@ -738,22 +738,25 @@ function filterMapelByUser(mapel) {
   // Admin: akses penuh ke semua mapel
   if (currentUser.role === 'admin') return mapel;
 
-  // Guru kelas: boleh lihat SEMUA mapel (semua mapel diajarkan di kelasnya)
+  // Guru kelas: boleh lihat SEMUA mapel (semua mata pelajaran diajarkan di kelasnya)
   if (currentUser.role === 'guru_kelas') return mapel;
 
-  // Guru bidang studi: HANYA mapel yang diampu sesuai setting admin
-  // CATATAN: auth.js menyimpan field 'mapel' (string mentah), bukan 'mapelList' (array).
-  // Kita parse di sini agar konsisten dengan getUsers() di sheets.js.
-  const mapelRaw   = currentUser.mapel || currentUser.mapelList?.join(',') || '';
-  const mapelDiampu = mapelRaw.split(',').map(s => s.trim()).filter(s => s && s !== 'semua');
+  // Guru bidang studi: hanya mapel yang diampu sesuai setting admin.
+  // auth.js menyimpan 'mapel' sebagai string mentah (misal "PJOK,TAHSIN"),
+  // bukan mapelList (array) — parse manual agar konsisten dengan input-nilai.html.
+  const mapelDiampu = currentUser.mapelList ||
+    (currentUser.mapel ? currentUser.mapel.split(',').map(s => s.trim()).filter(Boolean) : []);
 
-  if (!mapelDiampu.length) {
-    setTimeout(() => {
-      showAlert('warning', 'Mapel Belum Dikonfigurasi',
-        'Akun Anda belum memiliki mata pelajaran yang ditetapkan. ' +
-        'Silakan hubungi administrator untuk mengatur mata pelajaran yang Anda ampu.');
-    }, 500);
-    return [];
+  // Jika belum dikonfigurasi admin → tampilkan semua mapel + peringatan
+  if (!mapelDiampu.length || mapelDiampu.includes('semua')) {
+    if (!mapelDiampu.length) {
+      setTimeout(() => {
+        showAlert('warning', 'Mapel Belum Dikonfigurasi',
+          'Akun Anda belum memiliki mata pelajaran yang ditetapkan. ' +
+          'Silakan hubungi administrator untuk mengatur mata pelajaran yang Anda ampu.');
+      }, 500);
+    }
+    return mapel;
   }
 
   return mapel.filter(m => mapelDiampu.includes(m.id));
