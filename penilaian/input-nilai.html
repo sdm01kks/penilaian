@@ -704,12 +704,14 @@ function isiDropdownKelas() {
 
 function isiDropdownMapel() {
   const sel = document.getElementById('selMapel');
-  let mapel = allMapel;
+  // Tahsin-Tahfizh diinput melalui menu Setoran TT, bukan di sini
+  const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
+  let mapel = allMapel.filter(m => !isTahsin(m));
   if (currentUser.role === 'guru_mapel') {
     const mapelDiampu = currentUser.mapelList || 
       (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
     if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
-      mapel = allMapel.filter(m => mapelDiampu.includes(m.id));
+      mapel = mapel.filter(m => mapelDiampu.includes(m.id));
     }
   }
   sel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
