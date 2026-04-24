@@ -735,19 +735,24 @@ window.addEventListener('load', async () => {
 
 /* ── Filter mapel berdasarkan hak akses user ─────────── */
 function filterMapelByUser(mapel) {
-  // Admin: akses penuh ke semua mapel
-  if (currentUser.role === 'admin') return mapel;
+  // Tahsin-Tahfizh dikelola melalui menu tersendiri (Setup Tahsin-Tahfizh &
+  // Input Setoran TT), sehingga tidak perlu tampil di sini untuk siapapun.
+  const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
+  const mapelTanpaTT = mapel.filter(m => !isTahsin(m));
 
-  // Guru kelas: boleh lihat SEMUA mapel (semua mata pelajaran diajarkan di kelasnya)
-  if (currentUser.role === 'guru_kelas') return mapel;
+  // Admin: akses penuh ke semua mapel (kecuali Tahsin)
+  if (currentUser.role === 'admin') return mapelTanpaTT;
+
+  // Guru kelas: boleh lihat SEMUA mapel di kelasnya (kecuali Tahsin)
+  if (currentUser.role === 'guru_kelas') return mapelTanpaTT;
 
   // Guru bidang studi: hanya mapel yang diampu sesuai setting admin.
-  // auth.js menyimpan 'mapel' sebagai string mentah (misal "PJOK,TAHSIN"),
+  // auth.js menyimpan 'mapel' sebagai string mentah (misal "PJOK,PAI"),
   // bukan mapelList (array) — parse manual agar konsisten dengan input-nilai.html.
   const mapelDiampu = currentUser.mapelList ||
     (currentUser.mapel ? currentUser.mapel.split(',').map(s => s.trim()).filter(Boolean) : []);
 
-  // Jika belum dikonfigurasi admin → tampilkan semua mapel + peringatan
+  // Jika belum dikonfigurasi admin → tampilkan semua mapel (kecuali Tahsin) + peringatan
   if (!mapelDiampu.length || mapelDiampu.includes('semua')) {
     if (!mapelDiampu.length) {
       setTimeout(() => {
@@ -756,10 +761,10 @@ function filterMapelByUser(mapel) {
           'Silakan hubungi administrator untuk mengatur mata pelajaran yang Anda ampu.');
       }, 500);
     }
-    return mapel;
+    return mapelTanpaTT;
   }
 
-  return mapel.filter(m => mapelDiampu.includes(m.id));
+  return mapelTanpaTT.filter(m => mapelDiampu.includes(m.id));
 }
 
 /* ── Atur nav sesuai role ─────────────────────────────── */
