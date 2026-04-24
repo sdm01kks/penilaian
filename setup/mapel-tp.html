@@ -735,11 +735,24 @@ window.addEventListener('load', async () => {
 
 /* ── Filter mapel berdasarkan hak akses user ─────────── */
 function filterMapelByUser(mapel) {
+  // Admin: akses penuh ke semua mapel
   if (currentUser.role === 'admin') return mapel;
 
-  // Mapel yang diajarkan user (dari field mapel di USERS, bisa multi)
-  const mapelDiampu = currentUser.mapelList || [];
-  if (!mapelDiampu.length || mapelDiampu.includes('semua')) return mapel;
+  // Guru kelas: boleh lihat SEMUA mapel (semua mapel diajarkan di kelasnya)
+  if (currentUser.role === 'guru_kelas') return mapel;
+
+  // Guru bidang studi: HANYA mapel yang diampu sesuai setting admin
+  // Jika mapelList kosong = belum dikonfigurasi admin → tampilkan kosong + peringatan
+  const mapelDiampu = (currentUser.mapelList || []).filter(id => id && id !== 'semua');
+  if (!mapelDiampu.length) {
+    // Tampilkan pesan ke guru bahwa akun belum dikonfigurasi
+    setTimeout(() => {
+      showAlert('warning', 'Mapel Belum Dikonfigurasi',
+        'Akun Anda belum memiliki mata pelajaran yang ditetapkan. ' +
+        'Silakan hubungi administrator untuk mengatur mata pelajaran yang Anda ampu.');
+    }, 500);
+    return [];
+  }
 
   return mapel.filter(m => mapelDiampu.includes(m.id));
 }
