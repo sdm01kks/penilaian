@@ -229,6 +229,15 @@ window.addEventListener('load', async () => {
   currentUser = AUTH.requireLogin();
   if (!currentUser) return;
 
+  // Preview & Cetak Rapor hanya untuk admin dan guru kelas
+  if (currentUser.role === 'guru_mapel') {
+    showAlert('error','Akses Ditolak',
+      'Halaman ini hanya dapat diakses oleh guru kelas dan admin. ' +
+      'Gunakan menu Leger Nilai untuk melihat rekap nilai mata pelajaran yang Anda ampu.');
+    setTimeout(() => { window.location.href = '../rapor/leger-mapel.html'; }, 2500);
+    return;
+  }
+
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
 
@@ -261,8 +270,12 @@ function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role === 'guru_kelas') {
-    const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
-    kelas = allKelas.filter(k => arr.includes(k.nama));
+    // Ambil daftar kelas yang diampu dari kelasList atau parse dari field kelas (raw string)
+    const arr = (currentUser.kelasList ||
+      (currentUser.kelas ? currentUser.kelas.split(',') : []))
+      .map(s => String(s).trim()).filter(Boolean);
+    // Jika arr kosong (belum dikonfigurasi admin), tampilkan kosong agar tidak bisa akses semua
+    kelas = arr.length ? allKelas.filter(k => arr.includes(k.nama)) : [];
   }
   sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
