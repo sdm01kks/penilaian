@@ -691,7 +691,7 @@ window.addEventListener('load', async () => {
       document.getElementById('adminMapelActions').style.display = 'block';
     }
 
-    // Auto-set tingkatan untuk guru kelas
+    // Auto-set & lock tingkatan untuk guru kelas (hanya boleh akses kelasnya sendiri)
     if (currentUser.role === 'guru_kelas') {
       const kelas0 = (currentUser.kelasList || currentUser.kelas?.split(',')||[])[0]?.trim();
       if (kelas0) {
@@ -699,6 +699,30 @@ window.addEventListener('load', async () => {
         if (t) {
           document.getElementById('selTingkatan').value = t;
           activeTingkatan = t;
+          // Kunci dropdown — guru kelas tidak boleh pindah tingkatan
+          document.getElementById('selTingkatan').disabled = true;
+        }
+      }
+    }
+
+    // Batasi opsi tingkatan untuk guru bidang studi sesuai kelas yang diampu
+    if (currentUser.role === 'guru_mapel') {
+      const allowedTingkatan = new Set(
+        (currentUser.kelasList || currentUser.kelas?.split(',') || [])
+          .map(k => String(k).trim().replace(/[^0-9]/g, ''))
+          .filter(Boolean)
+      );
+      if (allowedTingkatan.size > 0) {
+        // Hapus opsi kelas yang tidak termasuk hak akses guru
+        document.querySelectorAll('#selTingkatan option').forEach(opt => {
+          if (opt.value && !allowedTingkatan.has(opt.value)) opt.remove();
+        });
+        // Auto-set jika hanya satu tingkatan yang boleh diakses
+        if (allowedTingkatan.size === 1) {
+          const t = [...allowedTingkatan][0];
+          document.getElementById('selTingkatan').value = t;
+          activeTingkatan = t;
+          document.getElementById('selTingkatan').disabled = true;
         }
       }
     }
@@ -737,7 +761,24 @@ function aturNav() {
    TINGKATAN & MAPEL SELECTOR
 ════════════════════════════════════════════════════════ */
 function gantiTingkatan() {
-  activeTingkatan = document.getElementById('selTingkatan').value;
+  const dipilih = document.getElementById('selTingkatan').value;
+
+  // Guard: guru non-admin tidak boleh memilih tingkatan di luar haknya
+  if (dipilih && currentUser.role !== 'admin') {
+    const allowedTingkatan = (currentUser.kelasList || currentUser.kelas?.split(',') || [])
+      .map(k => String(k).trim().replace(/[^0-9]/g, ''))
+      .filter(Boolean);
+    if (allowedTingkatan.length > 0 && !allowedTingkatan.includes(dipilih)) {
+      // Kembalikan ke nilai yang valid
+      const valid = allowedTingkatan[0] || '';
+      document.getElementById('selTingkatan').value = valid;
+      activeTingkatan = valid;
+      showAlert('error','Akses Ditolak','Anda tidak memiliki akses ke tingkatan kelas ini.');
+      return;
+    }
+  }
+
+  activeTingkatan = dipilih;
   activeMapel = null; allTP = [];
   document.getElementById('welcomeState').style.display = 'block';
   document.getElementById('detailArea').style.display   = 'none';
@@ -828,6 +869,18 @@ async function pilihMapel(m) {
     showAlert('warning','Pilih Tingkatan Dulu',
       'Silakan pilih tingkatan kelas terlebih dahulu dari dropdown di panel kiri.');
     return;
+  }
+
+  // Validasi server-side: pastikan tingkatan yang dipilih memang hak akses user
+  if (activeTingkatan && currentUser.role !== 'admin') {
+    const allowedTingkatan = (currentUser.kelasList || currentUser.kelas?.split(',') || [])
+      .map(k => String(k).trim().replace(/[^0-9]/g, ''))
+      .filter(Boolean);
+    if (allowedTingkatan.length > 0 && !allowedTingkatan.includes(activeTingkatan)) {
+      showAlert('error','Akses Ditolak',
+        'Anda tidak memiliki akses ke tingkatan kelas ini.');
+      return;
+    }
   }
 
   activeMapel = m;
@@ -1092,10 +1145,14 @@ async function simpanTP(idx) {
   try {
     const rows = await SHEETS.read('TP_KKTP!A:A');
     const rowIdx = rows.findIndex(r => r[0] === tp.id_tp);
-    if (rowIdx > 1 && tp.id_tp) {
+    if (rowIdx > 0 && tp.id_tp) {
+      // UPDATE — baris sudah ada
       await SHEETS.write(`TP_KKTP!A${rowIdx+1}:W${rowIdx+1}`, [row]);
     } else {
-      await SHEETS.append('TP_KKTP!A:W', [row]);
+      // INSERT — hitung baris berikutnya, minimal baris ke-3 (index 2)
+      // agar slice(2) di getTPKKTP selalu bisa membaca data ini
+      const nextRow = Math.max(rows.length + 1, 3);
+      await SHEETS.write(`TP_KKTP!A${nextRow}:W${nextRow}`, [row]);
       allTP[idx].id_tp = idTP;
     }
     // Update local state
@@ -1130,7 +1187,7 @@ async function hapusTP(idx) {
     if (tp.id_tp) {
       const rows = await SHEETS.read('TP_KKTP!A:A');
       const rowIdx = rows.findIndex(r => r[0] === tp.id_tp);
-      if (rowIdx > 1) {
+      if (rowIdx > 0) {
         // Kosongkan baris (soft delete — baris kosong akan difilter saat baca)
         await SHEETS.write(`TP_KKTP!A${rowIdx+1}:W${rowIdx+1}`, [Array(23).fill('')]);
       }
@@ -1168,7 +1225,8 @@ async function simpanBobot() {
   showLoading('Menyimpan bobot ke semua TP…');
   try {
     const rows = await SHEETS.read('TP_KKTP!A:J');
-    for (let ri = 2; ri < rows.length; ri++) {
+    for (let ri = 1; ri < rows.length; ri++) {
+      if (!rows[ri][0] || rows[ri][0] === 'id_tp' || rows[ri][0].trim() === '') continue;
       if (rows[ri][1] === activeMapel?.id) {
         await SHEETS.write(`TP_KKTP!I${ri+1}:J${ri+1}`, [[slm, sas]]);
       }
