@@ -1199,7 +1199,7 @@ async function simpanTP(tpIdx) {
     for (const item of toSave) {
       // Cek apakah sudah ada baris ini
       const existIdx = rows.findIndex((r, ri) =>
-        ri > 1 &&
+        ri > 0 &&
         r[1] === item.id_siswa &&
         r[2] === tp.id_tp &&
         r[3] === activeMapel.id &&
@@ -1239,7 +1239,9 @@ async function simpanTP(tpIdx) {
         await SHEETS.write('NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]);
       } else {
         row[0] = 'NL' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-        await SHEETS.append('NILAI', [row]);
+        // Hitung baris berikutnya min row 3 agar slice(2) di getNilai selalu membacanya
+        const nextNilaiRow = Math.max(rows.length + 1, 3);
+        await SHEETS.write('NILAI!A' + nextNilaiRow + ':K' + nextNilaiRow, [row]);
         rows.push(row);
       }
 
