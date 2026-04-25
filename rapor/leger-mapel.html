@@ -367,7 +367,7 @@ async function tampilkanLeger() {
     const tingkatanUniq = [...new Set(tingkatanList)];
     for (const t of tingkatanUniq) {
       const tpList = await SHEETS.getTPKKTP({ id_mapel: idMapel, kelas: t });
-      tpList.forEach(tp => { if (!allTP.find(x=>x.id===tp.id)) allTP.push(tp); });
+      tpList.forEach(tp => { if (!allTP.find(x=>x.id_tp===tp.id_tp)) allTP.push(tp); });
     }
     allTP.sort((a,b) => (parseInt(a.nomor_tp)||0) - (parseInt(b.nomor_tp)||0));
 
@@ -395,12 +395,17 @@ async function tampilkanLeger() {
 
     // Indeks: key = `${id_siswa}_${id_tp}` → nilai_akhir
     const nilaiIdx = {};
-    nilaiData.forEach(n => { nilaiIdx[`${n.id_siswa}_${n.id_tp}`] = n.nilai_akhir; });
+    nilaiData.forEach(n => {
+      // Simpan nilai_akhir; pakai null jika benar-benar tidak ada (bukan 0 yang valid)
+      const va = (n.nilai_akhir !== undefined && n.nilai_akhir !== null && n.nilai_akhir !== '') 
+        ? parseFloat(n.nilai_akhir) : null;
+      nilaiIdx[`${n.id_siswa}_${n.id_tp}`] = va;
+    });
 
     // Hitung nilai per siswa
     const rows = siswaList.map((s, idx) => {
       const vals = allTP.map(tp => {
-        const v = nilaiIdx[`${s.id}_${tp.id}`];
+        const v = nilaiIdx[`${s.id}_${tp.id_tp}`];
         return (v !== undefined && v !== null && v !== '') ? parseFloat(v) : null;
       });
       const filled = vals.filter(v => v !== null);
