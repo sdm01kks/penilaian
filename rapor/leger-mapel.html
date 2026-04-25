@@ -188,8 +188,8 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
     <div class="filter-group">
       <label>Semester</label>
       <select id="selSem" onchange="onFilterChange()">
-        <option value="1">Semester 1</option>
-        <option value="2">Semester 2</option>
+        <option value="I">Semester 1</option>
+        <option value="II">Semester 2</option>
       </select>
     </div>
     <div style="margin-top:auto;display:flex;gap:8px">
@@ -389,59 +389,60 @@ async function tampilkanLeger() {
     siswaList.sort((a,b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
 
     // Ambil semua nilai relevan
-    // DEBUG — tampilkan parameter filter di console
-    console.group('🔍 DEBUG getNilai');
-    console.log('id_mapel :', idMapel);
-    console.log('kelas    :', kelas);
-    console.log('semester :', semester);
-    console.log('tahun    :', tahun);
-    console.log('allTP    :', allTP.map(t => t.id_tp + ' (' + t.nomor_tp + ')'));
-    console.log('siswaList sample id :', siswaList[0]?.id);
-    console.groupEnd();
+    const nilaiData = [];  // tidak dipakai — diganti baca langsung dari sheet di bawah
 
-    const nilaiData = await SHEETS.getNilai({
-      id_mapel: idMapel, kelas, semester, tahun
-    });
-
-    // Baca sheet NILAI secara langsung untuk cross-check filter
+    // Baca sheet NILAI secara langsung — bypass getNilai
     const rawNilaiRows = await SHEETS.read('NILAI!A:K');
-    console.group('📊 DEBUG NILAI sheet (raw)');
-    console.log('Total baris di sheet (termasuk header):', rawNilaiRows.length);
-    const sampelRow = rawNilaiRows.slice(1, 4);
-    console.log('Baris 2-4 (raw):', sampelRow);
-    // Cari baris yang punya id_mapel = idMapel
-    const matchMapel = rawNilaiRows.filter(r => r[3] === idMapel);
-    console.log(`Baris dengan id_mapel=${idMapel}:`, matchMapel.length);
-    if (matchMapel.length) {
-      console.log('Sample (r[3]=idMapel):', matchMapel[0]);
-      console.log('  → r[4] kelas  :', matchMapel[0][4], '| cari:', kelas);
-      console.log('  → r[5] semester:', matchMapel[0][5], '| cari:', semester, '| cocok?', matchMapel[0][5] === semester);
-      console.log('  → r[6] tahun  :', matchMapel[0][6], '| cari:', tahun,    '| cocok?', matchMapel[0][6] === tahun);
-    }
-    console.groupEnd();
 
-    // Indeks: key = `${id_siswa}_${id_tp}` → nilai_akhir
-    // Filter manual dari raw rows (bypass getNilai agar tidak terdistorsi filter yang salah)
+    // FIX 1: Semester tersimpan sebagai Romawi ("I","II") tapi dropdown pakai Arab ("1","2")
+    // Buat mapping dua arah agar filter tetap cocok dalam format apapun
+    const semRomawi = { '1':'I', '2':'II', '3':'III', '4':'IV' };
+    const semArab   = { 'I':'1', 'II':'2', 'III':'3', 'IV':'4' };
+    const semAktif  = config['semester_aktif'] || semester;  // nilai di sheet (mungkin Romawi)
+    // Kandidat semester yang diterima (Arab dan Romawi keduanya valid)
+    const semKandidatUI  = semester;                          // "1" atau "2" dari dropdown
+    const semKandidatRom = semRomawi[semester] || semester;   // "I" atau "II"
+    const semValid = new Set([semKandidatUI, semKandidatRom, semAktif,
+                              semRomawi[semAktif]||semAktif, semArab[semAktif]||semAktif]);
+
+    // FIX 2: Buat indeks nomor_tp dari allTP untuk fallback lookup saat id_tp berubah
+    // key: nomor_tp (string) → id_tp baru
+    const tpByNomor = {};
+    allTP.forEach(tp => { tpByNomor[String(tp.nomor_tp)] = tp.id_tp; });
+
+    // Bangun nilaiIdx dari raw sheet
+    // key: "${id_siswa}_${id_tp_baru}" — pakai id_tp dari allTP (bukan dari sheet)
     const nilaiIdx = {};
     rawNilaiRows.slice(1).forEach(r => {
-      if (!r[0] || r[0] === 'id_nilai' || !r[1] || !r[2]) return;
+      if (!r[0] || r[0] === 'id_nilai' || r[0].trim() === '' || !r[1] || !r[2]) return;
       if (r[3] !== idMapel) return;
-      if (kelas    && r[4] !== kelas)    return;
-      if (semester && r[5] !== semester) return;
-      // Sengaja tidak filter tahun — biarkan semua tahun masuk dulu
+      if (kelas && r[4] !== kelas) return;
+      if (!semValid.has(r[5])) return;   // FIX 1: cocokkan Romawi atau Arab
+      if (tahun && r[6] && r[6] !== tahun) return;
+
       const va = (r[9] !== undefined && r[9] !== null && r[9] !== '')
         ? parseFloat(r[9]) : null;
-      nilaiIdx[`${r[1]}_${r[2]}`] = va;
-    });
 
-    console.log('🗂 nilaiIdx keys (tanpa filter tahun):', Object.keys(nilaiIdx).slice(0,5));
+      // FIX 2: coba pakai id_tp dari sheet; jika tidak ada di allTP, fallback ke nomor_tp
+      const idTpSheet  = r[2];
+      const tpMatch    = allTP.find(tp => tp.id_tp === idTpSheet);
+      const idTpPakai  = tpMatch ? idTpSheet : (() => {
+        // Ekstrak nomor TP dari id lama (format: TP-MAPEL-KELAS-NOMOR-HASH)
+        const parts = idTpSheet.split('-');
+        const nomor = parts[3] || '';
+        return tpByNomor[nomor] || idTpSheet;
+      })();
+
+      const key = `${r[1]}_${idTpPakai}`;
+      if (!nilaiIdx[key]) nilaiIdx[key] = va;  // ambil pertama jika ada duplikat
+    });
 
     // Hitung nilai per siswa
     const rows = siswaList.map((s, idx) => {
       const vals = allTP.map(tp => {
         const key = `${s.id}_${tp.id_tp}`;
         const v = nilaiIdx[key];
-        if (idx === 0) console.log(`  siswa[0] key ${key} → v=${v}`);
+
         return (v !== undefined && v !== null) ? parseFloat(v) : null;
       });
       const filled = vals.filter(v => v !== null);
