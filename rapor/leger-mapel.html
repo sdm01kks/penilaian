@@ -389,24 +389,49 @@ async function tampilkanLeger() {
     siswaList.sort((a,b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
 
     // Ambil semua nilai relevan
+    // DEBUG — tampilkan parameter filter di console
+    console.group('🔍 DEBUG getNilai');
+    console.log('id_mapel :', idMapel);
+    console.log('kelas    :', kelas);
+    console.log('semester :', semester);
+    console.log('tahun    :', tahun);
+    console.log('allTP    :', allTP.map(t => t.id_tp + ' (' + t.nomor_tp + ')'));
+    console.log('siswaList sample id :', siswaList[0]?.id);
+    console.groupEnd();
+
     const nilaiData = await SHEETS.getNilai({
       id_mapel: idMapel, kelas, semester, tahun
     });
 
+    console.group('📊 DEBUG nilaiData');
+    console.log('Jumlah record nilaiData :', nilaiData.length);
+    if (nilaiData.length > 0) {
+      console.log('Sample record :', nilaiData[0]);
+    } else {
+      console.warn('⚠️ nilaiData KOSONG — kemungkinan filter tidak cocok dengan data di sheet');
+    }
+    console.groupEnd();
+
     // Indeks: key = `${id_siswa}_${id_tp}` → nilai_akhir
     const nilaiIdx = {};
     nilaiData.forEach(n => {
-      // Simpan nilai_akhir; pakai null jika benar-benar tidak ada (bukan 0 yang valid)
-      const va = (n.nilai_akhir !== undefined && n.nilai_akhir !== null && n.nilai_akhir !== '') 
-        ? parseFloat(n.nilai_akhir) : null;
+      // Gunakan nilai mentah dari sheet — bukan hasil parseFloat di getNilai
+      // karena parseFloat(...) || 0 bisa ubah '' menjadi 0
+      const rawVal = n.nilai_akhir;
+      const va = (rawVal !== undefined && rawVal !== null && rawVal !== 0 && rawVal !== '')
+        ? parseFloat(rawVal) : null;
       nilaiIdx[`${n.id_siswa}_${n.id_tp}`] = va;
     });
+
+    console.log('🗂 nilaiIdx keys sample:', Object.keys(nilaiIdx).slice(0,5));
 
     // Hitung nilai per siswa
     const rows = siswaList.map((s, idx) => {
       const vals = allTP.map(tp => {
-        const v = nilaiIdx[`${s.id}_${tp.id_tp}`];
-        return (v !== undefined && v !== null && v !== '') ? parseFloat(v) : null;
+        const key = `${s.id}_${tp.id_tp}`;
+        const v = nilaiIdx[key];
+        if (idx === 0) console.log(`  siswa[0] key ${key} → v=${v}`);
+        return (v !== undefined && v !== null) ? parseFloat(v) : null;
       });
       const filled = vals.filter(v => v !== null);
       const total  = filled.reduce((a,b) => a+b, 0);
