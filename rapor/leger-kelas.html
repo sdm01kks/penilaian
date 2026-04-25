@@ -168,8 +168,8 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
     <div class="filter-group">
       <label>Semester</label>
       <select id="selSem" onchange="onFilterChange()">
-        <option value="1">Semester 1</option>
-        <option value="2">Semester 2</option>
+        <option value="I">Semester 1</option>
+        <option value="II">Semester 2</option>
       </select>
     </div>
     <div style="margin-top:auto;display:flex;gap:8px">
@@ -299,18 +299,33 @@ async function tampilkanLeger() {
     // Siswa di kelas ini, urut abjad
     const siswaList = (await SHEETS.getSiswa(kelas)).sort((a,b) => a.nama.localeCompare(b.nama));
 
-    // Nilai semua mapel untuk kelas ini
-    const nilaiAll = await SHEETS.getNilai({ kelas, semester, tahun });
+    // Baca NILAI sheet langsung — bypass getNilai agar tidak terdistorsi filter
+    const rawNilaiRows = await SHEETS.read('NILAI!A:K');
 
-    // Untuk setiap mapel, hitung nilai akhir per siswa
-    // Nilai akhir per mapel = rata-rata nilai_akhir semua TP mapel tersebut
+    // FIX 1: semester tersimpan sebagai Romawi ("I","II") — terima kedua format
+    const semRomawi = { '1':'I', '2':'II', '3':'III', '4':'IV' };
+    const semArab   = { 'I':'1', 'II':'2', 'III':'3', 'IV':'4' };
+    const semAktif  = config['semester_aktif'] || semester;
+    const semValid  = new Set([semester, semRomawi[semester]||semester,
+                               semAktif, semRomawi[semAktif]||semAktif,
+                               semArab[semAktif]||semAktif]);
+
     // Indeks: id_siswa → id_mapel → [nilai_akhir per TP]
+    // Nilai akhir per mapel = rata-rata semua TP mapel tersebut
     const nilaiIdx = {};
-    nilaiAll.forEach(n => {
-      if (!nilaiIdx[n.id_siswa]) nilaiIdx[n.id_siswa] = {};
-      if (!nilaiIdx[n.id_siswa][n.id_mapel]) nilaiIdx[n.id_siswa][n.id_mapel] = [];
-      if (n.nilai_akhir !== null && n.nilai_akhir !== undefined && n.nilai_akhir !== '')
-        nilaiIdx[n.id_siswa][n.id_mapel].push(parseFloat(n.nilai_akhir));
+    rawNilaiRows.slice(1).forEach(r => {
+      if (!r[0] || r[0] === 'id_nilai' || r[0].trim() === '' || !r[1] || !r[2]) return;
+      if (kelas && r[4] !== kelas) return;
+      if (!semValid.has(r[5])) return;           // FIX 1: cocokkan Romawi atau Arab
+      if (tahun && r[6] && r[6] !== tahun) return;
+      const va = (r[9] !== undefined && r[9] !== null && r[9] !== '')
+        ? parseFloat(r[9]) : null;
+      if (va === null) return;
+      const idSiswa = r[1];
+      const idMapel = r[3];
+      if (!nilaiIdx[idSiswa]) nilaiIdx[idSiswa] = {};
+      if (!nilaiIdx[idSiswa][idMapel]) nilaiIdx[idSiswa][idMapel] = [];
+      nilaiIdx[idSiswa][idMapel].push(va);
     });
 
     // Helper: rata-rata nilai mapel per siswa
