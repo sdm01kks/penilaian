@@ -403,27 +403,38 @@ async function tampilkanLeger() {
       id_mapel: idMapel, kelas, semester, tahun
     });
 
-    console.group('📊 DEBUG nilaiData');
-    console.log('Jumlah record nilaiData :', nilaiData.length);
-    if (nilaiData.length > 0) {
-      console.log('Sample record :', nilaiData[0]);
-    } else {
-      console.warn('⚠️ nilaiData KOSONG — kemungkinan filter tidak cocok dengan data di sheet');
+    // Baca sheet NILAI secara langsung untuk cross-check filter
+    const rawNilaiRows = await SHEETS.read('NILAI!A:K');
+    console.group('📊 DEBUG NILAI sheet (raw)');
+    console.log('Total baris di sheet (termasuk header):', rawNilaiRows.length);
+    const sampelRow = rawNilaiRows.slice(1, 4);
+    console.log('Baris 2-4 (raw):', sampelRow);
+    // Cari baris yang punya id_mapel = idMapel
+    const matchMapel = rawNilaiRows.filter(r => r[3] === idMapel);
+    console.log(`Baris dengan id_mapel=${idMapel}:`, matchMapel.length);
+    if (matchMapel.length) {
+      console.log('Sample (r[3]=idMapel):', matchMapel[0]);
+      console.log('  → r[4] kelas  :', matchMapel[0][4], '| cari:', kelas);
+      console.log('  → r[5] semester:', matchMapel[0][5], '| cari:', semester, '| cocok?', matchMapel[0][5] === semester);
+      console.log('  → r[6] tahun  :', matchMapel[0][6], '| cari:', tahun,    '| cocok?', matchMapel[0][6] === tahun);
     }
     console.groupEnd();
 
     // Indeks: key = `${id_siswa}_${id_tp}` → nilai_akhir
+    // Filter manual dari raw rows (bypass getNilai agar tidak terdistorsi filter yang salah)
     const nilaiIdx = {};
-    nilaiData.forEach(n => {
-      // Gunakan nilai mentah dari sheet — bukan hasil parseFloat di getNilai
-      // karena parseFloat(...) || 0 bisa ubah '' menjadi 0
-      const rawVal = n.nilai_akhir;
-      const va = (rawVal !== undefined && rawVal !== null && rawVal !== 0 && rawVal !== '')
-        ? parseFloat(rawVal) : null;
-      nilaiIdx[`${n.id_siswa}_${n.id_tp}`] = va;
+    rawNilaiRows.slice(1).forEach(r => {
+      if (!r[0] || r[0] === 'id_nilai' || !r[1] || !r[2]) return;
+      if (r[3] !== idMapel) return;
+      if (kelas    && r[4] !== kelas)    return;
+      if (semester && r[5] !== semester) return;
+      // Sengaja tidak filter tahun — biarkan semua tahun masuk dulu
+      const va = (r[9] !== undefined && r[9] !== null && r[9] !== '')
+        ? parseFloat(r[9]) : null;
+      nilaiIdx[`${r[1]}_${r[2]}`] = va;
     });
 
-    console.log('🗂 nilaiIdx keys sample:', Object.keys(nilaiIdx).slice(0,5));
+    console.log('🗂 nilaiIdx keys (tanpa filter tahun):', Object.keys(nilaiIdx).slice(0,5));
 
     // Hitung nilai per siswa
     const rows = siswaList.map((s, idx) => {
