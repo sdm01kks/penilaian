@@ -441,7 +441,9 @@ const SHEETS = (() => {
    */
   async function getNilai({ id_siswa, id_mapel, kelas, semester, tahun } = {}) {
     const rows = await read('NILAI!A:K');
-    let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai');
+    // Mulai dari index 1 (bukan 2) agar data di row 2 ikut terbaca,
+    // lalu filter header secara eksplisit
+    let data   = rows.slice(1).filter(r => r[0] && r[0] !== 'id_nilai' && r[0].trim() !== '');
 
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
     if (id_mapel) data = data.filter(r => r[3] === id_mapel);
