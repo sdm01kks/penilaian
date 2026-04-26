@@ -390,9 +390,10 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:#f4f6f4; color:var
 
 <!-- Loading overlay -->
 <div class="loading-overlay hidden" id="loadingOverlay">
-  <div class="loading-spinner"></div>
-  <div class="loading-text" id="loadingText">Memuat…</div>
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat…</p>
 </div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
@@ -444,18 +445,21 @@ body { font-family:'Plus Jakarta Sans',sans-serif; background:#f4f6f4; color:var
     <span class="nav-icon">🚪</span> Keluar
   </a>
 </nav>
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <!-- Topbar -->
 <header class="topbar">
-  <button class="hamburger" onclick="toggleSidebar()">☰</button>
-  <div class="topbar-title" id="topbarTitle">KKTP Ekstrakurikuler</div>
-  <div class="topbar-user">
-    <div class="user-avatar" id="userAvatar">G</div>
-    <div class="user-info">
-      <div class="user-name" id="userName">—</div>
-      <div class="user-role">Guru Kelas</div>
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">KKTP Ekstrakurikuler</div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-avatar" id="userAvatar">G</div>
+      <div class="user-info">
+        <div class="user-name" id="userName">—</div>
+        <div class="user-role" id="userRole">—</div>
+      </div>
     </div>
+    <button class="btn-logout" onclick="AUTH.logout()">⎋ Keluar</button>
   </div>
 </header>
 
@@ -493,6 +497,22 @@ window.addEventListener('load', async () => {
 
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
+  document.getElementById('userRole').textContent   =
+    currentUser.role === 'admin'      ? 'Administrator' :
+    currentUser.role === 'guru_kelas' ? 'Wali Kelas '+(currentUser.kelas||'') : 'Guru Bidang Studi';
+
+  // Hanya admin dan guru_kelas yang boleh setup KKTP Ekskul
+  if (currentUser.role === 'guru_mapel') {
+    document.getElementById('ekskulGrid').innerHTML =
+      `<div class="alert" style="background:var(--red-light);border:2px solid var(--red);border-radius:12px;padding:16px 18px;display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-size:22px">🚫</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--ink)">Akses Tidak Diizinkan</div>
+        <div style="font-size:13px;color:var(--ink-mid);margin-top:4px">
+          Setup KKTP Ekskul hanya dapat dilakukan oleh Wali Kelas atau Admin.</div></div>
+      </div>`;
+    hideLoading();
+    return;
+  }
 
   showLoading('Memuat data ekskul…');
   try {
@@ -508,27 +528,29 @@ window.addEventListener('load', async () => {
 /* ── Render cards ─────────────────────────────────── */
 function renderGrid() {
   const grid = document.getElementById('ekskulGrid');
-  const list = allEkskul.filter(e => e.jenis === 'ekstrakurikuler');
 
-  if (!list.length) {
+  if (!allEkskul.length) {
     grid.innerHTML = '<div style="color:var(--ink-muted);padding:24px;">Belum ada ekskul yang dibuat admin. Hubungi admin untuk menambahkan ekskul.</div>';
     return;
   }
 
-  grid.innerHTML = list.map(e => {
+  const wajibList  = allEkskul.filter(e => e.jenis === 'kokurikuler');
+  const pilihanList = allEkskul.filter(e => e.jenis === 'ekstrakurikuler');
+
+  function buatKartu(e, labelJenis, icon) {
     const lv = e.level || [];
     // level[0]=Layak, level[1]=Cakap, level[2]=Mahir, level[3]=TidakIkut
-    const TI   = lv[3]?.deskripsi || '';
-    const L    = lv[0]?.deskripsi || '';
-    const C    = lv[1]?.deskripsi || '';
-    const M    = lv[2]?.deskripsi || '';
+    const TI = lv[3]?.deskripsi || '';
+    const L  = lv[0]?.deskripsi || '';
+    const C  = lv[1]?.deskripsi || '';
+    const M  = lv[2]?.deskripsi || '';
 
     return `<div class="ekskul-card">
       <div class="ekskul-header">
-        <div class="ekskul-icon">🏅</div>
+        <div class="ekskul-icon">${icon}</div>
         <div>
           <div class="ekskul-title">${e.nama}</div>
-          <div class="ekskul-jenis">${e.jenis === 'ekstrakurikuler' ? 'Ekstrakurikuler Pilihan' : 'Kokurikuler Wajib'}</div>
+          <div class="ekskul-jenis">${labelJenis}</div>
         </div>
       </div>
       <div class="ekskul-body">
@@ -563,7 +585,32 @@ function renderGrid() {
           onclick="simpanKKTP('${e.id}')">💾 Simpan KKTP</button>
       </div>
     </div>`;
-  }).join('');
+  }
+
+  let html = '';
+
+  if (wajibList.length) {
+    html += `<div style="grid-column:1/-1;margin-bottom:4px;">
+      <div style="font-size:12px;font-weight:700;color:var(--green-deep);display:flex;align-items:center;gap:8px;">
+        🏵️ Ekstrakurikuler Wajib
+        <span style="font-size:11px;font-weight:400;color:var(--ink-muted);">(Berlaku mulai Kelas 3)</span>
+        <span style="flex:1;height:1px;background:var(--border);display:inline-block;"></span>
+      </div>
+    </div>`;
+    html += wajibList.map(e => buatKartu(e, 'Ekstrakurikuler Wajib (Kelas 3+)', '🏵️')).join('');
+  }
+
+  if (pilihanList.length) {
+    html += `<div style="grid-column:1/-1;margin:12px 0 4px;">
+      <div style="font-size:12px;font-weight:700;color:var(--green-deep);display:flex;align-items:center;gap:8px;">
+        🏅 Ekstrakurikuler Pilihan
+        <span style="flex:1;height:1px;background:var(--border);display:inline-block;"></span>
+      </div>
+    </div>`;
+    html += pilihanList.map(e => buatKartu(e, 'Ekstrakurikuler Pilihan', '🏅')).join('');
+  }
+
+  grid.innerHTML = html;
 }
 
 /* ── Tandai perubahan belum disimpan ─────────────── */
@@ -601,8 +648,7 @@ async function simpanKKTP(id_ekskul) {
     await SHEETS.write('EKSKUL!A' + (rowIdx+1) + ':N' + (rowIdx+1), [newRow]);
 
     // Update local allEkskul
-    const eks = allEkskul.find(e => e.id === id_ekskul);
-    if (eks) {
+    const eks = allEkskul.find(e => e.id === id_ekskul);    if (eks) {
       eks.level[0].deskripsi = newRow[6];
       eks.level[1].deskripsi = newRow[9];
       eks.level[2].deskripsi = newRow[12];
