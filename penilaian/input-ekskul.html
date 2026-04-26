@@ -135,14 +135,31 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .lv-btn.l3:hover,.lv-btn.l3.selected{background:var(--green-pale);border-color:var(--green-dark)}
 
 /* Deskripsi edit manual */
-.desc-wrap{display:flex;flex-direction:column;gap:3px;max-width:300px}
-.desc-edit-label{font-size:9.5px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
-.desc-reset-btn{font-size:10px;font-weight:600;color:var(--green-dark);background:var(--green-ghost);border:1px solid var(--border);border-radius:5px;padding:1px 6px;cursor:pointer;font-family:inherit;transition:all .15s}
-.desc-reset-btn:hover{background:var(--green-pale)}
-.desc-edit{width:100%;padding:7px 10px;border:1px solid var(--green-light);border-radius:7px;font-size:12px;font-family:inherit;color:var(--ink);resize:vertical;min-height:52px;outline:none;line-height:1.5;background:#fffdf0;transition:border-color .2s}
-.desc-edit:focus{border-color:var(--green-dark)}
-.desc-edit:disabled{background:#f5f5f5;color:var(--ink-muted);border-color:var(--border);cursor:default}
-.desc-edit::placeholder{color:var(--ink-muted);font-style:italic}
+.desc-wrap{display:flex;flex-direction:column;gap:4px;min-width:220px}
+.desc-view{font-size:12px;color:var(--ink-mid);line-height:1.6;padding:6px 10px;
+  background:var(--green-ghost);border-radius:6px;border-left:3px solid var(--green-light);
+  cursor:text;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.desc-view.empty{color:var(--ink-muted);font-style:italic;background:#f5f5f5;border-left-color:#ddd;cursor:default}
+.desc-view-text{flex:1;line-height:1.6}
+.desc-view-edit-btn{flex-shrink:0;padding:2px 8px;font-size:10.5px;font-weight:700;
+  border:1px solid var(--green-light);border-radius:5px;background:var(--white);
+  color:var(--green-dark);cursor:pointer;font-family:inherit;white-space:nowrap;
+  transition:all .15s;align-self:flex-start;margin-top:1px}
+.desc-view-edit-btn:hover{background:var(--green-pale);border-color:var(--green-dark)}
+.desc-edit-wrap{display:none;flex-direction:column;gap:4px}
+.desc-edit-wrap.open{display:flex}
+.desc-edit{width:100%;padding:7px 10px;border:2px solid var(--green-dark);border-radius:7px;
+  font-size:12px;font-family:inherit;color:var(--ink);resize:vertical;min-height:56px;
+  outline:none;line-height:1.6;background:#fffdf0;transition:border-color .2s}
+.desc-edit:focus{border-color:var(--green-mid);background:#fff}
+.desc-edit-actions{display:flex;gap:6px;align-items:center}
+.desc-edit-done{padding:3px 10px;font-size:11.5px;font-weight:700;border-radius:6px;
+  border:none;background:var(--green-dark);color:#fff;cursor:pointer;font-family:inherit}
+.desc-edit-done:hover{background:var(--green-mid)}
+.desc-reset-btn{font-size:11px;font-weight:600;color:var(--ink-muted);background:none;
+  border:1px solid var(--border);border-radius:5px;padding:3px 8px;cursor:pointer;
+  font-family:inherit;transition:all .15s}
+.desc-reset-btn:hover{background:var(--green-ghost);color:var(--green-dark)}
 
 /* Actions bar */
 .actions-bar{display:flex;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--border);background:var(--green-ghost);flex-wrap:wrap}
@@ -515,7 +532,11 @@ function pilihEkskul(id_ekskul) {
         onclick="pilihLevel('${id_ekskul}','${s.id}',${lv},this)">${EKS_LV[lv]}</button>`;
     }).join('');
 
-    const resetBtn = isModified
+    // Tampilan view (default) dan edit (toggle)
+    const viewEmpty  = curLv === 0;
+    const viewText   = viewEmpty ? 'Pilih level terlebih dahulu' : (curDesc || '—');
+    const editBtnHTML = viewEmpty ? '' : `<button class="desc-view-edit-btn" onclick="bukaEdit('${id_ekskul}','${s.id}')">✏️ Edit</button>`;
+    const resetBtnHTML = isModified
       ? `<button class="desc-reset-btn" onclick="resetDesc('${id_ekskul}','${s.id}')">↺ reset otomatis</button>`
       : '';
 
@@ -526,10 +547,19 @@ function pilihEkskul(id_ekskul) {
       <td><div class="level-selector" id="lv-${id_ekskul}-${s.id}">${btns}</div></td>
       <td>
         <div class="desc-wrap">
-          <div class="desc-edit-label">Deskripsi rapor ${resetBtn}</div>
-          <textarea class="desc-edit" id="ta-${id_ekskul}-${s.id}"
-            ${curLv===0 ? 'disabled placeholder="Pilih level dulu…"' : `placeholder="Deskripsi ${s.nama.split(' ')[0]}…"`}
-            oninput="onDescEdit('${id_ekskul}','${s.id}',this)">${curDesc}</textarea>
+          <div class="desc-view ${viewEmpty?'empty':''}" id="view-${id_ekskul}-${s.id}">
+            <span class="desc-view-text" id="viewtext-${id_ekskul}-${s.id}">${viewText}</span>
+            ${editBtnHTML}
+          </div>
+          <div class="desc-edit-wrap" id="editwrap-${id_ekskul}-${s.id}">
+            <textarea class="desc-edit" id="ta-${id_ekskul}-${s.id}"
+              placeholder="Tulis deskripsi capaian ${s.nama.split(' ')[0]}…"
+              oninput="onDescEdit('${id_ekskul}','${s.id}',this)">${curDesc}</textarea>
+            <div class="desc-edit-actions">
+              <button class="desc-edit-done" onclick="tutupEdit('${id_ekskul}','${s.id}')">✓ Selesai</button>
+              ${resetBtnHTML}
+            </div>
+          </div>
         </div>
       </td>
     </tr>`;
@@ -609,28 +639,79 @@ function pilihLevel(id_ekskul, id_siswa, level, btnEl) {
     ?.querySelectorAll('.lv-btn').forEach(b => b.classList.remove('selected'));
   btnEl?.classList.add('selected');
 
-  // Update textarea
-  const ta = document.getElementById('ta-' + id_ekskul + '-' + id_siswa);
-  if (ta) {
+  // Update view text
+  const viewEl    = document.getElementById('view-' + id_ekskul + '-' + id_siswa);
+  const viewTxtEl = document.getElementById('viewtext-' + id_ekskul + '-' + id_siswa);
+  if (viewEl && viewTxtEl) {
     if (level > 0) {
-      ta.disabled = false;
-      ta.value    = keepDesc;
-      ta.placeholder = '';
+      viewEl.classList.remove('empty');
+      viewTxtEl.textContent = keepDesc || '—';
+      // Pastikan tombol Edit ada
+      if (!viewEl.querySelector('.desc-view-edit-btn')) {
+        const eb = document.createElement('button');
+        eb.className   = 'desc-view-edit-btn';
+        eb.textContent = '✏️ Edit';
+        eb.onclick     = () => bukaEdit(id_ekskul, id_siswa);
+        viewEl.appendChild(eb);
+      }
     } else {
-      ta.disabled = true;
-      ta.value    = '';
-      ta.placeholder = 'Pilih level dulu…';
+      viewEl.classList.add('empty');
+      viewTxtEl.textContent = 'Pilih level terlebih dahulu';
+      viewEl.querySelector('.desc-view-edit-btn')?.remove();
+      // Tutup edit wrap jika terbuka
+      const ew = document.getElementById('editwrap-' + id_ekskul + '-' + id_siswa);
+      if (ew) ew.classList.remove('open');
     }
   }
 
-  // Update reset button
+  // Update textarea (untuk sinkronisasi saat simpan)
+  const ta = document.getElementById('ta-' + id_ekskul + '-' + id_siswa);
+  if (ta) ta.value = level > 0 ? keepDesc : '';
+
   refreshResetBtn(id_ekskul, id_siswa, level, keepDesc, auto);
   updateInfoBar(id_ekskul);
   updateTabDone(id_ekskul);
 }
 
 /* ════════════════════════════════════════════════════════
-   EVENT: EDIT DESKRIPSI MANUAL
+   BUKA / TUTUP EDIT MANUAL
+════════════════════════════════════════════════════════ */
+function bukaEdit(id_ekskul, id_siswa) {
+  const viewEl   = document.getElementById('view-'     + id_ekskul + '-' + id_siswa);
+  const editWrap = document.getElementById('editwrap-' + id_ekskul + '-' + id_siswa);
+  const ta       = document.getElementById('ta-'       + id_ekskul + '-' + id_siswa);
+  if (!editWrap) return;
+  viewEl?.style.setProperty('display', 'none');
+  editWrap.classList.add('open');
+  ta?.focus();
+}
+
+function tutupEdit(id_ekskul, id_siswa) {
+  const viewEl    = document.getElementById('view-'     + id_ekskul + '-' + id_siswa);
+  const editWrap  = document.getElementById('editwrap-' + id_ekskul + '-' + id_siswa);
+  const ta        = document.getElementById('ta-'       + id_ekskul + '-' + id_siswa);
+  const viewTxtEl = document.getElementById('viewtext-' + id_ekskul + '-' + id_siswa);
+  if (!editWrap) return;
+
+  const newDesc = ta?.value || '';
+  if (viewTxtEl) viewTxtEl.textContent = newDesc || '—';
+
+  editWrap.classList.remove('open');
+  viewEl?.style.removeProperty('display');
+
+  // Sync buffer
+  const key = id_siswa + '|' + id_ekskul;
+  if (!buffer[key]) buffer[key] = ekskulDB[key] ? {...ekskulDB[key]} : { level: 0, deskripsi: '' };
+  buffer[key].deskripsi = newDesc;
+
+  const eks  = allEkskul.find(e => e.id === id_ekskul) || {};
+  const auto = genDesc(eks, buffer[key].level);
+  refreshResetBtn(id_ekskul, id_siswa, buffer[key].level, newDesc, auto);
+  updateInfoBar(id_ekskul);
+}
+
+/* ════════════════════════════════════════════════════════
+   EVENT: EDIT DESKRIPSI MANUAL (real-time sync ke buffer)
 ════════════════════════════════════════════════════════ */
 function onDescEdit(id_ekskul, id_siswa, el) {
   const key = id_siswa + '|' + id_ekskul;
@@ -644,35 +725,42 @@ function onDescEdit(id_ekskul, id_siswa, el) {
 }
 
 /* ════════════════════════════════════════════════════════
-   RESET DESKRIPSI ke KKTP otomatis
+   RESET DESKRIPSI ke otomatis dari KKTP
 ════════════════════════════════════════════════════════ */
 function resetDesc(id_ekskul, id_siswa) {
-  const key = id_siswa + '|' + id_ekskul;
-  const eks = allEkskul.find(e => e.id === id_ekskul) || {};
-  const lv  = buffer[key]?.level || ekskulDB[key]?.level || 0;
+  const key  = id_siswa + '|' + id_ekskul;
+  const eks  = allEkskul.find(e => e.id === id_ekskul) || {};
+  const lv   = buffer[key]?.level || ekskulDB[key]?.level || 0;
   const auto = genDesc(eks, lv);
 
   if (!buffer[key]) buffer[key] = {};
   buffer[key].deskripsi = auto;
 
-  const ta = document.getElementById('ta-' + id_ekskul + '-' + id_siswa);
-  if (ta) ta.value = auto;
+  const ta        = document.getElementById('ta-'       + id_ekskul + '-' + id_siswa);
+  const viewTxtEl = document.getElementById('viewtext-' + id_ekskul + '-' + id_siswa);
+  if (ta)        ta.value           = auto;
+  if (viewTxtEl) viewTxtEl.textContent = auto || '—';
 
   refreshResetBtn(id_ekskul, id_siswa, lv, auto, auto);
   updateInfoBar(id_ekskul);
 }
 
 function refreshResetBtn(id_ekskul, id_siswa, level, curDesc, autoDesc) {
-  // Cari label deskripsi di baris yang sama dengan textarea
-  const ta = document.getElementById('ta-' + id_ekskul + '-' + id_siswa);
-  if (!ta) return;
-  const labelEl = ta.parentElement?.querySelector('.desc-edit-label');
-  if (!labelEl) return;
+  const editWrap = document.getElementById('editwrap-' + id_ekskul + '-' + id_siswa);
+  if (!editWrap) return;
+  const actionsEl = editWrap.querySelector('.desc-edit-actions');
+  if (!actionsEl) return;
+
   const isModified = level > 0 && autoDesc && curDesc !== autoDesc;
-  const resetHTML = isModified
-    ? ` <button class="desc-reset-btn" onclick="resetDesc('${id_ekskul}','${id_siswa}')">↺ reset otomatis</button>`
-    : '';
-  labelEl.innerHTML = 'Deskripsi rapor' + resetHTML;
+  // Hapus reset btn lama
+  actionsEl.querySelector('.desc-reset-btn')?.remove();
+  if (isModified) {
+    const rb = document.createElement('button');
+    rb.className   = 'desc-reset-btn';
+    rb.textContent = '↺ reset otomatis';
+    rb.onclick     = () => resetDesc(id_ekskul, id_siswa);
+    actionsEl.appendChild(rb);
+  }
 }
 
 /* ════════════════════════════════════════════════════════
