@@ -494,24 +494,47 @@ function buildSeksiKok(kokSiswa, namaSiswa) {
    BUILD SECTION D — EKSTRAKURIKULER
 ════════════════════════════════════════════════════════ */
 function buildSeksiEkskul(eksSiswa) {
+  const tingkatan = parseInt(activeKelas) || 0;
+  const LVS = ['','Layak','Cakap','Mahir','Tidak Ikut'];
   const hasil = [];
   let no = 0;
-  // Kokurikuler wajib — semua siswa (gunakan deskripsi dari col H)
-  allEkskul.filter(e => e.jenis === 'kokurikuler').forEach(e => {
-    no++;
-    const row = eksSiswa.find(r => r[3] === e.id);
-    hasil.push({ no, nama: e.nama, ket: row?.[7] || '—' });
-  });
-  // Ekstrakurikuler pilihan — hanya yang levelnya > 0
-  allEkskul.filter(e => e.jenis === 'ekstrakurikuler').forEach(e => {
-    const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
-    if (!row) return;
-    const lv     = parseInt(row[4]) || 0;
-    const lvName = ['','Layak','Cakap','Mahir','Tidak Ikut'][lv] || '';
-    const ket    = row[7] || (lvName ? lvName : '—');
-    no++;
-    hasil.push({ no, nama: e.nama, ket });
-  });
+
+  function getKet(row) {
+    if (!row) return null;
+    const lv  = parseInt(row[4]) || 0;
+    return row[7] || (lv > 0 ? (LVS[lv] || '—') : '—');
+  }
+
+  if (tingkatan >= 3) {
+    // Kelas 3+: ekskul wajib (jenis=kokurikuler) selalu tampil, ada data atau tidak
+    allEkskul.filter(e => e.jenis === 'kokurikuler').forEach(e => {
+      const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
+      hasil.push({ no: ++no, nama: e.nama, ket: getKet(row) || '—' });
+    });
+    // Ekskul pilihan yang diikuti
+    allEkskul.filter(e => e.jenis === 'ekstrakurikuler').forEach(e => {
+      const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
+      if (!row) return;
+      hasil.push({ no: ++no, nama: e.nama, ket: getKet(row) || '—' });
+    });
+  } else {
+    // Kelas 1&2: semua ekskul (termasuk HW/kokurikuler) adalah pilihan
+    // Tampilkan yang ada datanya saja
+    allEkskul.forEach(e => {
+      const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
+      if (!row) return;
+      hasil.push({ no: ++no, nama: e.nama, ket: getKet(row) || '—' });
+    });
+    // Jika tidak ada ekskul sama sekali → tampilkan HW + Tapak Suci sebagai default
+    if (hasil.length === 0) {
+      const hw = allEkskul.find(e => e.jenis === 'kokurikuler');
+      const ts = allEkskul.find(e =>
+        e.jenis === 'ekstrakurikuler' && e.nama.toLowerCase().includes('tapak'));
+      if (hw) hasil.push({ no: ++no, nama: hw.nama, ket: '—' });
+      if (ts) hasil.push({ no: ++no, nama: ts.nama, ket: '—' });
+    }
+  }
+
   return hasil;
 }
 
