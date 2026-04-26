@@ -842,13 +842,19 @@ td{border:1pt solid #000;padding:4pt 6pt;vertical-align:top}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
 .rpr-ttd-nbm{font-size:9.5pt;color:#444}
 /* ── Page break control ── */
-tr{page-break-inside:avoid}
-.rpr-section-title{page-break-after:avoid}
-.rpr-sub-title{page-break-after:avoid}
-.kok-header{page-break-after:avoid}
-.abs-catatan-grid{page-break-inside:avoid}
-.rpr-keputusan{page-break-inside:avoid}
-.rpr-ttd{page-break-inside:avoid}
+/* Gunakan kedua properti: lama (page-break-*) + modern (break-*) untuk kompatibilitas lintas browser */
+tr{page-break-inside:avoid;break-inside:avoid}
+.rpr-section-title{page-break-after:avoid;break-after:avoid}
+.rpr-sub-title{page-break-after:avoid;break-after:avoid}
+.kok-header{page-break-after:avoid;break-after:avoid}
+.abs-catatan-grid{page-break-inside:avoid;break-inside:avoid}
+.rpr-keputusan{page-break-inside:avoid;break-inside:avoid}
+.rpr-ttd{page-break-inside:avoid;break-inside:avoid}
+/* Wrapper serbaguna: gunakan pada blok yang harus tetap utuh di satu halaman */
+.no-break{page-break-inside:avoid;break-inside:avoid}
+/* Paksa konten berikutnya ikut berpindah halaman bersama judul section */
+.rpr-section-title + *{page-break-before:avoid;break-before:avoid}
+.rpr-sub-title + *{page-break-before:avoid;break-before:avoid}
 </style>
 </head>
 <body>
@@ -908,8 +914,10 @@ function buildBodyPrint(d) {
   // Section B
   html += `<div class="rpr-section">
 <div class="rpr-section-title">B. Kokurikuler</div>
-<div class="kok-header">Kokurikuler</div>
-<div class="kok-box">${d.sectionB || '—'}</div>
+<div class="no-break">
+  <div class="kok-header">Kokurikuler</div>
+  <div class="kok-box">${d.sectionB || '—'}</div>
+</div>
 </div>`;
 
   // Section C Ekskul
@@ -928,43 +936,46 @@ function buildBodyPrint(d) {
   // Section D Absensi + Catatan + Tanggapan
   html += `<div class="rpr-section">
 <div class="rpr-section-title">D. Ketidakhadiran</div>
-<div style="display:flex;gap:10pt;align-items:flex-start;margin-top:4pt;">
-  <!-- Tabel absensi: flex-shrink:0 agar tidak melebar -->
-  <div style="flex-shrink:0;">
-    <table style="border-collapse:collapse;font-size:10.5pt;border:none;">
-      <tr>
-        <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none;min-width:90pt">Sakit</td>
-        <td style="padding:3pt 5pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
-        <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.sakit}&nbsp;hari</td>
-      </tr>
-      <tr>
-        <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none">Izin</td>
-        <td style="padding:3pt 5pt;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
-        <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.izin}&nbsp;hari</td>
-      </tr>
-      <tr>
-        <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:1pt solid #000;border-right:none">Tanpa Keterangan</td>
-        <td style="padding:3pt 5pt;border-bottom:1pt solid #000;border-left:none;border-right:none">:</td>
-        <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.tk}&nbsp;hari</td>
-      </tr>
-    </table>
+<div class="no-break">
+  <div style="display:flex;gap:10pt;align-items:flex-start;margin-top:4pt;">
+    <!-- Tabel absensi: flex-shrink:0 agar tidak melebar -->
+    <div style="flex-shrink:0;">
+      <table style="border-collapse:collapse;font-size:10.5pt;border:none;">
+        <tr>
+          <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none;min-width:90pt">Sakit</td>
+          <td style="padding:3pt 5pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
+          <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.sakit}&nbsp;hari</td>
+        </tr>
+        <tr>
+          <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none">Izin</td>
+          <td style="padding:3pt 5pt;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
+          <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.izin}&nbsp;hari</td>
+        </tr>
+        <tr>
+          <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:1pt solid #000;border-right:none">Tanpa Keterangan</td>
+          <td style="padding:3pt 5pt;border-bottom:1pt solid #000;border-left:none;border-right:none">:</td>
+          <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.tk}&nbsp;hari</td>
+        </tr>
+      </table>
+    </div>
+    <!-- Catatan Wali: flex:1 mengisi sisa lebar -->
+    <div style="flex:1;border:1pt solid #000;min-height:60pt;">
+      <div style="padding:3pt 7pt;border-bottom:1pt solid #000;font-weight:bold;font-size:10pt;text-align:center;">Catatan Wali</div>
+      <div style="padding:6pt 8pt;font-size:10.5pt;line-height:1.6;min-height:48pt;">${d.absensi.catatan||''}</div>
+    </div>
   </div>
-  <!-- Catatan Wali: flex:1 mengisi sisa lebar -->
-  <div style="flex:1;border:1pt solid #000;min-height:60pt;">
-    <div style="padding:3pt 7pt;border-bottom:1pt solid #000;font-weight:bold;font-size:10pt;text-align:center;">Catatan Wali</div>
-    <div style="padding:6pt 8pt;font-size:10.5pt;line-height:1.6;min-height:48pt;">${d.absensi.catatan||''}</div>
+  <div class="tanggapan-box">
+    <div class="tanggapan-header">Tanggapan Orang Tua/Wali Murid</div>
+    <div class="tanggapan-body"></div>
   </div>
-</div>
-<div class="tanggapan-box">
-  <div class="tanggapan-header">Tanggapan Orang Tua/Wali Murid</div>
-  <div class="tanggapan-body"></div>
 </div>
 </div>`;
 
-  // Keputusan
+  // Keputusan + TTD — dibungkus no-break agar tidak terpotong antar halaman
+  let bottomHtml = '';
   if (isSem2) {
     const naik = d.absensi.keputusan !== 'Tinggal';
-    html += `<div style="margin-top:10pt">
+    bottomHtml += `<div style="margin-bottom:10pt">
 <div class="rpr-keputusan" style="min-width:0;width:auto;max-width:230pt;">
   <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
   <p><${naik?'strong':'s'}>Naik ke Fase ${faseKelas(nextKelas(d.kelas))} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
@@ -972,11 +983,8 @@ function buildBodyPrint(d) {
   <p><em>*) coret yang tidak perlu</em></p>
 </div></div>`;
   }
-
-  // TTD — urutan: Orang Tua/Wali | Kepala Sekolah | (kota-tgl) Wali Kelas
   const tanda = d.kota_rapor + ', ' + (d.tgl_rapor || '……………………');
-  html += `<div style="margin-top:20pt">
-  <div style="text-align:right;font-size:10.5pt;margin-bottom:3pt">${tanda}</div>
+  bottomHtml += `<div style="text-align:right;font-size:10.5pt;margin-bottom:3pt">${tanda}</div>
   <div class="rpr-ttd">
     <div class="rpr-ttd-col">
       <div>Orang Tua/Wali</div>
@@ -995,8 +1003,8 @@ function buildBodyPrint(d) {
       <div class="rpr-ttd-name">${d.wali_kelas}</div>
       ${d.nbm_wali?`<div class="rpr-ttd-nbm">NBM. ${d.nbm_wali}</div>`:''}
     </div>
-  </div>
-</div>`;
+  </div>`;
+  html += `<div class="no-break" style="margin-top:20pt">${bottomHtml}</div>`;
 
   return html;
 }
