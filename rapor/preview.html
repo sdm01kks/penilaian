@@ -431,7 +431,11 @@ function buildSeksiMapel(nilaiSiswa, isISMUBA) {
     if (!tpMapel.length) {
       // Khusus ISMUBA di Fase A (kelas 1–2): tampilkan baris kosong dengan keterangan placeholder
       if (isISMUBA && parseInt(activeKelas) <= 2) {
-        return { mapel: {...mapel, nama: mapel.nama}, nilaiAkhir: null, descBest: '', descWorst: '', faseAPlaceholder: true };
+        const isBahAsb = mapel.nama?.toLowerCase().includes('arab');
+        const faseADesc = isBahAsb
+          ? 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Pengenalan kosakata dan ungkapan bahasa Arab dasar diintegrasikan dalam mata pelajaran Al-Islam dan kegiatan Tahsin-Tahfizh.'
+          : 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Nilai-nilai ke-Muhammadiyahan ditanamkan melalui pembiasaan dan keteladanan dalam keseharian di sekolah.';
+        return { mapel: {...mapel, nama: mapel.nama}, nilaiAkhir: null, descBest: '', descWorst: '', faseAPlaceholder: true, faseADesc };
       }
       return null;  // Mapel belum ada TP untuk tingkatan ini → skip dari rapor
     }
@@ -734,7 +738,7 @@ function buildRaporHTML(d) {
 function buildRowMapel(no, item) {
   if (item.nilaiAkhir === null) {
     const desc = item.faseAPlaceholder
-      ? '<strong><em>Belum menjadi fokus di Fase A kelas 1 dan 2</em></strong>'
+      ? `<strong><em>${item.faseADesc}</em></strong>`
       : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
     return `<tr>
       <td class="td-no">${no}</td>
@@ -1021,7 +1025,7 @@ function buildBodyPrint(d) {
 function buildRowPrint(no, item) {
   if (item.nilaiAkhir === null) {
     const desc = item.faseAPlaceholder
-      ? '<strong><em>Belum menjadi fokus di Fase A kelas 1 dan 2</em></strong>'
+      ? `<strong><em>${item.faseADesc}</em></strong>`
       : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
     return `<tr><td class="td-no">${no}</td><td class="td-mapel">${item.mapel.nama}</td><td class="td-nilai" style="font-size:9pt;color:#999">—</td><td class="td-capaian">${desc}</td></tr>`;
   }
