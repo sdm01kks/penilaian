@@ -666,7 +666,7 @@ window.addEventListener('load', async () => {
       : config['seni_semester_genap'];
 
     isiDropdownKelas();
-    isiDropdownMapel();
+    isiDropdownMapel('');  // belum ada kelas dipilih — guru_kelas tampil semua (akan difilter ulang saat gantiKelas)
 
     // URL params
     const p = new URLSearchParams(window.location.search);
@@ -708,25 +708,53 @@ function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role !== 'admin') {
-    const diampuArr = (currentUser.kelas||'').split(',').map(s=>s.trim());
+    // Gabungkan kelas utama + kelas_mapel (kelas lain sbg guru bidang studi)
+    const kelasUtama    = (currentUser.kelas||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const kelasTambahan = currentUser.kelas_mapel
+      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
+      : [];
+    const diampuArr = [...new Set([...kelasUtama, ...kelasTambahan])];
     kelas = allKelas.filter(k => diampuArr.includes(k.nama));
   }
   sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama} (Fase ${k.fase})</option>`).join('');
 }
 
-function isiDropdownMapel() {
+function isiDropdownMapel(kelasAktif) {
   const sel = document.getElementById('selMapel');
   // Tahsin-Tahfizh diinput melalui menu Setoran TT, bukan di sini
   const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
   let mapel = allMapel.filter(m => !isTahsin(m));
+
   if (currentUser.role === 'guru_mapel') {
-    const mapelDiampu = currentUser.mapelList || 
+    // guru_mapel: filter berdasarkan daftar mapel yang diampu
+    const mapelDiampu = currentUser.mapelList ||
       (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
     if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
       mapel = mapel.filter(m => mapelDiampu.includes(m.id));
     }
+  } else if (currentUser.role === 'guru_kelas' && kelasAktif) {
+    // guru_kelas: cek apakah kelas yang dipilih adalah kelas utama (wali kelas) atau kelas tambahan
+    const kelasUtama = (currentUser.kelasList ||
+      (currentUser.kelas ? currentUser.kelas.split(',') : []))
+      .map(s => s.trim()).filter(Boolean);
+    const isKelasUtama = kelasUtama.includes(kelasAktif);
+
+    if (!isKelasUtama) {
+      // Kelas tambahan (bertugas sbg guru bidang studi):
+      // hanya tampilkan mapel yang memang diampu guru ini
+      const mapelDiampu = currentUser.mapelList ||
+        (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
+      if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
+        mapel = mapel.filter(m => mapelDiampu.includes(m.id));
+      } else {
+        // mapel belum dikonfigurasi admin → kosongkan agar tidak bisa akses semua
+        mapel = [];
+      }
+    }
+    // Jika kelas utama → tampilkan semua mapel (wali kelas bertanggung jawab semua mapel)
   }
+
   sel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
     mapel.map(m => {
       const label = m.id === 'MP07' ? 'Seni Budaya (' + (seniAktif||'—') + ')' : m.nama;
@@ -743,6 +771,10 @@ async function gantiKelas() {
   document.getElementById('selMapel').value = '';
   activeMapel = null; allTP = []; nilaiDB = {}; buffer = {};
   resetUI();
+
+  // Refresh dropdown mapel sesuai kelas yang baru dipilih
+  // (untuk guru_kelas: kelas utama → semua mapel, kelas tambahan → hanya mapel yg diampu)
+  isiDropdownMapel(activeKelas);
 
   if (!activeKelas) return;
   showLoading('Memuat siswa kelas ' + activeKelas + '…');
