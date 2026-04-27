@@ -216,7 +216,7 @@ const AUTH = (() => {
    */
   async function _verifikasiAkses(email, nama, token) {
     // Baca sheet USERS — gunakan token user untuk read
-    const url  = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent('USERS!A:G')}`;
+    const url  = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent('USERS!A:K')}`;
     const res  = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -253,14 +253,16 @@ const AUTH = (() => {
 
     // Simpan data user ke session
     const userData = {
-      id_user:   userRow[0] || '',
-      email:     userRow[1] || email,
-      nama:      userRow[2] || nama,
-      role:      userRow[3] || '',
-      kelas:     userRow[4] || '',
-      mapel:     userRow[5] || '',
-      status:    userRow[6] || '',
-      loginTime: new Date().toISOString(),
+      id_user:     userRow[0]  || '',
+      email:       userRow[1]  || email,
+      nama:        userRow[2]  || nama,
+      role:        userRow[3]  || '',
+      kelas:       userRow[4]  || '',
+      mapel:       userRow[5]  || '',
+      status:      userRow[6]  || '',
+      nbm:         userRow[9]  || '',   // kolom J: Nomor Baku Muhammadiyah
+      kelas_mapel: userRow[10] || '',   // kolom K: kelas lain sbg guru mapel (guru_kelas merangkap)
+      loginTime:   new Date().toISOString(),
     };
 
     sessionStorage.setItem('sdm01_user', JSON.stringify(userData));
