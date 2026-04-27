@@ -341,7 +341,12 @@ function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role === 'guru_kelas') {
-    const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
+    // Gabungkan kelas utama + kelas_mapel (kelas lain sbg guru bidang studi)
+    const kelasUtama    = (currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',') : [])).map(s=>s.trim());
+    const kelasTambahan = currentUser.kelas_mapel
+      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
+      : [];
+    const arr = [...new Set([...kelasUtama, ...kelasTambahan])];
     kelas = allKelas.filter(k => arr.includes(k.nama));
   }
   sel.innerHTML = '<option value="">— Pilih Kelas —</option>' +
