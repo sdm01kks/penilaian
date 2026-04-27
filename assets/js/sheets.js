@@ -295,25 +295,29 @@ const SHEETS = (() => {
    * @param {string|null} role - Filter role
    */
   async function getUsers(role = null) {
-    const rows = await read('USERS!A:I');
+    const rows = await read('USERS!A:K');
     let users  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_user');
 
     if (role) users = users.filter(r => (r[3] || '') === role);
 
     return users.map(r => {
-      const mapelRaw = r[5] || '';
+      const mapelRaw     = r[5]  || '';
+      const kelasMapelRaw= r[10] || '';
       return {
-        id:         r[0] || '',
-        email:      r[1] || '',
-        nama:       r[2] || '',
-        role:       r[3] || '',
-        kelas:      r[4] || '',
-        mapel:      mapelRaw,                                      // raw string (bisa multi, pisah koma)
-        mapelList:  mapelRaw ? mapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
-        kelasList:  r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
-        status:     r[6] || '',
-        ditambah:   r[7] || '',
-        tanggal:    r[8] || '',
+        id:             r[0] || '',
+        email:          r[1] || '',
+        nama:           r[2] || '',
+        role:           r[3] || '',
+        kelas:          r[4] || '',
+        mapel:          mapelRaw,                                          // raw string (bisa multi, pisah koma)
+        mapelList:      mapelRaw ? mapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        kelasList:      r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
+        status:         r[6] || '',
+        ditambah:       r[7] || '',
+        tanggal:        r[8] || '',
+        nbm:            r[9]  || '',                                       // kolom J: Nomor Baku Muhammadiyah
+        kelasMapel:     kelasMapelRaw,                                     // kolom K: kelas lain sbg guru mapel (guru_kelas yg merangkap)
+        kelasMapelList: kelasMapelRaw ? kelasMapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
       };
     });
   }
@@ -326,14 +330,16 @@ const SHEETS = (() => {
     const tanggal = new Date().toLocaleDateString('id-ID');
     const row     = [
       id,
-      user.email  || '',
-      user.nama   || '',
-      user.role   || 'guru_kelas',
-      user.kelas  || '',
-      user.mapel  || '',
+      user.email       || '',
+      user.nama        || '',
+      user.role        || 'guru_kelas',
+      user.kelas       || '',
+      user.mapel       || '',
       'aktif',
       AUTH.getUser()?.id_user || 'admin',
       tanggal,
+      user.nbm         || '',   // kolom J: NBM
+      user.kelas_mapel || '',   // kolom K: kelas tambahan sbg guru mapel
     ];
     await append('USERS', [row]);
     return id;
