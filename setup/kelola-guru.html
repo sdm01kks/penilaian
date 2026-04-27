@@ -287,6 +287,20 @@ input:disabled { background:var(--green-ghost); color:var(--ink-muted); cursor:n
         </p>
       </div>
 
+      <!-- Kelas tambahan sbg guru mapel (hanya untuk guru_kelas yang merangkap) -->
+      <div id="seksiKelasMapel" style="display:none;">
+        <div class="form-section-title">Kelas Lain sebagai Guru Bidang Studi
+          <span style="font-weight:400;font-size:10px;color:var(--ink-muted);margin-left:6px;">(opsional)</span>
+        </div>
+        <div class="kelas-check-grid" id="kelasMapelCheckGrid">
+          <!-- diisi JS -->
+        </div>
+        <p class="input-note" style="margin-top:8px;">
+          Pilih kelas lain di mana guru ini <strong>juga mengajar sebagai guru bidang studi</strong>
+          (bukan sebagai wali kelas). Ini memungkinkan akses ke input nilai &amp; setoran TT di kelas tersebut.
+        </p>
+      </div>
+
       <!-- Mapel yang diampu -->
       <div id="seksiMapel" style="display:none;">
         <div class="form-section-title" id="labelMapel">Mata Pelajaran yang Diampu</div>
@@ -479,7 +493,8 @@ let allMapel   = [];
 let roleFilter = 'semua';
 let editId     = null;
 let roleVal    = '';
-let kelasDipilih = [];
+let kelasDipilih      = [];
+let kelasMapelDipilih = [];   // kelas tambahan sbg guru mapel (untuk guru_kelas merangkap)
 
 /* ── Init ────────────────────────────────────────────── */
 window.addEventListener('load', async () => {
@@ -582,6 +597,8 @@ function renderTabel(users) {
 
     const kelasMapel = u.role === 'guru_mapel'
       ? (getNamaMapel(u.mapel) || u.mapel || '—')
+      : u.role === 'guru_kelas' && u.kelasMapel
+      ? `${u.kelas || '—'} <span style="color:var(--ink-muted);font-size:11px;">(+${u.kelasMapel} mapel)</span>`
       : (u.kelas || '—');
 
     return `
@@ -639,7 +656,7 @@ function cekKelasKosong() {
 
 /* ── Modal ────────────────────────────────────────────── */
 function bukaTambah() {
-  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = [];
+  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = []; kelasMapelDipilih = [];
   document.getElementById('modalTitle').textContent = 'Tambah Akun Guru';
   resetForm();
   bukaModal();
@@ -663,6 +680,7 @@ function bukaEdit(id) {
   document.getElementById('modalTitle').textContent = 'Edit Akun Guru';
   document.getElementById('f_nama').value   = u.nama  || '';
   document.getElementById('f_email').value  = u.email || '';
+  document.getElementById('f_nbm').value    = u.nbm   || '';
   document.getElementById('f_status').value = u.status || 'aktif';
 
   pilihRole(u.role);
@@ -676,6 +694,11 @@ function bukaEdit(id) {
         el.closest('.kelas-check')?.classList.add('selected');
       }
     });
+    // Restore kelas_mapel checkboxes (kelas tambahan sbg guru mapel)
+    kelasMapelDipilih = u.kelasMapelList || (u.kelasMapel && u.kelasMapel !== ''
+      ? u.kelasMapel.split(',').map(s=>s.trim()).filter(Boolean)
+      : []);
+    renderKelasMapelCheckbox();
     // Restore mapel checkboxes
     mapelDipilih = u.mapelList || (u.mapel && u.mapel !== 'semua'
       ? u.mapel.split(',').map(s=>s.trim()).filter(Boolean)
@@ -697,18 +720,21 @@ function tutupModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   document.body.style.overflow = '';
   resetForm();
-  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = [];
+  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = []; kelasMapelDipilih = [];
 }
 
 function resetForm() {
   document.getElementById('f_nama').value   = '';
   document.getElementById('f_email').value  = '';
+  document.getElementById('f_nbm').value    = '';
   document.getElementById('f_status').value = 'aktif';
   document.querySelectorAll('.role-opt').forEach(el => el.classList.remove('selected'));
-  document.getElementById('seksiKelas').style.display = 'none';
-  document.getElementById('seksiMapel').style.display = 'none';
-  document.getElementById('kelasCheckGrid').innerHTML = '';
-  kelasDipilih = [];
+  document.getElementById('seksiKelas').style.display     = 'none';
+  document.getElementById('seksiKelasMapel').style.display= 'none';
+  document.getElementById('seksiMapel').style.display     = 'none';
+  document.getElementById('kelasCheckGrid').innerHTML     = '';
+  document.getElementById('kelasMapelCheckGrid').innerHTML= '';
+  kelasDipilih = []; kelasMapelDipilih = [];
 }
 
 /* ── Pilih Role ───────────────────────────────────────── */
@@ -718,28 +744,33 @@ function pilihRole(role) {
     el.classList.toggle('selected', el.querySelector('input').value === role);
   });
 
-  const seksiKelas = document.getElementById('seksiKelas');
-  const seksiMapel = document.getElementById('seksiMapel');
+  const seksiKelas      = document.getElementById('seksiKelas');
+  const seksiKelasMapel = document.getElementById('seksiKelasMapel');
+  const seksiMapel      = document.getElementById('seksiMapel');
 
   if (role === 'admin') {
-    seksiKelas.style.display = 'none';
-    seksiMapel.style.display = 'none';
+    seksiKelas.style.display      = 'none';
+    seksiKelasMapel.style.display = 'none';
+    seksiMapel.style.display      = 'none';
   } else if (role === 'guru_kelas') {
-    seksiKelas.style.display = 'block';
-    seksiMapel.style.display = 'block';
-    document.getElementById('labelKelas').textContent  = 'Kelas yang Dipegang';
-    document.getElementById('noteKelas').textContent   = 'Bisa lebih dari 1 kelas jika memang mengajar di beberapa kelas.';
-    document.getElementById('labelMapel').textContent  = 'Mata Pelajaran yang Diajarkan';
-    document.getElementById('noteMapel').textContent   = 'Pilih semua mapel yang diajarkan — termasuk di kelas lain.';
-    renderKelasCheckbox(true);
+    seksiKelas.style.display      = 'block';
+    seksiKelasMapel.style.display = 'block';
+    seksiMapel.style.display      = 'block';
+    document.getElementById('labelKelas').textContent = 'Kelas Utama (Wali Kelas)';
+    document.getElementById('noteKelas').textContent  = 'Pilih kelas yang menjadi tanggung jawab guru ini sebagai wali kelas.';
+    document.getElementById('labelMapel').textContent = 'Mata Pelajaran yang Diajarkan';
+    document.getElementById('noteMapel').textContent  = 'Pilih semua mapel yang diajarkan — termasuk di kelas lain.';
+    renderKelasCheckbox(false);      // guru_kelas boleh pegang lebih dari 1 kelas
+    renderKelasMapelCheckbox();
     renderMapelCheckbox();
   } else if (role === 'guru_mapel') {
-    seksiKelas.style.display = 'block';
-    seksiMapel.style.display = 'block';
-    document.getElementById('labelKelas').textContent  = 'Kelas yang Diampu (bisa pilih beberapa)';
-    document.getElementById('noteKelas').textContent   = 'Guru mapel bisa mengampu lebih dari 1 kelas dan tingkatan.';
-    document.getElementById('labelMapel').textContent  = 'Mata Pelajaran yang Diajarkan';
-    document.getElementById('noteMapel').textContent   = 'Pilih semua mapel yang diajarkan.';
+    seksiKelas.style.display      = 'block';
+    seksiKelasMapel.style.display = 'none';  // guru_mapel langsung pilih semua kelas di seksiKelas
+    seksiMapel.style.display      = 'block';
+    document.getElementById('labelKelas').textContent = 'Kelas yang Diampu (bisa pilih beberapa)';
+    document.getElementById('noteKelas').textContent  = 'Guru mapel bisa mengampu lebih dari 1 kelas dan tingkatan.';
+    document.getElementById('labelMapel').textContent = 'Mata Pelajaran yang Diajarkan';
+    document.getElementById('noteMapel').textContent  = 'Pilih semua mapel yang diajarkan.';
     renderKelasCheckbox(true);
     renderMapelCheckbox();
   }
@@ -777,6 +808,35 @@ function toggleKelasCheck(nama, onlyOne = false) {
     kelasDipilih.push(nama);
     document.getElementById('chk-wrap-' + nama)?.classList.add('selected');
     const chk = document.getElementById('chk-' + nama);
+    if (chk) chk.checked = true;
+  }
+}
+
+/* ── Kelas Tambahan sbg Guru Mapel (guru_kelas merangkap) ─ */
+function renderKelasMapelCheckbox() {
+  const grid = document.getElementById('kelasMapelCheckGrid');
+  if (!grid) return;
+  grid.innerHTML = allKelas.map(k => `
+    <label class="kelas-check ${kelasMapelDipilih.includes(k.nama)?'selected':''}"
+      id="km-wrap-${k.nama}" onclick="toggleKelasMapelCheck('${k.nama}')">
+      <input type="checkbox" id="km-${k.nama}" value="${k.nama}"
+        ${kelasMapelDipilih.includes(k.nama)?'checked':''}>
+      ${k.nama}
+    </label>
+  `).join('');
+}
+
+function toggleKelasMapelCheck(nama) {
+  const idx = kelasMapelDipilih.indexOf(nama);
+  if (idx > -1) {
+    kelasMapelDipilih.splice(idx, 1);
+    document.getElementById('km-wrap-' + nama)?.classList.remove('selected');
+    const chk = document.getElementById('km-' + nama);
+    if (chk) chk.checked = false;
+  } else {
+    kelasMapelDipilih.push(nama);
+    document.getElementById('km-wrap-' + nama)?.classList.add('selected');
+    const chk = document.getElementById('km-' + nama);
     if (chk) chk.checked = true;
   }
 }
@@ -842,10 +902,12 @@ async function simpanGuru() {
     const data = {
       email,
       nama,
-      role:   roleVal,
-      kelas:  kelasDipilih.join(','),
-      mapel:  roleVal === 'admin' ? 'semua' : (mapelDipilih.length ? mapelDipilih.join(',') : 'semua'),
+      role:        roleVal,
+      kelas:       kelasDipilih.join(','),
+      mapel:       roleVal === 'admin' ? 'semua' : (mapelDipilih.length ? mapelDipilih.join(',') : 'semua'),
       status,
+      nbm:         document.getElementById('f_nbm').value.trim(),
+      kelas_mapel: roleVal === 'guru_kelas' ? kelasMapelDipilih.join(',') : '',
     };
 
     if (editId) {
@@ -874,7 +936,7 @@ async function simpanGuru() {
 }
 
 async function updateUser(id, data) {
-  const rows = await SHEETS.read('USERS!A:I');
+  const rows = await SHEETS.read('USERS!A:K');
   const idx  = rows.findIndex(r => r[0] === id);
   if (idx < 0) throw new Error('User tidak ditemukan.');
   const tanggal = rows[idx][8] || '';
@@ -882,8 +944,10 @@ async function updateUser(id, data) {
     id, data.email, data.nama, data.role,
     data.kelas, data.mapel, data.status,
     AUTH.getUser()?.id_user || '', tanggal,
+    data.nbm         || '',    // kolom J: NBM
+    data.kelas_mapel || '',    // kolom K: kelas tambahan sbg guru mapel
   ];
-  await SHEETS.write(`USERS!A${idx+1}:I${idx+1}`, [row]);
+  await SHEETS.write(`USERS!A${idx+1}:K${idx+1}`, [row]);
 }
 
 /* ── Toggle Status ────────────────────────────────────── */
@@ -929,10 +993,11 @@ function showAlert(type, title, text) {
     if (!confirm(`Hapus PERMANEN akun "${nama}"?\n\nAkun ini tidak akan bisa login lagi.`)) return;
     showLoading('Menghapus akun…');
     try {
-      const rows = await SHEETS.read('USERS!A:I');
+      const rows = await SHEETS.read('USERS!A:K');
       const idx  = rows.findIndex(r => r[0] === id);
       if (idx < 0) throw new Error('User tidak ditemukan.');
-      await SHEETS.write('USERS!A'+(idx+1)+':I'+(idx+1), [['','','','','','','','','']]);
+      // Bersihkan semua kolom A:K (11 kolom)
+      await SHEETS.write('USERS!A'+(idx+1)+':K'+(idx+1), [['','','','','','','','','','','']]);
       showAlert('success','✅ Berhasil', `Akun ${nama} berhasil dihapus.`);
       await muatData(); filterRole(roleFilter);
     } catch(e) {
