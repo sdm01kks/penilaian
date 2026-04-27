@@ -307,16 +307,18 @@ window.addEventListener('load', async () => {
     selMapel.innerHTML = '<option value="">— Pilih Mapel —</option>' +
       mapelFiltered.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
 
-    // Isi dropdown kelas sesuai kelasList guru
-    const allowedKelas = (currentUser.kelasList ||
+    // Isi dropdown kelas sesuai hak akses guru:
+    // gabungkan kelas utama + kelas_mapel (kelas lain sbg guru bidang studi)
+    const kelasUtama    = (currentUser.kelasList ||
       (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()).filter(Boolean) : []));
+    const kelasTambahan = currentUser.kelas_mapel
+      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
+      : [];
+    const allowedKelas  = [...new Set([...kelasUtama, ...kelasTambahan])];
     const selKelas = document.getElementById('selKelas');
     let kelasList = allKelas;
     if (allowedKelas.length) {
-      kelasList = allKelas.filter(k => {
-        const t = k.nama.replace(/[^0-9]/g,'');
-        return allowedKelas.some(ak => String(ak).replace(/[^0-9]/g,'') === t);
-      });
+      kelasList = allKelas.filter(k => allowedKelas.includes(k.nama));
     }
     selKelas.innerHTML = '<option value="">— Semua Kelas —</option>' +
       kelasList.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
@@ -355,12 +357,17 @@ async function tampilkanLeger() {
     const mapelObj = allMapel.find(m => m.id === idMapel);
 
     // Ambil TP untuk mapel ini
-    // Tingkatan dari kelas terpilih atau semua tingkatan mapel yang diampu
+    // Tingkatan dari kelas terpilih atau semua tingkatan mapel yang diampu (termasuk kelas_mapel)
+    const kelasUtamaArr   = (currentUser.kelasList ||
+      (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []));
+    const kelasTambahanArr = currentUser.kelas_mapel
+      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
+      : [];
+    const allAllowedKelas = [...new Set([...kelasUtamaArr, ...kelasTambahanArr])];
+
     const tingkatanList = kelas
       ? [kelas.replace(/[^0-9]/g,'')]
-      : (currentUser.kelasList ||
-         (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []))
-          .map(k => String(k).replace(/[^0-9]/g,''));
+      : allAllowedKelas.map(k => String(k).replace(/[^0-9]/g,''));
 
     // Kumpulkan TP dari semua tingkatan yang relevan
     let allTP = [];
@@ -375,14 +382,9 @@ async function tampilkanLeger() {
     const siswaList = kelas
       ? await SHEETS.getSiswa(kelas)
       : await (async () => {
-          // Semua siswa di kelas yang diampu guru
+          // Semua siswa di kelas yang diampu guru (kelas utama + kelas_mapel)
           const allSiswa = await SHEETS.getSiswa();
-          const kelasArr = (currentUser.kelasList ||
-            (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()).filter(Boolean) : []));
-          return allSiswa.filter(s => kelasArr.some(k => {
-            const t = String(k).replace(/[^0-9]/g,'');
-            return String(s.kelas).replace(/[^0-9]/g,'') === t;
-          }));
+          return allSiswa.filter(s => allAllowedKelas.includes(s.kelas));
         })();
 
     // Siswa diurutkan abjad per kelas
