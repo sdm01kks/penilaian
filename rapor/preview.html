@@ -738,7 +738,7 @@ function buildRaporHTML(d) {
 function buildRowMapel(no, item) {
   if (item.nilaiAkhir === null) {
     const desc = item.faseAPlaceholder
-      ? `<strong><em>${item.faseADesc}</em></strong>`
+      ? `<em>${item.faseADesc}</em>`
       : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
     return `<tr>
       <td class="td-no">${no}</td>
@@ -1025,7 +1025,7 @@ function buildBodyPrint(d) {
 function buildRowPrint(no, item) {
   if (item.nilaiAkhir === null) {
     const desc = item.faseAPlaceholder
-      ? `<strong><em>${item.faseADesc}</em></strong>`
+      ? `<em>${item.faseADesc}</em>`
       : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
     return `<tr><td class="td-no">${no}</td><td class="td-mapel">${item.mapel.nama}</td><td class="td-nilai" style="font-size:9pt;color:#999">—</td><td class="td-capaian">${desc}</td></tr>`;
   }
