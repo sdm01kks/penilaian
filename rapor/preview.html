@@ -229,15 +229,6 @@ window.addEventListener('load', async () => {
   currentUser = AUTH.requireLogin();
   if (!currentUser) return;
 
-  // Preview & Cetak Rapor hanya untuk admin dan guru kelas
-  if (currentUser.role === 'guru_mapel') {
-    showAlert('error','Akses Ditolak',
-      'Halaman ini hanya dapat diakses oleh guru kelas dan admin. ' +
-      'Gunakan menu Leger Nilai untuk melihat rekap nilai mata pelajaran yang Anda ampu.');
-    setTimeout(() => { window.location.href = '../rapor/leger-mapel.html'; }, 2500);
-    return;
-  }
-
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
 
@@ -270,12 +261,8 @@ function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role === 'guru_kelas') {
-    // Ambil daftar kelas yang diampu dari kelasList atau parse dari field kelas (raw string)
-    const arr = (currentUser.kelasList ||
-      (currentUser.kelas ? currentUser.kelas.split(',') : []))
-      .map(s => String(s).trim()).filter(Boolean);
-    // Jika arr kosong (belum dikonfigurasi admin), tampilkan kosong agar tidak bisa akses semua
-    kelas = arr.length ? allKelas.filter(k => arr.includes(k.nama)) : [];
+    const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
+    kelas = allKelas.filter(k => arr.includes(k.nama));
   }
   sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
@@ -353,7 +340,7 @@ async function muatRapor(siswa) {
         (u.kelasList?.includes(activeKelas) || u.kelas?.includes(activeKelas)) &&
         u.status==='aktif'
       );
-      if (waliUser) wali = { nama: waliUser.nama, nbm: '' };
+      if (waliUser) wali = { nama: waliUser.nama, nbm: waliUser.nbm || '' };
     } catch(_) {}
 
     raporData = {
@@ -408,13 +395,10 @@ function buildSeksiMapel(nilaiSiswa, isISMUBA) {
   const URUTAN_ISMUBA = ['MP12','MP13'];
   const urutanRef = isISMUBA ? URUTAN_ISMUBA : URUTAN_WAJIB;
 
-  // Tahsin-Tahfizh memiliki laporan sendiri (Laporan TT), tidak dimasukkan ke rapor
-  const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
-  // Filter mapel: hanya yang sesuai kelompok, kecualikan Tahsin-Tahfizh
-  const mapelFiltered = allMapel.filter(m =>
-    !isTahsin(m) &&
-    (isISMUBA ? ISMUBA_IDS.includes(m.id) : !ISMUBA_IDS.includes(m.id))
-  );
+  // Filter mapel: hanya yang sesuai kelompok
+  const mapelFiltered = allMapel.filter(m => isISMUBA
+    ? ISMUBA_IDS.includes(m.id)
+    : !ISMUBA_IDS.includes(m.id));
 
   // Urutkan berdasarkan urutan baku, sisipkan yang tidak ada di urutan di akhir
   const mapelList = [
@@ -428,17 +412,7 @@ function buildSeksiMapel(nilaiSiswa, isISMUBA) {
     const namaMapel = mapel.id === 'MP07' ? 'Seni Budaya' : mapel.nama;
 
     const tpMapel = allTP.filter(tp => tp.id_mapel === mapel.id);
-    if (!tpMapel.length) {
-      // Khusus ISMUBA di Fase A (kelas 1–2): tampilkan baris kosong dengan keterangan placeholder
-      if (isISMUBA && parseInt(activeKelas) <= 2) {
-        const isBahAsb = mapel.nama?.toLowerCase().includes('arab');
-        const faseADesc = isBahAsb
-          ? 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Pengenalan kosakata dan ungkapan bahasa Arab dasar diintegrasikan dalam mata pelajaran Al-Islam dan kegiatan Tahsin-Tahfizh.'
-          : 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Nilai-nilai ke-Muhammadiyahan ditanamkan melalui pembiasaan dan keteladanan dalam keseharian di sekolah.';
-        return { mapel: {...mapel, nama: mapel.nama}, nilaiAkhir: null, descBest: '', descWorst: '', faseAPlaceholder: true, faseADesc };
-      }
-      return null;  // Mapel belum ada TP untuk tingkatan ini → skip dari rapor
-    }
+    if (!tpMapel.length) return null;  // Mapel belum ada TP untuk tingkatan ini → skip dari rapor
 
     // Nilai akhir per TP
     const tpNilai = tpMapel.map(tp => {
@@ -504,47 +478,20 @@ function buildSeksiKok(kokSiswa, namaSiswa) {
    BUILD SECTION D — EKSTRAKURIKULER
 ════════════════════════════════════════════════════════ */
 function buildSeksiEkskul(eksSiswa) {
-  const tingkatan = parseInt(activeKelas) || 0;
-  const LVS = ['','Layak','Cakap','Mahir','Tidak Ikut'];
   const hasil = [];
   let no = 0;
-
-  function getKet(row) {
-    if (!row) return null;
-    const lv  = parseInt(row[4]) || 0;
-    return row[7] || (lv > 0 ? (LVS[lv] || '—') : '—');
-  }
-
-  if (tingkatan >= 3) {
-    // Kelas 3+: ekskul wajib (jenis=kokurikuler) selalu tampil, ada data atau tidak
-    allEkskul.filter(e => e.jenis === 'kokurikuler').forEach(e => {
-      const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
-      hasil.push({ no: ++no, nama: e.nama, ket: getKet(row) || '—' });
-    });
-    // Ekskul pilihan yang diikuti
-    allEkskul.filter(e => e.jenis === 'ekstrakurikuler').forEach(e => {
-      const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
-      if (!row) return;
-      hasil.push({ no: ++no, nama: e.nama, ket: getKet(row) || '—' });
-    });
-  } else {
-    // Kelas 1&2: semua ekskul (termasuk HW/kokurikuler) adalah pilihan
-    // Tampilkan yang ada datanya saja
-    allEkskul.forEach(e => {
-      const row = eksSiswa.find(r => r[3] === e.id && parseInt(r[4]) > 0);
-      if (!row) return;
-      hasil.push({ no: ++no, nama: e.nama, ket: getKet(row) || '—' });
-    });
-    // Jika tidak ada ekskul sama sekali → tampilkan HW + Tapak Suci sebagai default
-    if (hasil.length === 0) {
-      const hw = allEkskul.find(e => e.jenis === 'kokurikuler');
-      const ts = allEkskul.find(e =>
-        e.jenis === 'ekstrakurikuler' && e.nama.toLowerCase().includes('tapak'));
-      if (hw) hasil.push({ no: ++no, nama: hw.nama, ket: '—' });
-      if (ts) hasil.push({ no: ++no, nama: ts.nama, ket: '—' });
-    }
-  }
-
+  // Kokurikuler wajib — semua siswa
+  allEkskul.filter(e => e.jenis === 'kokurikuler').forEach(e => {
+    no++;
+    const row = eksSiswa.find(r => r[3] === e.id);
+    hasil.push({ no, nama: e.nama, ket: row?.[7] || '—' });
+  });
+  // Ekstrakurikuler pilihan — hanya yang diikuti
+  allEkskul.filter(e => e.jenis === 'ekstrakurikuler').forEach(e => {
+    const row = eksSiswa.find(r => r[3] === e.id &&
+      (r[4]==='1' || r[4]===1 || String(r[4]).toLowerCase()==='true'));
+    if (row) { no++; hasil.push({ no, nama: e.nama, ket: row[7] || '—' }); }
+  });
   return hasil;
 }
 
@@ -564,9 +511,8 @@ function angkaTerbilang(n) {
   return sat[Math.floor(n/100)] + ' ratus' + (n%100 ? ' ' + angkaTerbilang(n%100) : '');
 }
 
-function faseKelas(k) { const n=parseInt((k+'').replace(/[^0-9]/g,'')); return n<=2?'A':n<=4?'B':n<=6?'C':'?'; }
+function nextFase(f) { return f==='A'?'B':f==='B'?'C':'D'; }
 function nextKelas(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN(n)?k:(n+1); }
-function tingkatanKelas(k) { const n=parseInt((k+'').replace(/[^0-9]/g,'')); return isNaN(n)?k:n; }
 
 /* ════════════════════════════════════════════════════════
    RENDER PREVIEW (screen)
@@ -695,8 +641,8 @@ function buildRaporHTML(d) {
     html += `<div style="margin-top:12px">
     <div class="rpr-keputusan" style="display:inline-block;min-width:0;width:auto;max-width:280px;">
       <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
-      <p><${naik?'strong':'s'}>Naik ke Fase ${faseKelas(nextKelas(d.kelas))} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
-      <p><${!naik?'strong':'s'}>Tinggal di Kelas ${tingkatanKelas(d.kelas)}</${!naik?'strong':'s'}></p>
+      <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.fase)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
+      <p><${!naik?'strong':'s'}>Tinggal di kelas ${d.kelas}</${!naik?'strong':'s'}></p>
       <p><em>*) coret yang tidak perlu</em></p>
     </div></div>`;
   }
@@ -737,14 +683,11 @@ function buildRaporHTML(d) {
 
 function buildRowMapel(no, item) {
   if (item.nilaiAkhir === null) {
-    const desc = item.faseAPlaceholder
-      ? `<em>${item.faseADesc}</em>`
-      : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
     return `<tr>
       <td class="td-no">${no}</td>
       <td class="td-mapel">${item.mapel.nama}</td>
       <td class="td-nilai" style="font-size:10px;color:#999">—</td>
-      <td class="td-capaian">${desc}</td>
+      <td class="td-capaian" style="color:#999;font-style:italic">Belum ada nilai</td>
     </tr>`;
   }
   const best  = item.descBest  ? 'Mencapai kompetensi dengan sangat baik dalam ' + item.descBest : '';
@@ -855,19 +798,13 @@ td{border:1pt solid #000;padding:4pt 6pt;vertical-align:top}
 .rpr-ttd-name{font-weight:bold;border-top:1pt solid #000;padding-top:2pt}
 .rpr-ttd-nbm{font-size:9.5pt;color:#444}
 /* ── Page break control ── */
-/* Gunakan kedua properti: lama (page-break-*) + modern (break-*) untuk kompatibilitas lintas browser */
-tr{page-break-inside:avoid;break-inside:avoid}
-.rpr-section-title{page-break-after:avoid;break-after:avoid}
-.rpr-sub-title{page-break-after:avoid;break-after:avoid}
-.kok-header{page-break-after:avoid;break-after:avoid}
-.abs-catatan-grid{page-break-inside:avoid;break-inside:avoid}
-.rpr-keputusan{page-break-inside:avoid;break-inside:avoid}
-.rpr-ttd{page-break-inside:avoid;break-inside:avoid}
-/* Wrapper serbaguna: gunakan pada blok yang harus tetap utuh di satu halaman */
-.no-break{page-break-inside:avoid;break-inside:avoid}
-/* Paksa konten berikutnya ikut berpindah halaman bersama judul section */
-.rpr-section-title + *{page-break-before:avoid;break-before:avoid}
-.rpr-sub-title + *{page-break-before:avoid;break-before:avoid}
+tr{page-break-inside:avoid}
+.rpr-section-title{page-break-after:avoid}
+.rpr-sub-title{page-break-after:avoid}
+.kok-header{page-break-after:avoid}
+.abs-catatan-grid{page-break-inside:avoid}
+.rpr-keputusan{page-break-inside:avoid}
+.rpr-ttd{page-break-inside:avoid}
 </style>
 </head>
 <body>
@@ -927,10 +864,8 @@ function buildBodyPrint(d) {
   // Section B
   html += `<div class="rpr-section">
 <div class="rpr-section-title">B. Kokurikuler</div>
-<div class="no-break">
-  <div class="kok-header">Kokurikuler</div>
-  <div class="kok-box">${d.sectionB || '—'}</div>
-</div>
+<div class="kok-header">Kokurikuler</div>
+<div class="kok-box">${d.sectionB || '—'}</div>
 </div>`;
 
   // Section C Ekskul
@@ -949,55 +884,55 @@ function buildBodyPrint(d) {
   // Section D Absensi + Catatan + Tanggapan
   html += `<div class="rpr-section">
 <div class="rpr-section-title">D. Ketidakhadiran</div>
-<div class="no-break">
-  <div style="display:flex;gap:10pt;align-items:flex-start;margin-top:4pt;">
-    <!-- Tabel absensi: flex-shrink:0 agar tidak melebar -->
-    <div style="flex-shrink:0;">
-      <table style="border-collapse:collapse;font-size:10.5pt;border:none;">
-        <tr>
-          <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none;min-width:90pt">Sakit</td>
-          <td style="padding:3pt 5pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
-          <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.sakit}&nbsp;hari</td>
-        </tr>
-        <tr>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none">Izin</td>
-          <td style="padding:3pt 5pt;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.izin}&nbsp;hari</td>
-        </tr>
-        <tr>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:1pt solid #000;border-right:none">Tanpa Keterangan</td>
-          <td style="padding:3pt 5pt;border-bottom:1pt solid #000;border-left:none;border-right:none">:</td>
-          <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.tk}&nbsp;hari</td>
-        </tr>
-      </table>
-    </div>
-    <!-- Catatan Wali: flex:1 mengisi sisa lebar -->
-    <div style="flex:1;border:1pt solid #000;min-height:60pt;">
-      <div style="padding:3pt 7pt;border-bottom:1pt solid #000;font-weight:bold;font-size:10pt;text-align:center;">Catatan Wali</div>
-      <div style="padding:6pt 8pt;font-size:10.5pt;line-height:1.6;min-height:48pt;">${d.absensi.catatan||''}</div>
-    </div>
+<div style="display:flex;gap:10pt;align-items:flex-start;margin-top:4pt;">
+  <!-- Tabel absensi: flex-shrink:0 agar tidak melebar -->
+  <div style="flex-shrink:0;">
+    <table style="border-collapse:collapse;font-size:10.5pt;border:none;">
+      <tr>
+        <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none;min-width:90pt">Sakit</td>
+        <td style="padding:3pt 5pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
+        <td style="padding:3pt 8pt;border-top:1pt solid #000;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.sakit}&nbsp;hari</td>
+      </tr>
+      <tr>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:1pt solid #000;border-right:none">Izin</td>
+        <td style="padding:3pt 5pt;border-bottom:1pt solid #ccc;border-left:none;border-right:none">:</td>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #ccc;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.izin}&nbsp;hari</td>
+      </tr>
+      <tr>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:1pt solid #000;border-right:none">Tanpa Keterangan</td>
+        <td style="padding:3pt 5pt;border-bottom:1pt solid #000;border-left:none;border-right:none">:</td>
+        <td style="padding:3pt 8pt;border-bottom:1pt solid #000;border-left:none;border-right:1pt solid #000;white-space:nowrap">${d.absensi.tk}&nbsp;hari</td>
+      </tr>
+    </table>
   </div>
-  <div class="tanggapan-box">
-    <div class="tanggapan-header">Tanggapan Orang Tua/Wali Murid</div>
-    <div class="tanggapan-body"></div>
+  <!-- Catatan Wali: flex:1 mengisi sisa lebar -->
+  <div style="flex:1;border:1pt solid #000;min-height:60pt;">
+    <div style="padding:3pt 7pt;border-bottom:1pt solid #000;font-weight:bold;font-size:10pt;text-align:center;">Catatan Wali</div>
+    <div style="padding:6pt 8pt;font-size:10.5pt;line-height:1.6;min-height:48pt;">${d.absensi.catatan||''}</div>
   </div>
+</div>
+<div class="tanggapan-box">
+  <div class="tanggapan-header">Tanggapan Orang Tua/Wali Murid</div>
+  <div class="tanggapan-body"></div>
 </div>
 </div>`;
 
-  // Keputusan + TTD — dibungkus no-break agar tidak terpotong antar halaman
-  let bottomHtml = '';
+  // Keputusan
   if (isSem2) {
     const naik = d.absensi.keputusan !== 'Tinggal';
-    bottomHtml += `<div style="margin-bottom:10pt">
+    html += `<div style="margin-top:10pt">
 <div class="rpr-keputusan" style="min-width:0;width:auto;max-width:230pt;">
   <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
-  <p><${naik?'strong':'s'}>Naik ke Fase ${faseKelas(nextKelas(d.kelas))} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
-  <p><${!naik?'strong':'s'}>Tinggal di Kelas ${tingkatanKelas(d.kelas)}</${!naik?'strong':'s'}></p>
+  <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.fase)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
+  <p><${!naik?'strong':'s'}>Tinggal di kelas ${d.kelas}</${!naik?'strong':'s'}></p>
   <p><em>*) coret yang tidak perlu</em></p>
 </div></div>`;
   }
+
+  // TTD — urutan: Orang Tua/Wali | Kepala Sekolah | (kota-tgl) Wali Kelas
   const tanda = d.kota_rapor + ', ' + (d.tgl_rapor || '……………………');
-  bottomHtml += `<div style="text-align:right;font-size:10.5pt;margin-bottom:3pt">${tanda}</div>
+  html += `<div style="margin-top:20pt">
+  <div style="text-align:right;font-size:10.5pt;margin-bottom:3pt">${tanda}</div>
   <div class="rpr-ttd">
     <div class="rpr-ttd-col">
       <div>Orang Tua/Wali</div>
@@ -1016,18 +951,15 @@ function buildBodyPrint(d) {
       <div class="rpr-ttd-name">${d.wali_kelas}</div>
       ${d.nbm_wali?`<div class="rpr-ttd-nbm">NBM. ${d.nbm_wali}</div>`:''}
     </div>
-  </div>`;
-  html += `<div class="no-break" style="margin-top:20pt">${bottomHtml}</div>`;
+  </div>
+</div>`;
 
   return html;
 }
 
 function buildRowPrint(no, item) {
   if (item.nilaiAkhir === null) {
-    const desc = item.faseAPlaceholder
-      ? `<em>${item.faseADesc}</em>`
-      : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
-    return `<tr><td class="td-no">${no}</td><td class="td-mapel">${item.mapel.nama}</td><td class="td-nilai" style="font-size:9pt;color:#999">—</td><td class="td-capaian">${desc}</td></tr>`;
+    return `<tr><td class="td-no">${no}</td><td class="td-mapel">${item.mapel.nama}</td><td class="td-nilai" style="font-size:9pt;color:#999">—</td><td class="td-capaian" style="color:#999;font-style:italic">Belum ada nilai</td></tr>`;
   }
   const best  = item.descBest  ? 'Mencapai kompetensi dengan sangat baik dalam ' + item.descBest  : '';
   const worst = item.descWorst ? 'Perlu peningkatan dalam ' + item.descWorst : '';
