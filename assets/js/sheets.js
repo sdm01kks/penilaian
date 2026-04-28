@@ -654,8 +654,13 @@ const SHEETS = (() => {
    */
   async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
     const rows = await read('SETORAN_TT!A:M');
-    // FIX: jangan pakai slice(2) - cari berdasarkan prefix ID 'ST' agar tahan 1/2 baris header
-    let data   = rows.filter(r => r[0] && String(r[0]).startsWith('ST'));
+    // FIX: skip header/kosong - tidak bergantung prefix ID
+    const HEADER_VALS = ['id','id_setoran','id setoran',''];
+    let data = rows.filter(r => {
+      const first = String(r[0] || '').trim();
+      return first.length > 0 && !HEADER_VALS.includes(first.toLowerCase());
+    });
+    console.log('[getSetoranTT] total baris:', rows.length, '| data valid:', data.length, '| sample:', data.slice(0,3).map(r=>r[0]));
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
     if (semester) data = data.filter(r => r[3] === semester);
@@ -725,7 +730,7 @@ const SHEETS = (() => {
   async function updateSetoranTT(id, setoran) {
     const rows = await read('SETORAN_TT!A:M');
     // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
-    const idx  = rows.findIndex(r => r[0] === id);
+    const idx  = rows.findIndex(r => String(r[0] || '').trim() === String(id).trim());
     if (idx === -1) {
       const sample = rows.slice(0, 8).map(r => r[0]).filter(Boolean);
       console.error('[updateSetoranTT] ID dicari:', id, '| total baris:', rows.length);
@@ -765,7 +770,7 @@ const SHEETS = (() => {
   async function deleteSetoranTT(sheetId, id) {
     const rows = await read('SETORAN_TT!A:A');
     // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
-    const idx  = rows.findIndex(r => r[0] === id);
+    const idx  = rows.findIndex(r => String(r[0] || '').trim() === String(id).trim());
     if (idx === -1) {
       const sample = rows.slice(0, 8).map(r => r[0]).filter(Boolean);
       console.error('[updateSetoranTT] ID dicari:', id, '| total baris:', rows.length);
