@@ -295,29 +295,26 @@ const SHEETS = (() => {
    * @param {string|null} role - Filter role
    */
   async function getUsers(role = null) {
-    const rows = await read('USERS!A:K');
+    const rows = await read('USERS!A:J');
     let users  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_user');
 
     if (role) users = users.filter(r => (r[3] || '') === role);
 
     return users.map(r => {
-      const mapelRaw     = r[5]  || '';
-      const kelasMapelRaw= r[10] || '';
+      const mapelRaw = r[5] || '';
       return {
-        id:             r[0] || '',
-        email:          r[1] || '',
-        nama:           r[2] || '',
-        role:           r[3] || '',
-        kelas:          r[4] || '',
-        mapel:          mapelRaw,                                          // raw string (bisa multi, pisah koma)
-        mapelList:      mapelRaw ? mapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
-        kelasList:      r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
-        status:         r[6] || '',
-        ditambah:       r[7] || '',
-        tanggal:        r[8] || '',
-        nbm:            r[9]  || '',                                       // kolom J: Nomor Baku Muhammadiyah
-        kelasMapel:     kelasMapelRaw,                                     // kolom K: kelas lain sbg guru mapel (guru_kelas yg merangkap)
-        kelasMapelList: kelasMapelRaw ? kelasMapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        id:         r[0] || '',
+        email:      r[1] || '',
+        nama:       r[2] || '',
+        role:       r[3] || '',
+        kelas:      r[4] || '',
+        mapel:      mapelRaw,                                      // raw string (bisa multi, pisah koma)
+        mapelList:  mapelRaw ? mapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
+        kelasList:  r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
+        status:     r[6] || '',
+        ditambah:   r[7] || '',
+        tanggal:    r[8] || '',
+        nbm:        r[9] || '',
       };
     });
   }
@@ -330,16 +327,15 @@ const SHEETS = (() => {
     const tanggal = new Date().toLocaleDateString('id-ID');
     const row     = [
       id,
-      user.email       || '',
-      user.nama        || '',
-      user.role        || 'guru_kelas',
-      user.kelas       || '',
-      user.mapel       || '',
+      user.email  || '',
+      user.nama   || '',
+      user.role   || 'guru_kelas',
+      user.kelas  || '',
+      user.mapel  || '',
       'aktif',
       AUTH.getUser()?.id_user || 'admin',
       tanggal,
-      user.nbm         || '',   // kolom J: NBM
-      user.kelas_mapel || '',   // kolom K: kelas tambahan sbg guru mapel
+      user.nbm || '',
     ];
     await append('USERS', [row]);
     return id;
@@ -447,9 +443,7 @@ const SHEETS = (() => {
    */
   async function getNilai({ id_siswa, id_mapel, kelas, semester, tahun } = {}) {
     const rows = await read('NILAI!A:K');
-    // Mulai dari index 1 (bukan 2) agar data di row 2 ikut terbaca,
-    // lalu filter header secara eksplisit
-    let data   = rows.slice(1).filter(r => r[0] && r[0] !== 'id_nilai' && r[0].trim() !== '');
+    let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai');
 
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
     if (id_mapel) data = data.filter(r => r[3] === id_mapel);
@@ -520,13 +514,10 @@ const SHEETS = (() => {
         nama:        r[1] || '',
         jenis:       r[2] || '',
         keterangan:  r[3] || '',
-        // level[0]=Layak(1), level[1]=Cakap(2), level[2]=Mahir(3), level[3]=TidakIkut(4)
-        // Col N (r[13]) = deskripsi Tidak Ikut (tanpa rentang nilai)
         level: [
-          { min: parseInt(r[4])||0,  maks: parseInt(r[5])||60,  deskripsi: r[6]||''  },  // Layak
-          { min: parseInt(r[7])||61, maks: parseInt(r[8])||85,  deskripsi: r[9]||''  },  // Cakap
-          { min: parseInt(r[10])||86,maks: parseInt(r[11])||100, deskripsi: r[12]||'' }, // Mahir
-          { deskripsi: r[13]||'' },                                                        // Tidak Ikut
+          { min: parseInt(r[4])||0,  maks: parseInt(r[5])||60,  deskripsi: r[6]||'' },
+          { min: parseInt(r[7])||61, maks: parseInt(r[8])||85,  deskripsi: r[9]||'' },
+          { min: parseInt(r[10])||86,maks: parseInt(r[11])||100, deskripsi: r[12]||'' },
         ],
       }));
   }
@@ -654,14 +645,13 @@ const SHEETS = (() => {
    */
   async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
     const rows = await read('SETORAN_TT!A:M');
-    // FIX: skip header/kosong - tidak bergantung prefix ID
-    // FIX: ID data selalu diawali 'ST' - filter ketat + trim whitespace
-    let data = rows.filter(r => String(r[0] || '').trim().toUpperCase().startsWith('ST'));
-    console.log('[getSetoranTT] total baris:', rows.length, '| data valid:', data.length, '| sample:', data.slice(0,3).map(r=>r[0]));
+    // Robust: skip header rows by checking ID pattern (ST prefix), works with 1 OR 2 header rows
+    let data   = rows.filter(r => r[0] && String(r[0]).startsWith('ST'));
+    console.log('[SETORAN_TT] total rows from sheet:', rows.length, '| data rows:', data.length);
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
     if (semester) data = data.filter(r => r[3] === semester);
-    // Sengaja tidak filter tahun - format bisa beda (2025/2026 vs 2025-2026)
+    if (tahun)    data = data.filter(r => r[4] === tahun);
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
 
     return data.map(r => ({
@@ -704,19 +694,7 @@ const SHEETS = (() => {
       setoran.catatan         || '',
       setoran.nilai_aspek     ? JSON.stringify(setoran.nilai_aspek) : '',
     ];
-    // FIX: gunakan SETORAN_TT!A1 agar append selalu mulai dari kolom A
-    const appendRes = await append('SETORAN_TT!A1', [row]);
-    // Log WHERE Google Sheets actually wrote the data
-    console.log('[saveSetoranTT] id:', id);
-    console.log('[saveSetoranTT] append response updatedRange:', appendRes?.updates?.updatedRange || 'TIDAK ADA RANGE INFO');
-    console.log('[saveSetoranTT] row[0] yg ditulis:', row[0], '| kelas:', row[2], '| materi:', row[7]);
-    // Verifikasi: langsung baca balik untuk konfirmasi
-    try {
-      const verify = await read('SETORAN_TT!A:A');
-      console.log('[saveSetoranTT] VERIFIKASI baca kembali SETORAN_TT!A:A — total rows:', verify.length);
-      const found = verify.some(r => r[0] === id);
-      console.log('[saveSetoranTT] ID ditemukan di sheet?', found ? 'YA ✅' : 'TIDAK ❌ — data tidak tersimpan!');
-    } catch(e) { console.warn('[saveSetoranTT] verifikasi gagal:', e.message); }
+    await append('SETORAN_TT', [row]);
     return id;
   }
 
@@ -727,15 +705,10 @@ const SHEETS = (() => {
    */
   async function updateSetoranTT(id, setoran) {
     const rows = await read('SETORAN_TT!A:M');
-    // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
-    const idx  = rows.findIndex(r => String(r[0] || '').trim() === String(id).trim());
-    if (idx === -1) {
-      const sample = rows.slice(0, 8).map(r => r[0]).filter(Boolean);
-      console.error('[updateSetoranTT] ID dicari:', id, '| total baris:', rows.length);
-      console.error('[updateSetoranTT] Sample ID di sheet:', sample);
-      throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
-    }
-    console.log('[updateSetoranTT] ID ditemukan di baris', idx + 1);
+    // Robust: don't use i>=2, find by ID value directly
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
+    console.log('[updateSetoranTT] found at row index', idx, '→ sheet row', idx+1);
 
     const ex = rows[idx];  // data existing sebagai fallback
     const row = [
@@ -767,15 +740,9 @@ const SHEETS = (() => {
    */
   async function deleteSetoranTT(sheetId, id) {
     const rows = await read('SETORAN_TT!A:A');
-    // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
-    const idx  = rows.findIndex(r => String(r[0] || '').trim() === String(id).trim());
-    if (idx === -1) {
-      const sample = rows.slice(0, 8).map(r => r[0]).filter(Boolean);
-      console.error('[updateSetoranTT] ID dicari:', id, '| total baris:', rows.length);
-      console.error('[updateSetoranTT] Sample ID di sheet:', sample);
-      throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
-    }
-    console.log('[updateSetoranTT] ID ditemukan di baris', idx + 1);
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id}`);
+    console.log('[deleteSetoranTT] found at row index', idx, '→ sheet row', idx+1);
 
     // idx sudah 0-based, sesuai dengan format yang diharapkan deleteRow
     await deleteRow(sheetId, idx);
