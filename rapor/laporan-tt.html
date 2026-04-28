@@ -284,19 +284,30 @@ const BULAN = ['','Januari','Februari','Maret','April','Mei','Juni',
 
 function formatTanggal(str) {
   if (!str) return '—';
-  // Support: "2025-04-28" (ISO) or "28/4/2025" (id-ID locale)
   let d;
-  if (str.includes('-') && str.length >= 8) {
-    const [y,m,day] = str.split('-');
-    d = new Date(parseInt(y), parseInt(m)-1, parseInt(day));
-  } else if (str.includes('/')) {
+  const n = Number(str);
+  if (!isNaN(n) && n > 1000 && n < 100000) {
+    // Google Sheets date serial (mis. 46132 = 28 Apr 2026)
+    // Epoch: Dec 30, 1899 = serial 0
+    d = new Date(Date.UTC(1899, 11, 30) + n * 86400000);
+    // Koreksi ke local time
+    d = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  } else if (typeof str === 'string' && str.includes('-') && str.length >= 8) {
+    const [y, m, day] = str.split('-');
+    d = new Date(parseInt(y), parseInt(m) - 1, parseInt(day));
+  } else if (typeof str === 'string' && str.includes('/')) {
     const parts = str.split('/');
-    d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+    // Support dd/mm/yyyy AND yyyy/mm/dd
+    if (parseInt(parts[0]) > 31) {
+      d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    } else {
+      d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
   } else {
     d = new Date(str);
   }
-  if (isNaN(d)) return str;
-  return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()+1]} ${d.getFullYear()}`;
+  if (!d || isNaN(d.getTime())) return String(str);
+  return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth() + 1]} ${d.getFullYear()}`;
 }
 
 /* ════════════════════════════════════════════════════
@@ -328,14 +339,25 @@ window.addEventListener('load', async () => {
 
   showLoading('Memuat konfigurasi…');
   try {
-    // Refresh mapel dari USERS sheet lebih dulu agar aturNav akurat (hindari session cache lama)
+    // Muat config + kelas + users sekaligus (paralel) untuk performa
+    let allUsersCache = [];
     try {
-      const allUsers  = await SHEETS.getUsers();
-      const freshUser = allUsers.find(u => u.email === currentUser.email);
+      [config, allKelas, allUsersCache] = await Promise.all([
+        SHEETS.getConfig(), SHEETS.getKelas(), SHEETS.getUsers()
+      ]);
+      // Refresh mapel dari sheet (hindari session cache lama)
+      const freshUser = allUsersCache.find(u => u.email === currentUser.email);
       if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
-    } catch(e) { /* fallback ke session */ }
-
-    [config, allKelas] = await Promise.all([SHEETS.getConfig(), SHEETS.getKelas()]);
+      // Cache guru TT name for TTD
+      const guruTTUser = allUsersCache.find(u => {
+        const m = (u.mapel || '').toLowerCase().split(',').map(s=>s.trim());
+        return m.some(x => x.includes('tahsin')||x.includes('tahfizh')||x==='mp_tt'||x.endsWith('_tt'));
+      });
+      if (guruTTUser) config['_nama_guru_tt'] = guruTTUser.nama;
+    } catch(e) {
+      // fallback: muat satu per satu
+      [config, allKelas] = await Promise.all([SHEETS.getConfig(), SHEETS.getKelas()]);
+    }
     // Muat KKTP dari config
     ['iqro','quran'].forEach(j => {
       const raw = config[`tahsin_kktp_${j}`] || '';
@@ -388,12 +410,12 @@ function isiDropdownKelas() {
     // Guru kelas hanya lihat kelas yang diampu
     const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
     kelas = allKelas.filter(k => arr.includes(k.nama));
-  } else if (currentUser.role === 'guru_mapel' && !isTTGuru()) {
-    // Guru mapel non-TT hanya lihat kelas yang diampu
+  } else if (currentUser.role === 'guru_mapel') {
+    // Semua guru_mapel (termasuk TT) hanya lihat kelas yang mereka ampu
     const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
-    kelas = allKelas.filter(k => arr.includes(k.nama));
+    if (arr.length > 0) kelas = allKelas.filter(k => arr.includes(k.nama));
   }
-  // admin dan guru TT lihat semua kelas
+  // admin lihat semua kelas
   sel.innerHTML = '<option value="">— Pilih Kelas —</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
 }
@@ -428,19 +450,8 @@ async function muatLaporan() {
   try {
     setoranData = await SHEETS.getSetoranTT({ kelas, semester: sem, tahun });
 
-    // Muat identitas sekolah untuk TTD
-    if (!config['nama_kepsek']) {
-      config = await SHEETS.getConfig();
-    }
-    // Cari nama guru TT dari daftar user (guru dengan mapel mengandung 'TT' / 'tahsin')
-    try {
-      const allUsers = await SHEETS.getUsers();
-      const guruTT   = allUsers.find(u => {
-        const m = (u.mapel || '').toLowerCase();
-        return m.includes('tahsin') || m.includes('tahfizh') || m === 'mp_tt' || m.endsWith('_tt');
-      });
-      if (guruTT) config['_nama_guru_tt'] = guruTT.nama;
-    } catch(e) {}
+    // Identitas TTD sudah dimuat saat init (config['_nama_guru_tt'])
+    // Tidak perlu load ulang getUsers di sini
 
     const tingkat = parseInt(kelas.replace(/[^0-9]/g,''));
     const cfgKey  = `tahsin_target_${tingkat}_${sem}_${tahun}`;
@@ -912,7 +923,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 .print-header p  { font-size: 9.5pt; color: #444; margin-top: 3pt; }
 
 /* ── Card siswa ── */
-.lpr-card { border: 1pt solid #bdbdbd; border-radius: 4pt; margin-bottom: 0; page-break-inside: avoid; }
+.lpr-card { border: 1pt solid #bdbdbd; border-radius: 4pt; margin-bottom: 0; }
 .lpr-card + .lpr-card { margin-top: 14pt; }
 .lpr-card-header { background: #e8f5e9; border-bottom: 1pt solid #bdbdbd; padding: 7pt 10pt; display: flex; align-items: center; gap: 8pt; }
 .lpr-avatar { width: 28pt; height: 28pt; border-radius: 50%; background: #1e4d3b; display: flex; align-items: center; justify-content: center; font-size: 12pt; font-weight: bold; color: #fff; flex-shrink: 0; text-align: center; line-height: 28pt; }
@@ -922,14 +933,14 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 .lpr-body  { padding: 8pt 10pt; }
 
 /* ── Sections ── */
-.lpr-section { margin-bottom: 8pt; page-break-inside: avoid; }
+.lpr-section { margin-bottom: 8pt; }
 .lpr-section-title { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: .4pt; color: #1e4d3b; border-bottom: 1pt solid #c8e6c9; padding-bottom: 2.5pt; margin-bottom: 5pt; page-break-after: avoid; }
 
 /* ── Grid stats ── */
 .lpr-grid-2, .lpr-grid-3 { display: grid; gap: 6pt; }
 .lpr-grid-2 { grid-template-columns: 1fr 1fr; }
 .lpr-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-.lpr-stat { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; }
+.lpr-stat { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; break-inside: avoid; }
 .lpr-stat-label { font-size: 7.5pt; color: #666; font-weight: bold; text-transform: uppercase; }
 .lpr-stat-value { font-size: 15pt; font-weight: bold; }
 .lpr-stat-sub   { font-size: 7.5pt; color: #666; }
@@ -946,7 +957,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 
 /* ── Hafalan list ── */
 .hafalan-list { display: flex; flex-direction: column; gap: 2.5pt; }
-.hafalan-item { display: flex; align-items: center; gap: 5pt; padding: 2.5pt 7pt; border-radius: 3pt; background: #f5f5f5; border: 0.5pt solid #ddd; font-size: 9pt; page-break-inside: avoid; }
+.hafalan-item { display: flex; align-items: center; gap: 5pt; padding: 2.5pt 7pt; border-radius: 3pt; background: #f5f5f5; border: 0.5pt solid #ddd; font-size: 9pt; break-inside: avoid; }
 .hafalan-item.lulus { background: #e8f5e9; border-color: #a5d6a7; }
 .hafalan-item.ulang { background: #ffebee; border-color: #ef9a9a; }
 .hafalan-dot { width: 6pt; height: 6pt; border-radius: 50%; background: #999; flex-shrink: 0; }
@@ -957,12 +968,12 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 .hafalan-nilai   { font-weight: bold; white-space: nowrap; }
 
 /* ── Narasi ── */
-.narasi-box { background: #f1f8e9; border: 0.5pt solid #c5e1a5; border-radius: 3pt; padding: 7pt 9pt; font-size: 10pt; line-height: 1.7; text-align: justify; }
+.narasi-box { background: #f1f8e9; border: 0.5pt solid #c5e1a5; border-radius: 3pt; padding: 7pt 9pt; font-size: 10pt; line-height: 1.7; text-align: justify; break-inside: avoid; }
 .narasi-box.kosong { color: #999; font-style: italic; background: #f5f5f5; border-color: #ddd; }
 
 /* ── Aspek tahsin ── */
 .aspek-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5pt; }
-.aspek-item { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; page-break-inside: avoid; }
+.aspek-item { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; break-inside: avoid; }
 .aspek-item-label { font-size: 7.5pt; font-weight: bold; text-transform: uppercase; color: #555; margin-bottom: 2pt; }
 .aspek-item-desc  { font-size: 9.5pt; line-height: 1.55; }
 
@@ -970,7 +981,7 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 .alert { border-radius: 3pt; padding: 5pt 8pt; display: flex; gap: 6pt; align-items: flex-start; margin: 5pt 0; border: 0.5pt solid #90caf9; background: #e3f2fd; font-size: 9pt; }
 
 /* ── TTD ── */
-.ttd-section { page-break-inside: avoid; margin-top: 20pt; }
+.ttd-section { page-break-inside: avoid; page-break-before: auto; margin-top: 20pt; }
 .ttd-tanda   { text-align: right; font-size: 10pt; margin-bottom: 10pt; }
 .ttd-grid    { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; }
 .ttd-col     { text-align: center; font-size: 10pt; }
@@ -980,7 +991,8 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 
 /* ── Page break ── */
 .page-break-after  { page-break-after: always; }
-.no-break { page-break-inside: avoid; }
+.no-break { break-inside: avoid; }
+.keep-with-next { break-after: avoid; }
 </style>
 </head>
 <body>
