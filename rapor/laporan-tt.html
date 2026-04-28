@@ -353,7 +353,10 @@ window.addEventListener('load', async () => {
         const m = (u.mapel || '').toLowerCase().split(',').map(s=>s.trim());
         return m.some(x => x.includes('tahsin')||x.includes('tahfizh')||x==='mp_tt'||x.endsWith('_tt'));
       });
-      if (guruTTUser) config['_nama_guru_tt'] = guruTTUser.nama;
+      if (guruTTUser) {
+        config['_nama_guru_tt']  = guruTTUser.nama;
+        config['_nbm_guru_tt']   = guruTTUser.nbm || '';
+      }
     } catch(e) {
       // fallback: muat satu per satu
       [config, allKelas] = await Promise.all([SHEETS.getConfig(), SHEETS.getKelas()]);
@@ -873,7 +876,8 @@ function bukaJendelaCetak(bodyHTML, namaSiswa) {
   const sekolah = config['nama_sekolah']    || 'SD Muhammadiyah 01 Kukusan';
   const kepsek  = config['nama_kepsek']     || '—';
   const nbmKepsek = config['nbm_kepsek']   || '';
-  const guruTT  = config['_nama_guru_tt']  || '—';
+  const guruTT    = config['_nama_guru_tt']  || '—';
+  const nbmGuruTT = config['_nbm_guru_tt']   || '';
   const kota    = config['kota_rapor']     || 'Depok';
   const tglRapor= config['tgl_rapor']      || '……………………';
   const tanda   = kota + ', ' + tglRapor;
@@ -1019,6 +1023,7 @@ ${bodyHTML}
       <div>Guru Tahsin-Tahfizh,</div>
       <div class="ttd-space"></div>
       <div class="ttd-name">${guruTT}</div>
+      ${nbmGuruTT ? `<div class="ttd-nbm">NBM. ${nbmGuruTT}</div>` : ''}
     </div>
   </div>
 </div>
