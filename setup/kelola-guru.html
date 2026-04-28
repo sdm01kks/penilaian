@@ -730,7 +730,15 @@ function resetForm() {
 }
 
 /* ── Pilih Role ───────────────────────────────────────── */
-function pilihRole(role) {
+function pilihRole(role, fromEdit = false) {
+  // Jika dipanggil dari klik user (bukan restore saat bukaEdit):
+  // clear semua state pilihan agar tidak ada data lama yang terbawa
+  if (!fromEdit) {
+    kelasDipilih      = [];
+    kelasMapelDipilih = [];
+    mapelDipilih      = [];
+  }
+
   roleVal = role;
   document.querySelectorAll('.role-opt').forEach(el => {
     el.classList.toggle('selected', el.querySelector('input').value === role);
@@ -747,13 +755,12 @@ function pilihRole(role) {
   } else if (role === 'guru_kelas') {
     seksiKelas.style.display      = 'block';
     seksiKelasMapel.style.display = 'block';
-    seksiMapel.style.display      = 'none';   // guru kelas TIDAK perlu pilih mapel — otomatis akses semua
+    seksiMapel.style.display      = 'none';   // dikontrol dinamis oleh _syncSeksiMapel
     document.getElementById('labelKelas').textContent = 'Kelas Utama (Wali Kelas)';
-    document.getElementById('noteKelas').textContent  = 'Pilih satu kelas yang menjadi tanggung jawab guru ini sebagai wali kelas. Guru kelas otomatis memiliki akses ke seluruh mata pelajaran termasuk Tahsin-Tahfizh.';
-    // guru_kelas: hanya boleh 1 kelas utama → multi=false → onlyOne=true
+    document.getElementById('noteKelas').textContent  = 'Pilih satu kelas yang menjadi tanggung jawab guru ini sebagai wali kelas. Di kelas ini, guru otomatis mengakses seluruh mata pelajaran termasuk Tahsin-Tahfizh.';
     renderKelasCheckbox(false);
     renderKelasMapelCheckbox();
-    mapelDipilih = [];  // reset — tidak dipakai untuk guru_kelas
+    _syncSeksiMapel();  // tampilkan seksiMapel jika sudah ada kelas tambahan (mode edit)
   } else if (role === 'guru_mapel') {
     seksiKelas.style.display      = 'block';
     seksiKelasMapel.style.display = 'none';  // guru_mapel langsung pilih semua kelas di seksiKelas
@@ -764,7 +771,6 @@ function pilihRole(role) {
     document.getElementById('noteMapel').textContent  = 'Pilih semua mapel yang diajarkan.';
     renderKelasCheckbox(true);
     renderMapelCheckbox();
-    kelasMapelDipilih = [];  // reset — tidak dipakai untuk guru_mapel
   }
 }
 
@@ -834,6 +840,25 @@ function toggleKelasMapelCheck(nama) {
     const chk = document.getElementById('km-' + nama);
     if (chk) chk.checked = true;
   }
+  // Tampilkan seksiMapel hanya jika ada kelas tambahan yang dipilih
+  _syncSeksiMapel();
+}
+
+// Munculkan/sembunyikan seksiMapel untuk guru_kelas sesuai kelas tambahan
+function _syncSeksiMapel() {
+  if (roleVal !== 'guru_kelas') return;
+  const seksiMapel = document.getElementById('seksiMapel');
+  if (kelasMapelDipilih.length > 0) {
+    seksiMapel.style.display = 'block';
+    document.getElementById('labelMapel').textContent = 'Mata Pelajaran di Kelas Tambahan';
+    document.getElementById('noteMapel').textContent  =
+      'Pilih mapel yang diajarkan di kelas tambahan (bukan di kelas utama). ' +
+      'Di kelas utama, guru kelas otomatis dapat akses semua mapel.';
+    renderMapelCheckbox();
+  } else {
+    seksiMapel.style.display = 'none';
+    mapelDipilih = [];
+  }
 }
 
 /* ── Dropdown Mapel ───────────────────────────────────── */
@@ -900,11 +925,15 @@ async function simpanGuru() {
       nama,
       role:        roleVal,
       kelas:       kelasDipilih.join(','),
-      // guru_kelas: selalu 'semua' (otomatis akses semua mapel termasuk TT)
-      // guru_mapel: sesuai pilihan, admin: 'semua'
-      mapel:       (roleVal === 'admin' || roleVal === 'guru_kelas')
+      // guru_kelas: jika ada kelas tambahan → simpan mapel spesifik yang diajarkan di sana
+      //            jika tidak ada kelas tambahan → 'semua' (wali kelas akses semua mapel)
+      mapel:       (roleVal === 'admin')
                      ? 'semua'
-                     : (mapelDipilih.length ? mapelDipilih.join(',') : 'semua'),
+                     : roleVal === 'guru_kelas'
+                       ? (kelasMapelDipilih.length && mapelDipilih.length
+                           ? mapelDipilih.join(',')
+                           : 'semua')
+                       : (mapelDipilih.length ? mapelDipilih.join(',') : 'semua'),
       status,
       nbm:         document.getElementById('f_nbm').value.trim(),
       kelas_mapel: roleVal === 'guru_kelas' ? kelasMapelDipilih.join(',') : '',
