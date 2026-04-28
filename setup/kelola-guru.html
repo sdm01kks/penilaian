@@ -681,14 +681,14 @@ function bukaEdit(id) {
   kelasDipilih = (u.kelas || '').split(',').map(k => k.trim()).filter(Boolean);
 
   kelasMapelDipilih = u.kelasMapelList?.length
-    ? [...u.kelasMapelList]
-    : (u.kelasMapel ? u.kelasMapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    ? u.kelasMapelList.map(s => s.trim()).filter(Boolean)
+    : (u.kelasMapel ? u.kelasMapel.split(',').map(s => s.trim()).filter(Boolean) : []);
 
-  mapelDipilih = u.mapelList?.length
-    ? [...u.mapelList]
-    : (u.mapel && u.mapel !== 'semua'
-        ? u.mapel.split(',').map(s=>s.trim()).filter(Boolean)
-        : []);
+  // FIX: mapelDipilih hanya diisi jika mapel BUKAN 'semua'
+  // (guru_kelas dengan kelas tambahan menyimpan mapel spesifik, bukan 'semua')
+  mapelDipilih = (u.mapel && u.mapel !== 'semua')
+    ? u.mapel.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
 
   document.getElementById('modalTitle').textContent = 'Edit Akun Guru';
   document.getElementById('f_nama').value   = u.nama  || '';
@@ -696,9 +696,12 @@ function bukaEdit(id) {
   document.getElementById('f_nbm').value    = u.nbm   || '';
   document.getElementById('f_status').value = u.status || 'aktif';
 
-  // pilihRole akan memanggil renderKelasCheckbox, renderKelasMapelCheckbox, renderMapelCheckbox
-  // dengan state (kelasDipilih, kelasMapelDipilih, mapelDipilih) yang sudah di-set di atas
+  // pilihRole memanggil render* dengan state di atas
   pilihRole(u.role);
+
+  // Force-apply state ke DOM: lebih aman dari pure template karena menghindari
+  // mismatch whitespace antara data sheet dan allKelas
+  _forceRestoreCheckboxes();
 
   bukaModal();
 }
@@ -706,6 +709,36 @@ function bukaEdit(id) {
 function bukaModal() {
   document.getElementById('modalOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Force-apply checkbox state dari kelasDipilih, kelasMapelDipilih, mapelDipilih ke DOM.
+ * Dipanggil setelah pilihRole() agar mismatch whitespace / async render tidak menghilangkan state.
+ */
+function _forceRestoreCheckboxes() {
+  // Kelas utama (kelasCheckGrid)
+  kelasDipilih.forEach(nama => {
+    const wrap = document.getElementById('chk-wrap-' + nama);
+    const chk  = document.getElementById('chk-' + nama);
+    if (wrap) wrap.classList.add('selected');
+    if (chk)  chk.checked = true;
+  });
+
+  // Kelas tambahan (kelasMapelCheckGrid)
+  kelasMapelDipilih.forEach(nama => {
+    const wrap = document.getElementById('km-wrap-' + nama);
+    const chk  = document.getElementById('km-' + nama);
+    if (wrap) wrap.classList.add('selected');
+    if (chk)  chk.checked = true;
+  });
+
+  // Mapel (mapelCheckGrid) — hanya relevan jika seksiMapel tampil
+  mapelDipilih.forEach(id => {
+    const wrap = document.getElementById('mc-wrap-' + id);
+    const chk  = document.getElementById('mc-' + id);
+    if (wrap) wrap.classList.add('selected');
+    if (chk)  chk.checked = true;
+  });
 }
 
 function tutupModal() {
@@ -776,15 +809,18 @@ function pilihRole(role, fromEdit = false) {
 
 function renderKelasCheckbox(multi) {
   const grid = document.getElementById('kelasCheckGrid');
-  grid.innerHTML = allKelas.map(k => `
-    <label class="kelas-check ${kelasDipilih.includes(k.nama) ? 'selected' : ''}"
-      id="chk-wrap-${k.nama}"
-      onclick="toggleKelasCheck('${k.nama}', ${!multi})">
-      <input type="checkbox" id="chk-${k.nama}" value="${k.nama}"
-        ${kelasDipilih.includes(k.nama) ? 'checked' : ''}>
-      ${k.nama}
-    </label>
-  `).join('');
+  const checked = new Set(kelasDipilih.map(s => s.trim()));
+  grid.innerHTML = allKelas.map(k => {
+    const nama = (k.nama || '').trim();
+    const sel  = checked.has(nama);
+    return `
+    <label class="kelas-check ${sel ? 'selected' : ''}"
+      id="chk-wrap-${nama}"
+      onclick="toggleKelasCheck('${nama}', ${!multi})">
+      <input type="checkbox" id="chk-${nama}" value="${nama}" ${sel ? 'checked' : ''}>
+      ${nama}
+    </label>`;
+  }).join('');
 }
 
 function toggleKelasCheck(nama, onlyOne = false) {
@@ -817,14 +853,17 @@ function toggleKelasCheck(nama, onlyOne = false) {
 function renderKelasMapelCheckbox() {
   const grid = document.getElementById('kelasMapelCheckGrid');
   if (!grid) return;
-  grid.innerHTML = allKelas.map(k => `
-    <label class="kelas-check ${kelasMapelDipilih.includes(k.nama)?'selected':''}"
-      id="km-wrap-${k.nama}" onclick="toggleKelasMapelCheck('${k.nama}')">
-      <input type="checkbox" id="km-${k.nama}" value="${k.nama}"
-        ${kelasMapelDipilih.includes(k.nama)?'checked':''}>
-      ${k.nama}
-    </label>
-  `).join('');
+  const checked = new Set(kelasMapelDipilih.map(s => s.trim()));
+  grid.innerHTML = allKelas.map(k => {
+    const nama = (k.nama || '').trim();
+    const sel  = checked.has(nama);
+    return `
+    <label class="kelas-check ${sel ? 'selected' : ''}"
+      id="km-wrap-${nama}" onclick="toggleKelasMapelCheck('${nama}')">
+      <input type="checkbox" id="km-${nama}" value="${nama}" ${sel ? 'checked' : ''}>
+      ${nama}
+    </label>`;
+  }).join('');
 }
 
 function toggleKelasMapelCheck(nama) {
