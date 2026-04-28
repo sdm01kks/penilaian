@@ -254,11 +254,6 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
     <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
   </a>
 
-  <div class="sidebar-section-label">Laporan</div>
-  <a class="nav-item" href="../rapor/leger-mapel.html">
-    <span class="nav-icon">📊</span> Leger Nilai
-  </a>
-
   <div class="sidebar-section-label">Kurikulum</div>
   <a class="nav-item" href="../setup/mapel-tp.html">
     <span class="nav-icon">📚</span> Setup TP & KKTP
@@ -403,10 +398,23 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent  = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
 
+  // Refresh mapel dari sheet untuk hindari stale session cache
+  try {
+    const allUsers  = await SHEETS.getUsers();
+    const freshUser = allUsers.find(u => u.email === currentUser.email);
+    if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+  } catch(e) { /* fallback ke session */ }
+
   // Tampilkan menu Tahsin-Tahfizh jika guru ini mengampu mapel TT
-  const mapelUser = (currentUser.mapel || '').toLowerCase();
-  const isTTGuru  = mapelUser.includes('tahsin') || mapelUser.includes('tahfizh')
-                    || mapelUser.includes(' tt') || mapelUser === 'tt';
+  // isTTGuru: split mapel per koma, cek setiap item
+  const mapelRaw  = (currentUser.mapel || '').toLowerCase();
+  const mapelArr  = mapelRaw.split(',').map(s => s.trim()).filter(Boolean);
+  const isTTGuru  = mapelArr.some(m =>
+    m.includes('tahsin') || m.includes('tahfizh') ||
+    m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_') ||
+    m === 'tahsin-tahfizh' || m.replace(/[^a-z]/g,'').includes('tahsin')
+  );
+  console.log('[TT] mapel:', mapelRaw, '| isTTGuru:', isTTGuru);
   if (isTTGuru) {
     ['navSetoranTT','navSetupTT','btnSetoranTT','navLaporanTT'].forEach(id => {
       const el = document.getElementById(id);
