@@ -659,7 +659,7 @@ const SHEETS = (() => {
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
     if (semester) data = data.filter(r => r[3] === semester);
-    if (tahun)    data = data.filter(r => r[4] === tahun);
+    // Sengaja tidak filter tahun - format bisa beda (2025/2026 vs 2025-2026)
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
 
     return data.map(r => ({
