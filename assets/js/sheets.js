@@ -702,7 +702,18 @@ const SHEETS = (() => {
       setoran.catatan         || '',
       setoran.nilai_aspek     ? JSON.stringify(setoran.nilai_aspek) : '',
     ];
-    await append('SETORAN_TT', [row]);
+    const appendRes = await append('SETORAN_TT', [row]);
+    // Log WHERE Google Sheets actually wrote the data
+    console.log('[saveSetoranTT] id:', id);
+    console.log('[saveSetoranTT] append response updatedRange:', appendRes?.updates?.updatedRange || 'TIDAK ADA RANGE INFO');
+    console.log('[saveSetoranTT] row[0] yg ditulis:', row[0], '| kelas:', row[2], '| materi:', row[7]);
+    // Verifikasi: langsung baca balik untuk konfirmasi
+    try {
+      const verify = await read('SETORAN_TT!A:A');
+      console.log('[saveSetoranTT] VERIFIKASI baca kembali SETORAN_TT!A:A — total rows:', verify.length);
+      const found = verify.some(r => r[0] === id);
+      console.log('[saveSetoranTT] ID ditemukan di sheet?', found ? 'YA ✅' : 'TIDAK ❌ — data tidak tersimpan!');
+    } catch(e) { console.warn('[saveSetoranTT] verifikasi gagal:', e.message); }
     return id;
   }
 
@@ -715,7 +726,13 @@ const SHEETS = (() => {
     const rows = await read('SETORAN_TT!A:M');
     // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
     const idx  = rows.findIndex(r => r[0] === id);
-    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
+    if (idx === -1) {
+      const sample = rows.slice(0, 8).map(r => r[0]).filter(Boolean);
+      console.error('[updateSetoranTT] ID dicari:', id, '| total baris:', rows.length);
+      console.error('[updateSetoranTT] Sample ID di sheet:', sample);
+      throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
+    }
+    console.log('[updateSetoranTT] ID ditemukan di baris', idx + 1);
 
     const ex = rows[idx];  // data existing sebagai fallback
     const row = [
@@ -749,7 +766,13 @@ const SHEETS = (() => {
     const rows = await read('SETORAN_TT!A:A');
     // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
     const idx  = rows.findIndex(r => r[0] === id);
-    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
+    if (idx === -1) {
+      const sample = rows.slice(0, 8).map(r => r[0]).filter(Boolean);
+      console.error('[updateSetoranTT] ID dicari:', id, '| total baris:', rows.length);
+      console.error('[updateSetoranTT] Sample ID di sheet:', sample);
+      throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
+    }
+    console.log('[updateSetoranTT] ID ditemukan di baris', idx + 1);
 
     // idx sudah 0-based, sesuai dengan format yang diharapkan deleteRow
     await deleteRow(sheetId, idx);
