@@ -507,13 +507,6 @@ const NAMA_SURAH = {
 };
 
 function labelFromKey(key) {
-  // Handle JSON array dari multi-select (e.g. '["79-1-15","79-16-30"]')
-  if (typeof key === 'string' && key.startsWith('[')) {
-    try {
-      const keys = JSON.parse(key);
-      if (Array.isArray(keys)) return keys.map(k => labelFromKey(k)).join(', ');
-    } catch(e) {}
-  }
   // key: "surahNo-start-end"
   const p = key.split('-');
   if (p.length < 3) return key;
@@ -621,12 +614,7 @@ function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role !== 'admin') {
-    // Gabungkan kelas utama + kelas_mapel (kelas lain sbg guru bidang studi)
-    const kelasUtama    = (currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',') : [])).map(s=>s.trim());
-    const kelasTambahan = currentUser.kelas_mapel
-      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
-      : [];
-    const diampuArr = [...new Set([...kelasUtama, ...kelasTambahan])];
+    const diampuArr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
     kelas = allKelas.filter(k => diampuArr.includes(k.nama));
   }
   sel.innerHTML = '<option value="">— Pilih Kelas —</option>' +
@@ -662,8 +650,7 @@ async function gantiKelas() {
 
   showLoading('Memuat siswa & target kelas ' + activeKelas + '…');
   try {
-    // Refresh config untuk memastikan kunci tamat_iqro terbaru tersedia
-    config = await SHEETS.getConfig();
+    // Gunakan config yang sudah dimuat saat init (tidak perlu reload)
     const tahun = config['tahun_pelajaran'] || '';
     allSiswa = await SHEETS.getSiswa(activeKelas);
 
@@ -677,7 +664,6 @@ async function gantiKelas() {
 
     // Muat semua setoran semester ini dari sheet
     setoranDB = await SHEETS.getSetoranTT({ kelas: activeKelas, semester: activeSem, tahun });
-    console.log('[gantiKelas] loaded setoranDB:', setoranDB.length, 'items | kelas:', activeKelas, 'sem:', activeSem, 'tahun:', tahun);
 
     // Rekonstruksi tamatIqroSet dari CONFIG (permanen) + setoranDB (fallback)
     const rawTamat = config[`tamat_iqro_${activeKelas}`] || '';
@@ -806,7 +792,9 @@ function renderMateriList() {
   }
   const selCount = selectedMateri.size;
   el.innerHTML = (selCount > 0
-    ? `<div style="padding:5px 10px 4px;font-size:11px;color:var(--green-dark);font-weight:600;">${selCount} dipilih — <a href="#" onclick="selectedMateri=new Set();renderMateriList();return false;" style="color:var(--red);text-decoration:none;">✕ Batal semua</a></div>` : '') +
+    ? `<div style="padding:5px 10px 4px;font-size:11px;color:var(--green-dark);font-weight:600;">
+         ${selCount} dipilih — <a href="#" onclick="selectedMateri=new Set();renderMateriList();return false;" style="color:var(--red);text-decoration:none;">✕ Batal semua</a>
+       </div>` : '') +
   targetKeys.map(key => {
     const label  = labelFromKey(key);
     const isSel  = selectedMateri.has(key);
@@ -992,7 +980,8 @@ async function simpanSetoran() {
   } else {
     const custom = document.getElementById('inputMateriCustom').value.trim();
     if (selectedMateri.size > 0) {
-      const keys  = [...selectedMateri];
+      // Multi-materi: simpan sebagai array JSON, label gabungan
+      const keys   = [...selectedMateri];
       materi      = keys.length === 1 ? keys[0] : JSON.stringify(keys);
       materiLabel = keys.map(k => labelFromKey(k)).join(', ');
     } else if (custom) {
@@ -1013,6 +1002,7 @@ async function simpanSetoran() {
 
   try {
     const nilaiAspek = getAspekValues();
+    console.log('[simpanSetoran] saving to sheet:', { id_siswa: activeSiswa.id, kelas: activeKelas, semester: activeSem, tahun, materi });
     const id = await SHEETS.saveSetoranTT({
       id_siswa:        activeSiswa.id,
       kelas:           activeKelas,
@@ -1027,6 +1017,7 @@ async function simpanSetoran() {
       catatan,
       nilai_aspek:     nilaiAspek,
     });
+    console.log('[simpanSetoran] saved with id:', id);
 
     // Simpan ke cache lokal
     const newEntry = {
@@ -1056,6 +1047,7 @@ async function simpanSetoran() {
     document.getElementById('inputNilai').value = 80;
     document.getElementById('nilaiSlider').value = 80;
     updatePredikat();
+    selectedMateri = new Set();
     if (modeJenis === 'quran') renderMateriList();
     if (kktpAspek.length) setAspekValues(kktpAspek.reduce((o,a,i)=>{o[a.nama]=80;return o},{}));
     renderRiwayatSiswa();
@@ -1101,6 +1093,7 @@ function editSetoran(id) {
   } else {
     selectedMateri = new Set();
     if (st.materi && st.materi !== 'custom') {
+      // Support both single key and JSON array
       try {
         const keys = JSON.parse(st.materi);
         if (Array.isArray(keys)) keys.forEach(k => selectedMateri.add(k));
@@ -1159,11 +1152,8 @@ async function updateSetoran() {
     }
   } else {
     const custom = document.getElementById('inputMateriCustom').value.trim();
-    if (selectedMateri.size > 0) {
-      const keys  = [...selectedMateri];
-      materi      = keys.length === 1 ? keys[0] : JSON.stringify(keys);
-      materiLabel = keys.map(k => labelFromKey(k)).join(', ');
-    } else if (custom) { materi = 'custom'; materiLabel = custom; }
+    if (selectedMateri) { materi = selectedMateri; materiLabel = labelFromKey(selectedMateri); }
+    else if (custom)    { materi = 'custom'; materiLabel = custom; }
     else { showAlert('error','Validasi','Pilih materi.'); return; }
   }
 
