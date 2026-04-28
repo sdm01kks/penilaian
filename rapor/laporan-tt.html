@@ -276,6 +276,30 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 <script src="../assets/js/sheets.js"></script>
 <script>
 /* ════════════════════════════════════════════════════
+   FORMAT TANGGAL
+════════════════════════════════════════════════════ */
+const HARI  = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const BULAN = ['','Januari','Februari','Maret','April','Mei','Juni',
+               'Juli','Agustus','September','Oktober','November','Desember'];
+
+function formatTanggal(str) {
+  if (!str) return '—';
+  // Support: "2025-04-28" (ISO) or "28/4/2025" (id-ID locale)
+  let d;
+  if (str.includes('-') && str.length >= 8) {
+    const [y,m,day] = str.split('-');
+    d = new Date(parseInt(y), parseInt(m)-1, parseInt(day));
+  } else if (str.includes('/')) {
+    const parts = str.split('/');
+    d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+  } else {
+    d = new Date(str);
+  }
+  if (isNaN(d)) return str;
+  return `${HARI[d.getDay()]}, ${d.getDate()} ${BULAN[d.getMonth()+1]} ${d.getFullYear()}`;
+}
+
+/* ════════════════════════════════════════════════════
    STATE
 ════════════════════════════════════════════════════ */
 let currentUser  = null;
@@ -341,12 +365,7 @@ function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role === 'guru_kelas') {
-    // Gabungkan kelas utama + kelas_mapel (kelas lain sbg guru bidang studi)
-    const kelasUtama    = (currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',') : [])).map(s=>s.trim());
-    const kelasTambahan = currentUser.kelas_mapel
-      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
-      : [];
-    const arr = [...new Set([...kelasUtama, ...kelasTambahan])];
+    const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
     kelas = allKelas.filter(k => arr.includes(k.nama));
   }
   sel.innerHTML = '<option value="">— Pilih Kelas —</option>' +
@@ -382,6 +401,20 @@ async function muatLaporan() {
   showLoading('Memuat data setoran…');
   try {
     setoranData = await SHEETS.getSetoranTT({ kelas, semester: sem, tahun });
+
+    // Muat identitas sekolah untuk TTD
+    if (!config['nama_kepsek']) {
+      config = await SHEETS.getConfig();
+    }
+    // Cari nama guru TT dari daftar user (guru dengan mapel mengandung 'TT' / 'tahsin')
+    try {
+      const allUsers = await SHEETS.getUsers();
+      const guruTT   = allUsers.find(u => {
+        const m = (u.mapel || '').toLowerCase();
+        return m.includes('tahsin') || m.includes('tahfizh') || m === 'mp_tt' || m.endsWith('_tt');
+      });
+      if (guruTT) config['_nama_guru_tt'] = guruTT.nama;
+    } catch(e) {}
 
     const tingkat = parseInt(kelas.replace(/[^0-9]/g,''));
     const cfgKey  = `tahsin_target_${tingkat}_${sem}_${tahun}`;
@@ -511,7 +544,7 @@ function buildLaporanIqro(siswa, setoran, jenis, kelas, sem) {
                </div>
                <div class="lpr-stat">
                  <div class="lpr-stat-label">Terakhir Disetor</div>
-                 <div class="lpr-stat-value" style="font-size:14px;">${iqroTerakhir?.tanggal||'—'}</div>
+                 <div class="lpr-stat-value" style="font-size:14px;">${formatTanggal(iqroTerakhir?.tanggal)||'—'}</div>
                  <div class="lpr-stat-sub">${iqroTerakhir?.status_hafalan==='lulus'?'✅ Lulus':'🔄 Ulang'}</div>
                </div>
              </div>`
@@ -524,7 +557,7 @@ function buildLaporanIqro(siswa, setoran, jenis, kelas, sem) {
                 <div class="hafalan-item ${s.status_hafalan}">
                   <div class="hafalan-dot"></div>
                   <div class="hafalan-materi">${s.materi_label||s.materi}</div>
-                  <div class="hafalan-tanggal">${s.tanggal}</div>
+                  <div class="hafalan-tanggal">${formatTanggal(s.tanggal)}</div>
                   <div class="hafalan-nilai">${s.nilai_tahsin}</div>
                 </div>`).join('')}
               ${lanjutSetoran.length>5?`<div style="font-size:11px;color:var(--ink-muted);padding:4px 10px;">…dan ${lanjutSetoran.length-5} setoran lainnya</div>`:''}
@@ -561,7 +594,7 @@ function buildLaporanIqro(siswa, setoran, jenis, kelas, sem) {
             <div class="hafalan-item ${s.status_hafalan}">
               <div class="hafalan-dot"></div>
               <div class="hafalan-materi">${s.materi_label||s.materi}</div>
-              <div class="hafalan-tanggal">${s.tanggal}</div>
+              <div class="hafalan-tanggal">${formatTanggal(s.tanggal)}</div>
               <div class="hafalan-nilai">${s.nilai_tahsin}</div>
             </div>`).join('')}
           ${setoran.length>8?`<div style="font-size:11px;color:var(--ink-muted);padding:4px 10px;">…dan ${setoran.length-8} setoran lainnya</div>`:''}
@@ -712,7 +745,7 @@ function buildLaporanQuran(siswa, setoran, jenis, kelas, sem) {
             <div class="hafalan-item ${s.status_hafalan}">
               <div class="hafalan-dot"></div>
               <div class="hafalan-materi">${s.materi_label||s.materi}</div>
-              <div class="hafalan-tanggal">${s.tanggal}</div>
+              <div class="hafalan-tanggal">${formatTanggal(s.tanggal)}</div>
               <div class="hafalan-nilai">${s.nilai_tahsin}</div>
             </div>`).join('')}
           ${setoran.length>8?`<div style="font-size:11px;color:var(--ink-muted);padding:4px 10px;">…dan ${setoran.length-8} lainnya</div>`:''}
@@ -780,7 +813,10 @@ function namaPredikat(v) {
 function cetakSatuPDF() {
   const preview = document.getElementById('laporanPreview');
   if (!preview.innerHTML.trim()) { showAlert('warning','Kosong','Tampilkan laporan dulu.'); return; }
-  bukaJendelaCetak(preview.innerHTML);
+  // Ambil nama siswa dari header card laporan
+  const namaEl = preview.querySelector('.lpr-nama');
+  const namaSiswa = namaEl ? namaEl.textContent.trim() : '';
+  bukaJendelaCetak(preview.innerHTML, namaSiswa);
 }
 
 function cetakSemuaSiswa() {
@@ -792,75 +828,169 @@ function cetakSemuaSiswa() {
   bukaJendelaCetak(allHTML);
 }
 
-function bukaJendelaCetak(bodyHTML) {
-  const jenis = document.getElementById('selJenis').value;
-  const kelas = document.getElementById('selKelas').value;
-  const sem   = document.getElementById('selSem').value;
-  const tahun = config['tahun_pelajaran'] || '';
-  const sekolah = config['nama_sekolah'] || 'SD Muhammadiyah 01 Kukusan';
+function bukaJendelaCetak(bodyHTML, namaSiswa) {
+  const jenis   = document.getElementById('selJenis').value;
+  const kelas   = document.getElementById('selKelas').value;
+  const sem     = document.getElementById('selSem').value;
+  const tahun   = config['tahun_pelajaran'] || '';
+  const sekolah = config['nama_sekolah']    || 'SD Muhammadiyah 01 Kukusan';
+  const kepsek  = config['nama_kepsek']     || '—';
+  const nbmKepsek = config['nbm_kepsek']   || '';
+  const guruTT  = config['_nama_guru_tt']  || '—';
+  const kota    = config['kota_rapor']     || 'Depok';
+  const tglRapor= config['tgl_rapor']      || '……………………';
+  const tanda   = kota + ', ' + tglRapor;
 
-  const printHTML = `<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">
-<title>Laporan TT — Kelas ${kelas}</title>
+  // Nama file PDF default
+  const judulJenis = jenis === 'progress' ? 'Laporan Progress TT' : 'Laporan Akhir TT';
+  const judulFile  = namaSiswa
+    ? `${judulJenis} - ${namaSiswa} - Kelas ${kelas}`
+    : `${judulJenis} - Kelas ${kelas} - Sem ${sem}`;
+
+  // Footer info siswa — akan diisi per siswa via inline style jika cetak semua
+  // Untuk cetak satu: ambil nama dari header laporan
+  const footerSiswa = namaSiswa || `Kelas ${kelas}`;
+
+  const printHTML = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>${judulFile}</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-@page{size:A4;margin:1.8cm 2cm;
-  @bottom-right{content:"Halaman " counter(page) " dari " counter(pages);font-family:Arial;font-size:8pt;color:#888}
+@page {
+  size: A4;
+  margin: 1.5cm 1.8cm;
+  @bottom-left {
+    content: "${footerSiswa}";
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #777;
+    border-top: 0.5pt solid #ccc;
+    padding-top: 3pt;
+  }
+  @bottom-right {
+    content: "Halaman " counter(page) " dari " counter(pages);
+    font-family: Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #777;
+    border-top: 0.5pt solid #ccc;
+    padding-top: 3pt;
+  }
 }
-body{font-family:Arial,Helvetica,sans-serif;font-size:10.5pt;line-height:1.6;color:#000;background:#fff}
-.lpr-card{border:1pt solid #ccc;border-radius:6pt;margin-bottom:16pt;page-break-inside:avoid}
-.lpr-card-header{background:#e8f5e9;border-bottom:1pt solid #ccc;padding:8pt 12pt;display:flex;align-items:center;gap:10pt}
-.lpr-avatar{width:32pt;height:32pt;border-radius:50%;background:#1e4d3b;display:flex;align-items:center;justify-content:center;font-size:13pt;font-weight:bold;color:#fff;flex-shrink:0;line-height:32pt;text-align:center}
-.lpr-nama{font-size:12pt;font-weight:bold}
-.lpr-kelas{font-size:9pt;color:#555}
-.lpr-badge{margin-left:auto;font-size:9pt;font-weight:bold;padding:2pt 8pt;border-radius:10pt;background:#e3f2fd;color:#1565c0}
-.lpr-body{padding:10pt 12pt}
-.lpr-section{margin-bottom:10pt}
-.lpr-section-title{font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.4pt;color:#1e4d3b;border-bottom:1pt solid #ccc;padding-bottom:3pt;margin-bottom:6pt}
-.lpr-grid-2,.lpr-grid-3{display:grid;gap:8pt}
-.lpr-grid-2{grid-template-columns:1fr 1fr}
-.lpr-grid-3{grid-template-columns:1fr 1fr 1fr}
-.lpr-stat{background:#f5f5f5;border:0.5pt solid #ccc;border-radius:4pt;padding:6pt 8pt}
-.lpr-stat-label{font-size:8pt;color:#666;font-weight:bold;text-transform:uppercase}
-.lpr-stat-value{font-size:16pt;font-weight:bold}
-.lpr-stat-sub{font-size:8pt;color:#666}
-.predikat-besar{font-family:Georgia,serif;font-size:20pt;font-weight:bold;color:#1e4d3b}
-.predikat-label{font-size:9pt;color:#555}
-.progress-bar-wrap{background:#e0e0e0;border-radius:10pt;height:8pt;overflow:hidden;margin:4pt 0}
-.progress-bar-fill{height:100%;border-radius:10pt;background:#2d7055}
-.progress-bar-fill.gold{background:#c9882a}
-.progress-bar-fill.red{background:#c0392b}
-.hafalan-list{display:flex;flex-direction:column;gap:3pt}
-.hafalan-item{display:flex;align-items:center;gap:6pt;padding:3pt 8pt;border-radius:4pt;background:#f5f5f5;border:0.5pt solid #ddd;font-size:9.5pt}
-.hafalan-item.lulus{background:#e8f5e9;border-color:#a5d6a7}
-.hafalan-item.ulang{background:#ffebee;border-color:#ef9a9a}
-.hafalan-dot{width:6pt;height:6pt;border-radius:50%;background:#999;flex-shrink:0}
-.hafalan-item.lulus .hafalan-dot{background:#2e7d32}
-.hafalan-item.ulang .hafalan-dot{background:#c62828}
-.hafalan-materi{flex:1}
-.hafalan-tanggal{font-size:8pt;color:#777}
-.hafalan-nilai{font-weight:bold}
-.narasi-box{background:#f1f8e9;border:0.5pt solid #c5e1a5;border-radius:4pt;padding:8pt 10pt;font-size:10pt;line-height:1.7;text-align:justify}
-.narasi-box.kosong{color:#999;font-style:italic;background:#f5f5f5;border-color:#ddd}
-.alert{border-radius:4pt;padding:6pt 10pt;display:flex;gap:8pt;align-items:flex-start;margin:6pt 0;border:0.5pt solid #90caf9;background:#e3f2fd;font-size:9.5pt}
-.alert-icon{flex-shrink:0}
-/* Header laporan */
-.print-header{text-align:center;border-bottom:2pt solid #000;padding-bottom:8pt;margin-bottom:14pt}
-.print-header h2{font-size:13pt;font-weight:bold;text-transform:uppercase;letter-spacing:.3pt}
-.print-header p{font-size:9.5pt;color:#333;margin-top:2pt}
-/* page break */
-.page-break{page-break-after:always}
+body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.6; color: #000; background: #fff; }
+
+/* ── Print header ── */
+.print-header { text-align:center; border-bottom: 2pt solid #1e4d3b; padding-bottom: 8pt; margin-bottom: 14pt; }
+.print-header h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: .3pt; color: #1e4d3b; }
+.print-header p  { font-size: 9.5pt; color: #444; margin-top: 3pt; }
+
+/* ── Card siswa ── */
+.lpr-card { border: 1pt solid #bdbdbd; border-radius: 4pt; margin-bottom: 0; page-break-inside: avoid; }
+.lpr-card + .lpr-card { margin-top: 14pt; }
+.lpr-card-header { background: #e8f5e9; border-bottom: 1pt solid #bdbdbd; padding: 7pt 10pt; display: flex; align-items: center; gap: 8pt; }
+.lpr-avatar { width: 28pt; height: 28pt; border-radius: 50%; background: #1e4d3b; display: flex; align-items: center; justify-content: center; font-size: 12pt; font-weight: bold; color: #fff; flex-shrink: 0; text-align: center; line-height: 28pt; }
+.lpr-nama  { font-size: 11pt; font-weight: bold; }
+.lpr-kelas { font-size: 8.5pt; color: #555; }
+.lpr-badge { margin-left: auto; font-size: 8pt; font-weight: bold; padding: 2pt 7pt; border-radius: 8pt; background: #e3f2fd; color: #1565c0; white-space: nowrap; }
+.lpr-body  { padding: 8pt 10pt; }
+
+/* ── Sections ── */
+.lpr-section { margin-bottom: 8pt; page-break-inside: avoid; }
+.lpr-section-title { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: .4pt; color: #1e4d3b; border-bottom: 1pt solid #c8e6c9; padding-bottom: 2.5pt; margin-bottom: 5pt; page-break-after: avoid; }
+
+/* ── Grid stats ── */
+.lpr-grid-2, .lpr-grid-3 { display: grid; gap: 6pt; }
+.lpr-grid-2 { grid-template-columns: 1fr 1fr; }
+.lpr-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.lpr-stat { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; }
+.lpr-stat-label { font-size: 7.5pt; color: #666; font-weight: bold; text-transform: uppercase; }
+.lpr-stat-value { font-size: 15pt; font-weight: bold; }
+.lpr-stat-sub   { font-size: 7.5pt; color: #666; }
+
+/* ── Predikat ── */
+.predikat-besar { font-family: Georgia, serif; font-size: 18pt; font-weight: bold; color: #1e4d3b; }
+.predikat-label { font-size: 8.5pt; color: #555; }
+
+/* ── Progress bar ── */
+.progress-bar-wrap { background: #e0e0e0; border-radius: 8pt; height: 7pt; overflow: hidden; margin: 3pt 0; }
+.progress-bar-fill      { height: 100%; border-radius: 8pt; background: #2d7055; }
+.progress-bar-fill.gold { background: #c9882a; }
+.progress-bar-fill.red  { background: #c0392b; }
+
+/* ── Hafalan list ── */
+.hafalan-list { display: flex; flex-direction: column; gap: 2.5pt; }
+.hafalan-item { display: flex; align-items: center; gap: 5pt; padding: 2.5pt 7pt; border-radius: 3pt; background: #f5f5f5; border: 0.5pt solid #ddd; font-size: 9pt; page-break-inside: avoid; }
+.hafalan-item.lulus { background: #e8f5e9; border-color: #a5d6a7; }
+.hafalan-item.ulang { background: #ffebee; border-color: #ef9a9a; }
+.hafalan-dot { width: 6pt; height: 6pt; border-radius: 50%; background: #999; flex-shrink: 0; }
+.hafalan-item.lulus .hafalan-dot { background: #2e7d32; }
+.hafalan-item.ulang .hafalan-dot { background: #c62828; }
+.hafalan-materi  { flex: 1; }
+.hafalan-tanggal { font-size: 8pt; color: #777; white-space: nowrap; min-width: 110pt; }
+.hafalan-nilai   { font-weight: bold; white-space: nowrap; }
+
+/* ── Narasi ── */
+.narasi-box { background: #f1f8e9; border: 0.5pt solid #c5e1a5; border-radius: 3pt; padding: 7pt 9pt; font-size: 10pt; line-height: 1.7; text-align: justify; }
+.narasi-box.kosong { color: #999; font-style: italic; background: #f5f5f5; border-color: #ddd; }
+
+/* ── Aspek tahsin ── */
+.aspek-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5pt; }
+.aspek-item { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; page-break-inside: avoid; }
+.aspek-item-label { font-size: 7.5pt; font-weight: bold; text-transform: uppercase; color: #555; margin-bottom: 2pt; }
+.aspek-item-desc  { font-size: 9.5pt; line-height: 1.55; }
+
+/* ── Alert ── */
+.alert { border-radius: 3pt; padding: 5pt 8pt; display: flex; gap: 6pt; align-items: flex-start; margin: 5pt 0; border: 0.5pt solid #90caf9; background: #e3f2fd; font-size: 9pt; }
+
+/* ── TTD ── */
+.ttd-section { page-break-inside: avoid; margin-top: 20pt; }
+.ttd-tanda   { text-align: right; font-size: 10pt; margin-bottom: 10pt; }
+.ttd-grid    { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt; }
+.ttd-col     { text-align: center; font-size: 10pt; }
+.ttd-space   { height: 48pt; }
+.ttd-name    { font-weight: bold; border-top: 0.5pt solid #000; padding-top: 2pt; font-size: 10pt; }
+.ttd-nbm     { font-size: 8.5pt; color: #555; }
+
+/* ── Page break ── */
+.page-break-after  { page-break-after: always; }
+.no-break { page-break-inside: avoid; }
 </style>
-</head><body>
+</head>
+<body>
 <div class="print-header">
   <h2>Laporan ${jenis==='progress'?'Progress Tengah Semester':'Akhir Semester'} Tahsin-Tahfizh</h2>
-  <p>${sekolah} · Kelas ${kelas} · Semester ${sem} · Tahun Pelajaran ${tahun}</p>
+  <p>${sekolah} &nbsp;·&nbsp; Kelas ${kelas} &nbsp;·&nbsp; Semester ${sem} &nbsp;·&nbsp; Tahun Pelajaran ${tahun}</p>
 </div>
 ${bodyHTML}
+<div class="ttd-section">
+  <div class="ttd-tanda">${tanda}</div>
+  <div class="ttd-grid">
+    <div class="ttd-col">
+      <div>Orang Tua/Wali</div>
+      <div class="ttd-space"></div>
+      <div class="ttd-name">(……………………………)</div>
+    </div>
+    <div class="ttd-col">
+      <div>Kepala Sekolah,</div>
+      <div class="ttd-space"></div>
+      <div class="ttd-name">${kepsek}</div>
+      ${nbmKepsek ? `<div class="ttd-nbm">NBM. ${nbmKepsek}</div>` : ''}
+    </div>
+    <div class="ttd-col">
+      <div>Guru Tahsin-Tahfizh,</div>
+      <div class="ttd-space"></div>
+      <div class="ttd-name">${guruTT}</div>
+    </div>
+  </div>
+</div>
 <script>window.onload=function(){window.focus();window.print()};<\/script>
-</body></html>`;
+</body>
+</html>`;
 
-  const w = window.open('','_blank','width=960,height=700');
-  if (!w) { showAlert('error','Pop-up Diblokir','Izinkan pop-up untuk situs ini.'); return; }
+  const w = window.open('', '_blank', 'width=960,height=750');
+  if (!w) { showAlert('error','Pop-up Diblokir','Izinkan pop-up untuk situs ini agar dapat membuka jendela cetak.'); return; }
+  w.document.title = judulFile;
   w.document.write(printHTML);
   w.document.close();
 }
