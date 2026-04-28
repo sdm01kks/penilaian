@@ -326,9 +326,15 @@ window.addEventListener('load', async () => {
     currentUser.role === 'admin' ? 'Administrator' :
     currentUser.role === 'guru_kelas' ? 'Wali Kelas ' + (currentUser.kelas||'') : 'Guru';
 
-  aturNav();
   showLoading('Memuat konfigurasi…');
   try {
+    // Refresh mapel dari USERS sheet lebih dulu agar aturNav akurat (hindari session cache lama)
+    try {
+      const allUsers  = await SHEETS.getUsers();
+      const freshUser = allUsers.find(u => u.email === currentUser.email);
+      if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+    } catch(e) { /* fallback ke session */ }
+
     [config, allKelas] = await Promise.all([SHEETS.getConfig(), SHEETS.getKelas()]);
     // Muat KKTP dari config
     ['iqro','quran'].forEach(j => {
@@ -338,6 +344,7 @@ window.addEventListener('load', async () => {
     const sem = config['semester_aktif'] || 'I';
     document.getElementById('selSem').value = sem;
 
+    aturNav();        // dipanggil setelah mapel ter-refresh
     isiDropdownKelas();
     hideLoading();
   } catch(e) {
@@ -345,29 +352,48 @@ window.addEventListener('load', async () => {
   }
 });
 
+function isTTGuru() {
+  const mapelRaw = (currentUser.mapel || '').toLowerCase();
+  return mapelRaw.split(',').map(s => s.trim()).some(m =>
+    m.includes('tahsin') || m.includes('tahfizh') ||
+    m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_')
+  );
+}
+
 function aturNav() {
-  const r = currentUser.role;
+  const r    = currentUser.role;
+  const isTT = isTTGuru();
   if (r === 'admin') {
-    document.getElementById('navAdmin').style.display = 'flex';
+    document.getElementById('navAdmin').style.display   = 'flex';
     document.getElementById('navSetupTT').style.display = 'flex';
   } else if (r === 'guru_kelas') {
     document.getElementById('navGK').style.display = 'flex';
   } else {
+    // guru_mapel
     document.getElementById('navGM').style.display = 'flex';
-    const mapelUser = (currentUser.mapel||'').toLowerCase();
-    if (mapelUser.includes('tahsin')||mapelUser.includes('tahfizh')||mapelUser==='tt') {
+    if (isTT) {
       document.getElementById('navSetupTT').style.display = 'flex';
     }
   }
+  // Semua guru (termasuk guru_mapel TT) bisa akses laporan TT
+  // - guru_kelas: akses kelas diampu
+  // - guru_mapel TT: akses semua kelas
+  // Dropdown kelas sudah dikontrol di isiDropdownKelas()
 }
 
 function isiDropdownKelas() {
   const sel = document.getElementById('selKelas');
   let kelas = allKelas;
   if (currentUser.role === 'guru_kelas') {
+    // Guru kelas hanya lihat kelas yang diampu
+    const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
+    kelas = allKelas.filter(k => arr.includes(k.nama));
+  } else if (currentUser.role === 'guru_mapel' && !isTTGuru()) {
+    // Guru mapel non-TT hanya lihat kelas yang diampu
     const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
     kelas = allKelas.filter(k => arr.includes(k.nama));
   }
+  // admin dan guru TT lihat semua kelas
   sel.innerHTML = '<option value="">— Pilih Kelas —</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
 }
