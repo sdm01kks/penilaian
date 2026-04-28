@@ -533,7 +533,7 @@ let activeSem     = 'I';
 let activeSiswa   = null;   // { id, nama, ... }
 let modeJenis     = 'quran'; // 'iqro' | 'quran'
 let statusHafalan = 'lulus';
-let selectedMateri= null;   // key segmen terpilih
+let selectedMateri= new Set(); // keys segmen terpilih (multi)
 let targetKeys    = [];     // Array of keys dari target kelas ini
 let setoranHariIni= [];     // Setoran yang sudah diinput hari ini (session)
 let setoranDB     = [];     // Semua setoran semester ini dari sheet
@@ -633,7 +633,7 @@ async function gantiKelas() {
   activeKelas  = document.getElementById('selKelas').value;
   activeSem    = document.getElementById('selSem').value;
   activeSiswa  = null;
-  selectedMateri = null;
+  selectedMateri = new Set();
 
   if (!activeKelas) {
     document.getElementById('emptyState').style.display  = 'block';
@@ -749,7 +749,7 @@ function filterSiswa() {
 ════════════════════════════════════════════════════ */
 function pilihSiswa(id) {
   activeSiswa    = allSiswa.find(s => s.id === id) || null;
-  selectedMateri = null;
+  selectedMateri = new Set();
 
   // Highlight row
   document.querySelectorAll('.siswa-row').forEach(r => r.classList.remove('active'));
@@ -796,9 +796,12 @@ function renderMateriList() {
     el.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--ink-muted);">Target hafalan belum diatur. Gunakan kolom teks di bawah.</div>';
     return;
   }
-  el.innerHTML = targetKeys.map(key => {
-    const label = labelFromKey(key);
-    const isSel = selectedMateri === key;
+  const selCount = selectedMateri.size;
+  el.innerHTML = (selCount > 0
+    ? `<div style="padding:5px 10px 4px;font-size:11px;color:var(--green-dark);font-weight:600;">${selCount} dipilih — <a href="#" onclick="selectedMateri=new Set();renderMateriList();return false;" style="color:var(--red);text-decoration:none;">✕ Batal semua</a></div>` : '') +
+  targetKeys.map(key => {
+    const label  = labelFromKey(key);
+    const isSel  = selectedMateri.has(key);
     const safeId = 'mat-' + key.replace(/[^a-z0-9]/gi,'_');
     return `
       <div class="materi-item ${isSel?'selected':''}" id="${safeId}"
@@ -814,8 +817,10 @@ function pilihMateriById(elId) {
   pilihMateri(key);
 }
 function pilihMateri(key) {
-  selectedMateri = (selectedMateri === key) ? null : key;
-  if (selectedMateri) {
+  if (selectedMateri.has(key)) {
+    selectedMateri.delete(key);
+  } else {
+    selectedMateri.add(key);
     document.getElementById('inputMateriCustom').value = '';
   }
   renderMateriList();
@@ -978,9 +983,10 @@ async function simpanSetoran() {
     }
   } else {
     const custom = document.getElementById('inputMateriCustom').value.trim();
-    if (selectedMateri) {
-      materi      = selectedMateri;
-      materiLabel = labelFromKey(selectedMateri);
+    if (selectedMateri.size > 0) {
+      const keys  = [...selectedMateri];
+      materi      = keys.length === 1 ? keys[0] : JSON.stringify(keys);
+      materiLabel = keys.map(k => labelFromKey(k)).join(', ');
     } else if (custom) {
       materi      = 'custom';
       materiLabel = custom;
@@ -1037,7 +1043,7 @@ async function simpanSetoran() {
     document.getElementById('inputMateriCustom').value = '';
     document.getElementById('inputIqroHal').value = '';
     document.getElementById('inputIqroLanjutMateri').value = '';
-    selectedMateri = null;
+    selectedMateri = new Set();
     pilihStatus('lulus');
     document.getElementById('inputNilai').value = 80;
     document.getElementById('nilaiSlider').value = 80;
@@ -1085,8 +1091,14 @@ function editSetoran(id) {
       document.getElementById('inputIqroLanjutMateri').value = st.materi_label || '';
     }
   } else {
-    selectedMateri = st.materi && st.materi !== 'custom' ? st.materi : null;
-    if (st.materi === 'custom') {
+    selectedMateri = new Set();
+    if (st.materi && st.materi !== 'custom') {
+      try {
+        const keys = JSON.parse(st.materi);
+        if (Array.isArray(keys)) keys.forEach(k => selectedMateri.add(k));
+        else selectedMateri.add(st.materi);
+      } catch(e) { selectedMateri.add(st.materi); }
+    } else if (st.materi === 'custom') {
       document.getElementById('inputMateriCustom').value = st.materi_label || '';
     }
     renderMateriList();
@@ -1110,7 +1122,7 @@ function batalEdit() {
   document.getElementById('inputMateriCustom').value = '';
   document.getElementById('inputIqroHal').value = '';
   document.getElementById('inputIqroLanjutMateri').value = '';
-  selectedMateri = null;
+  selectedMateri = new Set();
   pilihStatus('lulus');
   document.getElementById('inputNilai').value = 80;
   document.getElementById('nilaiSlider').value = 80;
@@ -1246,7 +1258,7 @@ function renderRiwayat() {
 ════════════════════════════════════════════════════ */
 function resetForm() {
   activeSiswa    = null;
-  selectedMateri = null;
+  selectedMateri = new Set();
   statusHafalan  = 'lulus';
 
   document.getElementById('formSiswaName').textContent = 'Pilih Siswa';
