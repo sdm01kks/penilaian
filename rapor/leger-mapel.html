@@ -183,7 +183,7 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
     </div>
     <div class="filter-group">
       <label>Kelas</label>
-      <select id="selKelas" onchange="onFilterChange()"><option value="">— Semua Kelas —</option></select>
+      <select id="selKelas" onchange="onKelasChange()"><option value="">— Semua Kelas —</option></select>
     </div>
     <div class="filter-group">
       <label>Semester</label>
@@ -293,28 +293,23 @@ window.addEventListener('load', async () => {
     document.getElementById('semPill').textContent = 'Semester ' + sem + ' · ' + tp;
     document.getElementById('selSem').value = sem;
 
-    // Filter mapel sesuai hak akses guru (sama persis dengan mapel-tp.html)
+    // Pisahkan kelas utama dan kelas tambahan untuk filter mapel per kelas
     const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
-    const mapelDiampu = currentUser.mapelList ||
-      (currentUser.mapel ? currentUser.mapel.split(',').map(s => s.trim()).filter(Boolean) : []);
-    let mapelFiltered = allMapel.filter(m => !isTahsin(m));
-    if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
-      mapelFiltered = mapelFiltered.filter(m => mapelDiampu.includes(m.id));
-    }
-
-    // Isi dropdown mapel
-    const selMapel = document.getElementById('selMapel');
-    selMapel.innerHTML = '<option value="">— Pilih Mapel —</option>' +
-      mapelFiltered.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
-
-    // Isi dropdown kelas sesuai hak akses guru:
-    // gabungkan kelas utama + kelas_mapel (kelas lain sbg guru bidang studi)
-    const kelasUtama    = (currentUser.kelasList ||
+    const _kelasUtama    = (currentUser.kelasList ||
       (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()).filter(Boolean) : []));
-    const kelasTambahan = currentUser.kelas_mapel
+    const _kelasTambahan = currentUser.kelas_mapel
       ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
       : [];
-    const allowedKelas  = [...new Set([...kelasUtama, ...kelasTambahan])];
+    const allowedKelas   = [...new Set([..._kelasUtama, ..._kelasTambahan])];
+
+    // Simpan di closure agar bisa dipakai onKelasChange
+    window._lmKelasUtama    = _kelasUtama;
+    window._lmMapelDiampu   = currentUser.mapelList ||
+      (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    window._lmAllMapel      = allMapel;
+    window._lmIsTahsin      = isTahsin;
+
+    // Isi dropdown kelas
     const selKelas = document.getElementById('selKelas');
     let kelasList = allKelas;
     if (allowedKelas.length) {
@@ -323,12 +318,8 @@ window.addEventListener('load', async () => {
     selKelas.innerHTML = '<option value="">— Semua Kelas —</option>' +
       kelasList.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
 
-    // Auto-pilih jika guru hanya punya 1 mapel
-    if (mapelFiltered.length === 1) {
-      selMapel.value = mapelFiltered[0].id;
-      document.getElementById('btnTampilkan').disabled = false;
-      document.getElementById('btnCetak').disabled = false;
-    }
+    // Isi dropdown mapel (awal: tampilkan sesuai kelas belum dipilih → semua yg boleh)
+    _updateMapelDropdown('');
 
     hideLoading();
   } catch(e) {
@@ -336,6 +327,49 @@ window.addEventListener('load', async () => {
     alert('Gagal memuat data: ' + e.message);
   }
 });
+
+// Dipanggil tiap kali kelas dropdown berubah
+function onKelasChange() {
+  _updateMapelDropdown(document.getElementById('selKelas').value);
+  onFilterChange();
+}
+
+// Filter dropdown mapel berdasarkan kelas yang dipilih
+function _updateMapelDropdown(kelasAktif) {
+  const selMapel    = document.getElementById('selMapel');
+  const prevVal     = selMapel.value;
+  const isTahsin    = window._lmIsTahsin    || (m => false);
+  const kelasUtama  = window._lmKelasUtama  || [];
+  const mapelDiampu = window._lmMapelDiampu || [];
+  let mapelFiltered = (window._lmAllMapel || []).filter(m => !isTahsin(m));
+
+  if (currentUser.role === 'guru_kelas') {
+    const isKelasUtama = !kelasAktif || kelasUtama.includes(kelasAktif);
+    if (!isKelasUtama) {
+      // Kelas tambahan → hanya mapel yang diampu (mapel spesifik, bukan 'semua')
+      if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
+        mapelFiltered = mapelFiltered.filter(m => mapelDiampu.includes(m.id));
+      } else {
+        mapelFiltered = []; // admin belum set mapel tambahan → kosong
+      }
+    }
+    // kelas utama / belum dipilih → semua mapel tersedia
+  } else if (currentUser.role === 'guru_mapel') {
+    if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
+      mapelFiltered = mapelFiltered.filter(m => mapelDiampu.includes(m.id));
+    }
+  }
+  // admin: semua mapel tampil
+
+  selMapel.innerHTML = '<option value="">— Pilih Mapel —</option>' +
+    mapelFiltered.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+
+  // Pertahankan pilihan sebelumnya jika masih tersedia
+  if (prevVal && mapelFiltered.find(m => m.id === prevVal)) selMapel.value = prevVal;
+
+  // Auto-pilih jika hanya 1 opsi
+  if (mapelFiltered.length === 1) selMapel.value = mapelFiltered[0].id;
+}
 
 function onFilterChange() {
   const hasMapel = !!document.getElementById('selMapel').value;
