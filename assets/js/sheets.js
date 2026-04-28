@@ -655,11 +655,8 @@ const SHEETS = (() => {
   async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
     const rows = await read('SETORAN_TT!A:M');
     // FIX: skip header/kosong - tidak bergantung prefix ID
-    const HEADER_VALS = ['id','id_setoran','id setoran',''];
-    let data = rows.filter(r => {
-      const first = String(r[0] || '').trim();
-      return first.length > 0 && !HEADER_VALS.includes(first.toLowerCase());
-    });
+    // FIX: ID data selalu diawali 'ST' - filter ketat + trim whitespace
+    let data = rows.filter(r => String(r[0] || '').trim().toUpperCase().startsWith('ST'));
     console.log('[getSetoranTT] total baris:', rows.length, '| data valid:', data.length, '| sample:', data.slice(0,3).map(r=>r[0]));
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
@@ -707,7 +704,8 @@ const SHEETS = (() => {
       setoran.catatan         || '',
       setoran.nilai_aspek     ? JSON.stringify(setoran.nilai_aspek) : '',
     ];
-    const appendRes = await append('SETORAN_TT', [row]);
+    // FIX: gunakan SETORAN_TT!A1 agar append selalu mulai dari kolom A
+    const appendRes = await append('SETORAN_TT!A1', [row]);
     // Log WHERE Google Sheets actually wrote the data
     console.log('[saveSetoranTT] id:', id);
     console.log('[saveSetoranTT] append response updatedRange:', appendRes?.updates?.updatedRange || 'TIDAK ADA RANGE INFO');
