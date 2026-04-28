@@ -654,7 +654,8 @@ const SHEETS = (() => {
    */
   async function getSetoranTT({ kelas, semester, tahun, id_siswa } = {}) {
     const rows = await read('SETORAN_TT!A:M');
-    let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id');
+    // FIX: jangan pakai slice(2) - cari berdasarkan prefix ID 'ST' agar tahan 1/2 baris header
+    let data   = rows.filter(r => r[0] && String(r[0]).startsWith('ST'));
 
     if (kelas)    data = data.filter(r => r[2] === kelas);
     if (semester) data = data.filter(r => r[3] === semester);
@@ -712,8 +713,9 @@ const SHEETS = (() => {
    */
   async function updateSetoranTT(id, setoran) {
     const rows = await read('SETORAN_TT!A:M');
-    const idx  = rows.findIndex((r, i) => i >= 2 && r[0] === id);
-    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id}`);
+    // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
 
     const ex = rows[idx];  // data existing sebagai fallback
     const row = [
@@ -745,8 +747,9 @@ const SHEETS = (() => {
    */
   async function deleteSetoranTT(sheetId, id) {
     const rows = await read('SETORAN_TT!A:A');
-    const idx  = rows.findIndex((r, i) => i >= 2 && r[0] === id);
-    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id}`);
+    // FIX: jangan pakai i>=2, cari langsung berdasarkan nilai ID
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
 
     // idx sudah 0-based, sesuai dengan format yang diharapkan deleteRow
     await deleteRow(sheetId, idx);
