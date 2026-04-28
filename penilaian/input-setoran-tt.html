@@ -507,6 +507,13 @@ const NAMA_SURAH = {
 };
 
 function labelFromKey(key) {
+  // Handle JSON array dari multi-select (e.g. '["79-1-15","79-16-30"]')
+  if (typeof key === 'string' && key.startsWith('[')) {
+    try {
+      const keys = JSON.parse(key);
+      if (Array.isArray(keys)) return keys.map(k => labelFromKey(k)).join(', ');
+    } catch(e) {}
+  }
   // key: "surahNo-start-end"
   const p = key.split('-');
   if (p.length < 3) return key;
@@ -670,6 +677,7 @@ async function gantiKelas() {
 
     // Muat semua setoran semester ini dari sheet
     setoranDB = await SHEETS.getSetoranTT({ kelas: activeKelas, semester: activeSem, tahun });
+    console.log('[gantiKelas] loaded setoranDB:', setoranDB.length, 'items | kelas:', activeKelas, 'sem:', activeSem, 'tahun:', tahun);
 
     // Rekonstruksi tamatIqroSet dari CONFIG (permanen) + setoranDB (fallback)
     const rawTamat = config[`tamat_iqro_${activeKelas}`] || '';
@@ -1151,8 +1159,11 @@ async function updateSetoran() {
     }
   } else {
     const custom = document.getElementById('inputMateriCustom').value.trim();
-    if (selectedMateri) { materi = selectedMateri; materiLabel = labelFromKey(selectedMateri); }
-    else if (custom)    { materi = 'custom'; materiLabel = custom; }
+    if (selectedMateri.size > 0) {
+      const keys  = [...selectedMateri];
+      materi      = keys.length === 1 ? keys[0] : JSON.stringify(keys);
+      materiLabel = keys.map(k => labelFromKey(k)).join(', ');
+    } else if (custom) { materi = 'custom'; materiLabel = custom; }
     else { showAlert('error','Validasi','Pilih materi.'); return; }
   }
 
