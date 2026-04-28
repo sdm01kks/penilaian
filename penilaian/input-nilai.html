@@ -741,18 +741,17 @@ function isiDropdownMapel(kelasAktif) {
     const isKelasUtama = kelasUtama.includes(kelasAktif);
 
     if (!isKelasUtama) {
-      // Kelas tambahan (bertugas sbg guru bidang studi):
-      // hanya tampilkan mapel yang memang diampu guru ini
+      // Kelas tambahan → filter hanya mapel yang diampu (disimpan di field mapel, bukan 'semua')
       const mapelDiampu = currentUser.mapelList ||
         (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
       if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
         mapel = mapel.filter(m => mapelDiampu.includes(m.id));
       } else {
-        // mapel belum dikonfigurasi admin → kosongkan agar tidak bisa akses semua
+        // mapel = 'semua' artinya admin belum set mapel tambahan → kosongkan agar aman
         mapel = [];
       }
     }
-    // Jika kelas utama → tampilkan semua mapel (wali kelas bertanggung jawab semua mapel)
+    // Jika kelas utama → semua mapel tersedia (wali kelas)
   }
 
   sel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
