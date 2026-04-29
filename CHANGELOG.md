@@ -295,3 +295,61 @@ Kolom A hingga K. Baris 2 ke bawah akan diisi otomatis oleh aplikasi.
 ---
 
 *Dibuat: 29 April 2025 (v3) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
+## [2025-04-29 v3-fix] — Perbaikan Bug Redirect Mutasi (Hotfix)
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### BUG-004 · `siswa/verifikasi-mutasi.html` & `siswa/mutasi.html` · `requireLogin` menerima array, bukan string
+
+**File:** `siswa/verifikasi-mutasi.html`, `siswa/mutasi.html`  
+**Dampak:** Kritis — halaman mutasi selalu redirect ke dashboard, tidak bisa dibuka
+
+**Akar masalah:**  
+Fungsi `AUTH.requireLogin()` di `auth.js` mengandung pengecekan:
+```js
+if (requiredRole && user.role !== requiredRole) { redirect... }
+```
+Perbandingan ini mengharapkan `requiredRole` berupa **string**. Namun halaman mutasi baru memanggil dengan **array**:
+```js
+// ❌ SALAH — menyebabkan 'admin' !== ['admin'] selalu true
+AUTH.requireLogin(['admin'])
+AUTH.requireLogin(['guru_kelas'])
+```
+Akibatnya kondisi `user.role !== requiredRole` selalu `true` (string tidak pernah sama dengan array), sehingga **setiap user yang membuka halaman tersebut langsung diredirect ke dashboard masing-masing** — termasuk admin yang membuka verifikasi-mutasi.html.
+
+**Perbaikan:**
+```js
+// ✅ BENAR — konsisten dengan semua halaman lain
+AUTH.requireLogin('admin')
+AUTH.requireLogin('guru_kelas')
+```
+
+---
+
+### BUG-005 · `dashboard/admin.html` · Duplikat item "Data Siswa" di sidebar nav
+
+**File:** `dashboard/admin.html`  
+**Dampak:** Minor — item "Data Siswa" muncul dua kali di sidebar
+
+**Akar masalah:**  
+Saat menyisipkan seksi "Kelola Data" di v3, str_replace menyertakan ulang item nav "Data Siswa" yang sudah ada di seksi "Setup Sekolah". Akibatnya sidebar menampilkan dua tombol "Data Siswa".
+
+**Perbaikan:**  
+Item "Data Siswa" duplikat dihapus dari seksi "Kelola Data". Seksi tersebut kini hanya berisi item "Verifikasi Mutasi".
+
+---
+
+### 📋 Ringkasan File yang Diubah (v3-fix)
+
+| File | Perubahan |
+|------|-----------|
+| `siswa/verifikasi-mutasi.html` | `requireLogin(['admin'])` → `requireLogin('admin')` |
+| `siswa/mutasi.html` | `requireLogin(['guru_kelas'])` → `requireLogin('guru_kelas')` |
+| `dashboard/admin.html` | Hapus duplikat nav item "Data Siswa" |
+
+*Dibuat: 29 April 2025 (v3-fix) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
