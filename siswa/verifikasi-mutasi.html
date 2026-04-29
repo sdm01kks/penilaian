@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifikasi Mutasi Siswa — SDM01KKS (Admin)</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+:root {
+  --green-deep:  #0f3226;
+  --green-dark:  #1e4d3b;
+  --green-mid:   #2d7055;
+  --green-light: #4aa07a;
+  --green-pale:  #e5f2ec;
+  --green-ghost: #f0f7f3;
+  --gold:        #c9882a;
+  --gold-light:  #f5c97a;
+  --yellow-light:#fef9e7;
+  --white:       #ffffff;
+  --ink:         #1c1b18;
+  --ink-mid:     #4a4840;
+  --ink-muted:   #7d7a72;
+  --red:         #c0392b;
+  --red-light:   #fdecea;
+  --blue:        #2980b9;
+  --blue-light:  #ebf5fb;
+  --sidebar-w:   260px;
+  --topbar-h:    64px;
+  --radius:      12px;
+  --shadow:      0 2px 16px rgba(15,50,38,.10);
+  --shadow-card: 0 4px 24px rgba(15,50,38,.08);
+  --border:      rgba(30,77,59,.10);
+}
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+
+.topbar { position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h); background: var(--green-dark); display: flex; align-items: center; padding: 0 20px; gap: 14px; z-index: 200; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
+.topbar-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
+.brand-name { font-family: 'Amiri', serif; font-size: 14px; font-weight: 700; color: #fff; }
+.brand-sub  { font-size: 10px; color: rgba(255,255,255,.55); }
+.topbar-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.85); flex: 1; }
+.topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--green-mid); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+.user-name { font-size: 12px; font-weight: 600; color: #fff; }
+.user-role { font-size: 10px; color: rgba(255,255,255,.55); }
+.btn-logout { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: rgba(255,255,255,.75); font-size: 11.5px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all .2s; }
+.btn-logout:hover { background: rgba(255,255,255,.12); color: #fff; }
+.sidebar-toggle { display: none; background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+
+.sidebar { position: fixed; top: var(--topbar-h); left: 0; width: var(--sidebar-w); height: calc(100vh - var(--topbar-h)); background: var(--white); border-right: 1px solid var(--border); overflow-y: auto; z-index: 100; padding: 20px 0 40px; transition: transform .3s ease; }
+.sidebar-section-label { font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-muted); padding: 14px 20px 6px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: 13px; font-weight: 500; color: var(--ink-mid); text-decoration: none; transition: all .15s; border-left: 3px solid transparent; }
+.nav-item:hover { background: var(--green-ghost); color: var(--green-dark); border-left-color: var(--green-light); }
+.nav-item.active { background: var(--green-pale); color: var(--green-dark); font-weight: 600; border-left-color: var(--green-dark); }
+.nav-icon { font-size: 16px; flex-shrink: 0; width: 22px; text-align: center; }
+.nav-badge { margin-left: auto; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
+.nav-badge.warn { background: var(--gold); color: #fff; }
+
+.main { margin-left: var(--sidebar-w); margin-top: var(--topbar-h); padding: 28px 28px 60px; }
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-family: 'Amiri', serif; font-size: 26px; color: var(--green-deep); font-weight: 700; }
+.page-header p { font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
+
+.loading-overlay { position: fixed; inset: 0; background: rgba(15,50,38,.85); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 999; }
+.loading-overlay.hidden { display: none; }
+.spinner-lg { width: 44px; height: 44px; border: 4px solid rgba(255,255,255,.2); border-top-color: var(--green-light); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay p { color: rgba(255,255,255,.8); font-size: 14px; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
+
+.section-title { font-size: 14px; font-weight: 700; color: var(--green-deep); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.alert { border-radius: var(--radius); padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+.alert.warning { background: var(--yellow-light); border: 1px solid rgba(243,156,18,.25); }
+.alert.error   { background: var(--red-light); border: 1px solid rgba(192,57,43,.2); }
+.alert.success { background: var(--green-pale); border: 1px solid rgba(30,77,59,.15); }
+.alert.info    { background: var(--blue-light); border: 1px solid rgba(41,128,185,.2); }
+.alert-icon  { font-size: 20px; flex-shrink: 0; }
+.alert-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.alert-text  { font-size: 12px; color: var(--ink-mid); line-height: 1.6; }
+
+/* Filter bar */
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+.filter-bar select, .filter-bar input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--ink); background: var(--white); outline: none; }
+.filter-bar select:focus, .filter-bar input:focus { border-color: var(--green-light); }
+
+/* Stats */
+.stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+.stat-mini { background: var(--white); border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 120px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+.stat-mini-label { font-size: 11px; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
+.stat-mini-val   { font-size: 26px; font-weight: 700; margin-top: 4px; }
+.stat-mini.pending  { border-top: 3px solid var(--gold); }
+.stat-mini.approved { border-top: 3px solid var(--green-light); }
+.stat-mini.rejected { border-top: 3px solid var(--red); }
+.stat-mini.total    { border-top: 3px solid var(--blue); }
+
+/* Cards pengajuan */
+.mutasi-list { display: flex; flex-direction: column; gap: 14px; }
+.mutasi-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden; }
+.mutasi-card.status-pending  { border-left: 4px solid var(--gold); }
+.mutasi-card.status-disetujui { border-left: 4px solid var(--green-light); }
+.mutasi-card.status-ditolak  { border-left: 4px solid var(--red); }
+.mc-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--green-ghost); flex-wrap: wrap; }
+.mc-jenis { font-size: 13px; font-weight: 700; }
+.mc-nama  { font-family: 'Amiri', serif; font-size: 17px; font-weight: 700; color: var(--green-deep); flex: 1; }
+.mc-body  { padding: 14px 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 24px; }
+.mc-field { font-size: 12px; }
+.mc-field span { color: var(--ink-muted); display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; font-weight: 600; }
+.mc-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--green-ghost); }
+.mc-catatan { flex: 1; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-pending  { background: var(--yellow-light); color: #b46a00; }
+.badge-approved { background: var(--green-pale);   color: var(--green-dark); }
+.badge-rejected { background: var(--red-light);    color: var(--red); }
+.badge-masuk    { background: var(--blue-light);   color: var(--blue); }
+.badge-keluar   { background: #fde8e8;             color: #8b0000; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .2s; border: none; }
+.btn-approve  { background: var(--green-dark); color: #fff; }
+.btn-approve:hover { background: var(--green-mid); }
+.btn-reject   { background: var(--red); color: #fff; }
+.btn-reject:hover { opacity: .88; }
+.btn-secondary { background: var(--green-pale); color: var(--green-dark); border: 1px solid rgba(30,77,59,.15); }
+.btn-secondary:hover { background: var(--green-ghost); }
+.btn:disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+
+.catatan-input { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-family: inherit; font-size: 12.5px; min-width: 160px; outline: none; }
+.catatan-input:focus { border-color: var(--green-light); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15,50,38,.6); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--white); border-radius: 16px; width: 100%; max-width: 480px; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.25); transform: translateY(20px); transition: transform .25s; }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--green-ghost); }
+.modal-header h3 { font-family: 'Amiri', serif; font-size: 18px; font-weight: 700; color: var(--green-deep); }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--ink-muted); }
+.modal-close:hover { color: var(--red); }
+.modal-body { padding: 22px; }
+.modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-mid); margin-bottom: 6px; }
+.form-control { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; outline: none; }
+.form-control:focus { border-color: var(--green-light); }
+.info-box { background: var(--green-pale); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; line-height: 1.6; }
+.info-box strong { color: var(--green-dark); }
+
+.empty-state { text-align: center; padding: 48px; color: var(--ink-muted); }
+.empty-icon  { font-size: 48px; margin-bottom: 12px; }
+
+@media (max-width: 768px) {
+  .sidebar-toggle { display: block; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .main { margin-left: 0; }
+  .topbar-title { display: none; }
+  .mc-body { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat data pengajuan…</p>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Modal Keputusan -->
+<div class="modal-overlay" id="modalKeputusan">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalJudul">Keputusan Mutasi</h3>
+      <button class="modal-close" onclick="tutupModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-box" id="modalInfoBox"></div>
+      <div class="form-group">
+        <label class="form-label">Catatan untuk Guru (opsional)</label>
+        <textarea class="form-control" id="inputCatatan" rows="3" placeholder="Alasan penolakan, atau keterangan lain…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal()">Batal</button>
+      <button class="btn" id="btnKonfirmasi" onclick="eksekusiKeputusan()">Konfirmasi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topbar -->
+<header class="topbar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <a class="topbar-logo" href="../index.html">
+    <div>
+      <div class="brand-name">SD Muhammadiyah 01 Kukusan</div>
+      <div class="brand-sub">Sistem Penilaian Kurikulum Merdeka</div>
+    </div>
+  </a>
+  <div class="topbar-title">Verifikasi Mutasi Siswa</div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-avatar" id="userAvatar">A</div>
+      <div>
+        <div class="user-name" id="userName">Admin</div>
+        <div class="user-role">Administrator</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="AUTH.logout()">⎋ Keluar</button>
+  </div>
+</header>
+
+<!-- Sidebar admin -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section-label">Utama</div>
+  <a class="nav-item" href="../dashboard/admin.html">
+    <span class="nav-icon">🏠</span> Dashboard Admin
+  </a>
+
+  <div class="sidebar-section-label">Kelola Data</div>
+  <a class="nav-item" href="../setup/data-siswa.html">
+    <span class="nav-icon">👦</span> Data Siswa
+  </a>
+  <a class="nav-item active" href="verifikasi-mutasi.html">
+    <span class="nav-icon">🔄</span> Verifikasi Mutasi
+    <span class="nav-badge warn" id="navBadgePending" style="display:none;">!</span>
+  </a>
+  <a class="nav-item" href="../setup/kelola-guru.html">
+    <span class="nav-icon">👩‍🏫</span> Kelola Akun Guru
+  </a>
+
+  <div class="sidebar-section-label">Setup Kurikulum</div>
+  <a class="nav-item" href="../setup/mapel-tp.html">
+    <span class="nav-icon">📝</span> Setup TP & KKTP
+  </a>
+  <a class="nav-item" href="../setup/kokurikuler.html">
+    <span class="nav-icon">🌱</span> Setup Kokurikuler
+  </a>
+
+  <div class="sidebar-section-label">Laporan & Rapor</div>
+  <a class="nav-item" href="../rapor/preview.html">
+    <span class="nav-icon">🖨️</span> Preview & Cetak Rapor
+  </a>
+  <a class="nav-item" href="../rapor/laporan-tt.html">
+    <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
+  </a>
+  <a class="nav-item" href="../rapor/validasi.html">
+    <span class="nav-icon">✅</span> Validasi Rapor
+  </a>
+</nav>
+
+<!-- Main -->
+<main class="main">
+  <div class="page-header">
+    <h1>🔄 Verifikasi Mutasi Siswa</h1>
+    <p>Tinjau, setujui, atau tolak pengajuan mutasi yang diajukan oleh guru kelas.</p>
+  </div>
+
+  <div id="alertArea"></div>
+
+  <!-- Statistik -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-mini pending"><div class="stat-mini-label">Menunggu</div><div class="stat-mini-val" id="statPending">—</div></div>
+    <div class="stat-mini approved"><div class="stat-mini-label">Disetujui</div><div class="stat-mini-val" id="statApproved">—</div></div>
+    <div class="stat-mini rejected"><div class="stat-mini-label">Ditolak</div><div class="stat-mini-val" id="statRejected">—</div></div>
+    <div class="stat-mini total"><div class="stat-mini-label">Total</div><div class="stat-mini-val" id="statTotal">—</div></div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <select id="filterStatus" onchange="renderDaftar()">
+      <option value="">Semua Status</option>
+      <option value="pending" selected>⏳ Menunggu</option>
+      <option value="disetujui">✅ Disetujui</option>
+      <option value="ditolak">❌ Ditolak</option>
+    </select>
+    <select id="filterJenis" onchange="renderDaftar()">
+      <option value="">Semua Jenis</option>
+      <option value="masuk">⬅️ Masuk</option>
+      <option value="keluar">➡️ Keluar</option>
+    </select>
+    <input type="text" id="filterCari" placeholder="🔍 Cari nama siswa atau guru…" oninput="renderDaftar()">
+    <button class="btn btn-secondary" onclick="muatData()">🔄 Refresh</button>
+  </div>
+
+  <div class="section-title">Daftar Pengajuan</div>
+  <div id="listArea">
+    <div class="empty-state"><div class="empty-icon">⏳</div><div>Memuat data…</div></div>
+  </div>
+</main>
+
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+/* ─── State ─────────────────────────────────── */
+let currentUser  = null;
+let semuaMutasi  = [];
+let pendingAction = null;  // { id, status, nama, jenis, id_siswa, kelas }
+
+/* ─── Init ──────────────────────────────────── */
+AUTH.init();
+document.addEventListener('DOMContentLoaded', async () => {
+  currentUser = AUTH.requireLogin(['admin']);
+  if (!currentUser) return;
+  document.getElementById('userAvatar').textContent = (currentUser.nama||'A')[0].toUpperCase();
+  document.getElementById('userName').textContent   = currentUser.nama || 'Admin';
+  await muatData();
+});
+
+/* ─── Load semua mutasi ──────────────────────── */
+async function muatData() {
+  showLoading('Memuat pengajuan mutasi…');
+  try {
+    semuaMutasi = await SHEETS.getMutasi();
+    // Urutkan: pending dulu, lalu terbaru
+    semuaMutasi.sort((a,b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
+      return b.tanggal_pengajuan.localeCompare(a.tanggal_pengajuan);
+    });
+    perbaruiStats();
+    renderDaftar();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal memuat data', e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+/* ─── Statistik ──────────────────────────────── */
+function perbaruiStats() {
+  const pending   = semuaMutasi.filter(d => d.status === 'pending').length;
+  const approved  = semuaMutasi.filter(d => d.status === 'disetujui').length;
+  const rejected  = semuaMutasi.filter(d => d.status === 'ditolak').length;
+  document.getElementById('statPending').textContent  = pending;
+  document.getElementById('statApproved').textContent = approved;
+  document.getElementById('statRejected').textContent = rejected;
+  document.getElementById('statTotal').textContent    = semuaMutasi.length;
+
+  const navBadge = document.getElementById('navBadgePending');
+  if (pending > 0) { navBadge.style.display = 'flex'; navBadge.textContent = pending; }
+  else             { navBadge.style.display = 'none'; }
+}
+
+/* ─── Render daftar pengajuan ────────────────── */
+function renderDaftar() {
+  const statusFilter = document.getElementById('filterStatus').value;
+  const jenisFilter  = document.getElementById('filterJenis').value;
+  const cari         = document.getElementById('filterCari').value.toLowerCase().trim();
+
+  let data = semuaMutasi.filter(d => {
+    if (statusFilter && d.status  !== statusFilter) return false;
+    if (jenisFilter  && d.jenis   !== jenisFilter)  return false;
+    if (cari && !d.nama_siswa.toLowerCase().includes(cari) &&
+                !d.nama_guru.toLowerCase().includes(cari)) return false;
+    return true;
+  });
+
+  const area = document.getElementById('listArea');
+
+  if (!data.length) {
+    area.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div>Tidak ada pengajuan yang cocok dengan filter ini</div>
+      </div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="mutasi-list">${data.map(d => kartuMutasi(d)).join('')}</div>`;
+}
+
+function kartuMutasi(d) {
+  const badgeStatus = d.status === 'pending'
+    ? '<span class="badge badge-pending">⏳ Menunggu Verifikasi</span>'
+    : d.status === 'disetujui'
+    ? '<span class="badge badge-approved">✅ Disetujui</span>'
+    : '<span class="badge badge-rejected">❌ Ditolak</span>';
+
+  const badgeJenis = d.jenis === 'masuk'
+    ? '<span class="badge badge-masuk">⬅️ Mutasi Masuk</span>'
+    : '<span class="badge badge-keluar">➡️ Mutasi Keluar</span>';
+
+  const actionButtons = d.status === 'pending' ? `
+    <input class="catatan-input" id="catatan_${d.id}" placeholder="Catatan (opsional)…" type="text">
+    <button class="btn btn-approve" onclick="bukaModal('${d.id}','disetujui')">✅ Setujui</button>
+    <button class="btn btn-reject"  onclick="bukaModal('${d.id}','ditolak')">❌ Tolak</button>
+  ` : `<span style="font-size:12px;color:var(--ink-muted);">Diproses pada ${d.tanggal_keputusan || '—'} ${d.catatan_admin ? '· Catatan: ' + d.catatan_admin : ''}</span>`;
+
+  return `
+    <div class="mutasi-card status-${d.status}">
+      <div class="mc-header">
+        ${badgeJenis} ${badgeStatus}
+        <span class="mc-nama">${d.nama_siswa}</span>
+      </div>
+      <div class="mc-body">
+        <div class="mc-field"><span>Kelas</span>${d.kelas}</div>
+        <div class="mc-field"><span>Diajukan oleh</span>${d.nama_guru}</div>
+        <div class="mc-field"><span>Tanggal Pengajuan</span>${d.tanggal_pengajuan}</div>
+        ${d.id_siswa ? `<div class="mc-field"><span>ID Siswa</span>${d.id_siswa}</div>` : ''}
+      </div>
+      <div class="mc-footer">
+        ${actionButtons}
+      </div>
+    </div>`;
+}
+
+/* ─── Buka modal keputusan ───────────────────── */
+function bukaModal(id, status) {
+  const mutasi = semuaMutasi.find(d => d.id === id);
+  if (!mutasi) return;
+
+  const catatanInput = document.getElementById(`catatan_${id}`);
+  const catatanVal   = catatanInput ? catatanInput.value.trim() : '';
+
+  pendingAction = { id, status, nama: mutasi.nama_siswa, jenis: mutasi.jenis, id_siswa: mutasi.id_siswa, kelas: mutasi.kelas, catatan: catatanVal };
+
+  const setuju = status === 'disetujui';
+  const aksiStr = setuju ? '✅ MENYETUJUI' : '❌ MENOLAK';
+  const efekStr = mutasi.jenis === 'masuk' && setuju
+    ? 'Siswa <strong>' + mutasi.nama_siswa + '</strong> akan otomatis ditambahkan ke kelas <strong>' + mutasi.kelas + '</strong>.'
+    : mutasi.jenis === 'keluar' && setuju
+    ? 'Data siswa <strong>' + mutasi.nama_siswa + '</strong> akan dihapus dari sistem. Pastikan ini sudah benar.'
+    : 'Pengajuan akan ditandai sebagai ditolak. Guru pengaju akan melihat status ini di riwayat mereka.';
+
+  document.getElementById('modalJudul').textContent = aksiStr + ' Pengajuan';
+  document.getElementById('modalInfoBox').innerHTML = `
+    <strong>${aksiStr} mutasi ${mutasi.jenis} untuk:</strong><br>
+    Nama: ${mutasi.nama_siswa} · Kelas: ${mutasi.kelas}<br><br>
+    ${efekStr}`;
+
+  const btnKonfirmasi = document.getElementById('btnKonfirmasi');
+  btnKonfirmasi.textContent = setuju ? '✅ Ya, Setujui' : '❌ Ya, Tolak';
+  btnKonfirmasi.className   = 'btn ' + (setuju ? 'btn-approve' : 'btn-reject');
+  document.getElementById('inputCatatan').value = catatanVal;
+
+  document.getElementById('modalKeputusan').classList.add('open');
+}
+
+function tutupModal() {
+  document.getElementById('modalKeputusan').classList.remove('open');
+  pendingAction = null;
+}
+
+/* ─── Eksekusi keputusan ─────────────────────── */
+async function eksekusiKeputusan() {
+  if (!pendingAction) return;
+  const { id, status, nama, jenis, id_siswa, kelas } = pendingAction;
+  const catatan = document.getElementById('inputCatatan').value.trim();
+
+  document.getElementById('btnKonfirmasi').disabled = true;
+  tutupModal();
+  showLoading(status === 'disetujui' ? 'Menyetujui pengajuan…' : 'Menolak pengajuan…');
+
+  try {
+    // 1. Update status pengajuan di sheet MUTASI
+    await SHEETS.updateMutasiStatus(id, status, catatan);
+
+    // 2. Jika DISETUJUI, lakukan perubahan data siswa
+    if (status === 'disetujui') {
+      if (jenis === 'masuk') {
+        // Tambah siswa baru ke sheet SISWA (data minimal)
+        await SHEETS.addSiswa({ nama, kelas, agama: 'Islam' });
+        showAlert('success', '✅ Mutasi Masuk Disetujui',
+          `${nama} berhasil ditambahkan ke kelas ${kelas}. Admin dapat melengkapi data (NISN, orang tua, dll.) di halaman Data Siswa.`);
+      } else {
+        // Hapus siswa dari sheet SISWA (kosongkan baris)
+        if (id_siswa) {
+          const rows = await SHEETS.read('SISWA!A:A');
+          const idx  = rows.findIndex(r => r[0] === id_siswa);
+          if (idx >= 0) {
+            await SHEETS.write(`SISWA!A${idx+1}:L${idx+1}`, [['','','','','','','','','','','','']]);
+          }
+        }
+        showAlert('success', '✅ Mutasi Keluar Disetujui',
+          `Data ${nama} telah dihapus dari sistem sesuai pengajuan.`);
+      }
+    } else {
+      showAlert('info', 'ℹ️ Pengajuan Ditolak',
+        `Pengajuan mutasi ${jenis} untuk ${nama} telah ditolak.${catatan ? ' Catatan: ' + catatan : ''}`);
+    }
+
+    await muatData();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal memproses keputusan', e.message);
+  } finally {
+    hideLoading();
+    document.getElementById('btnKonfirmasi').disabled = false;
+  }
+}
+
+/* ─── Sidebar mobile ─────────────────────────── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+/* ─── UI helpers ─────────────────────────────── */
+function showLoading(t='Memuat…') { document.getElementById('loadingText').textContent=t; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading()             { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function showAlert(type, title, text) {
+  document.getElementById('alertArea').innerHTML = `
+    <div class="alert ${type}">
+      <div class="alert-icon">${type==='success'?'✅':type==='info'?'ℹ️':type==='warning'?'⚠️':'⛔'}</div>
+      <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
+    </div>`;
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+</script>
+</body>
+</html>
