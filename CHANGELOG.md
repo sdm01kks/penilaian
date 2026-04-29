@@ -102,3 +102,65 @@ Perbaikan ini bersifat **additive** (menambahkan yang kurang), bukan mengubah ya
 ---
 
 *Dibuat: 29 April 2025 | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
+## [2025-04-29 v2] — Tambahan Menu Laporan & Rapor di Dashboard Admin
+
+### ✨ Fitur Baru
+
+---
+
+### FEAT-001 · `dashboard/admin.html` · Menu navigasi "Laporan & Rapor"
+
+**File:** `dashboard/admin.html`  
+**Lokasi perubahan:** Sidebar nav
+
+Ditambahkan seksi baru **"Laporan & Rapor"** di antara seksi "Pantau & Validasi" dan "Log", berisi dua item navigasi:
+
+| Item | Tujuan | Akses Admin |
+|------|--------|-------------|
+| 🖨️ Preview & Cetak Rapor | `../rapor/preview.html` | Semua kelas |
+| 📋 Laporan Tahsin-Tahfizh | `../rapor/laporan-tt.html` | Semua kelas |
+
+Kedua halaman target sudah mendukung role `admin` dengan akses penuh ke semua kelas (tidak ada perubahan pada file tersebut).
+
+---
+
+### FEAT-002 · `dashboard/admin.html` · Action card baru di "Aksi Cepat"
+
+**File:** `dashboard/admin.html`  
+**Lokasi perubahan:** Grid Aksi Cepat
+
+Ditambahkan dua kartu aksi baru:
+
+- **📄 Preview & Cetak Rapor** — menuju `rapor/preview.html`
+- **📋 Laporan Tahsin-Tahfizh** — menuju `rapor/laporan-tt.html`
+
+---
+
+### FEAT-003 · `dashboard/admin.html` · Tombol "Laporan TT" di kartu status kelas
+
+**File:** `dashboard/admin.html`  
+**Lokasi perubahan:** Footer `kelas-status-card` (template dinamis)
+
+Ditambahkan tombol **📋 Laporan TT** di setiap kartu status kelas, di samping tombol "Cetak/Preview Rapor" dan "Input Nilai" yang sudah ada.
+
+---
+
+### 📋 Ringkasan Hak Akses Laporan setelah Perubahan ini
+
+| Halaman | Admin | Guru Kelas | Guru Mapel TT |
+|---------|-------|------------|---------------|
+| Preview & Cetak Rapor (`rapor/preview.html`) | ✅ Semua kelas | ✅ Kelas sendiri | ✗ Tidak ada akses |
+| Laporan Tahsin-Tahfizh (`rapor/laporan-tt.html`) | ✅ Semua kelas | ✅ Kelas sendiri | ✅ Kelas yang diampu |
+
+---
+
+### 📋 Ringkasan File yang Diubah (v2)
+
+| File | Perubahan |
+|------|-----------|
+| `dashboard/admin.html` | Tambah seksi nav "Laporan & Rapor", 2 action card baru, tombol Laporan TT di kelas-status-card |
+
+*Dibuat: 29 April 2025 (v2) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
