@@ -353,3 +353,59 @@ Item "Data Siswa" duplikat dihapus dari seksi "Kelola Data". Seksi tersebut kini
 | `dashboard/admin.html` | Hapus duplikat nav item "Data Siswa" |
 
 *Dibuat: 29 April 2025 (v3-fix) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
+## [2025-04-29 v3-fix2] — Perbaikan Error AUTH.init Timing (Hotfix)
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### BUG-006 · `siswa/verifikasi-mutasi.html` & `siswa/mutasi.html` · `AUTH.init()` dipanggil sebelum Google Identity Services selesai dimuat
+
+**File:** `siswa/verifikasi-mutasi.html`, `siswa/mutasi.html`  
+**Gejala:** Error di console — `AUTH: Google Identity Services belum dimuat` (auth.js:38)  
+**Dampak:** Sedang — AUTH.init() gagal diam-diam; halaman tetap bisa berjalan karena `requireLogin` hanya membaca sessionStorage, namun token refresh otomatis tidak terjadwal sehingga sesi bisa kadaluarsa tanpa peringatan.
+
+**Akar masalah:**  
+Kedua halaman baru memanggil `AUTH.init()` di top-level script, lalu `document.addEventListener('DOMContentLoaded', ...)`:
+
+```js
+// ❌ POLA LAMA (salah)
+AUTH.init();                              // ← Google script belum tentu siap!
+document.addEventListener('DOMContentLoaded', async () => { ... });
+```
+
+Script Google Identity Services dimuat dengan atribut `async defer`, artinya eksekusinya tidak dijamin selesai sebelum `DOMContentLoaded`. Ketika `AUTH.init()` dijalankan, `typeof google === 'undefined'` masih bernilai `true`, sehingga `init()` keluar lebih awal tanpa menginisialisasi `_tokenClient`.
+
+**Solusi:**  
+Menggunakan `window.addEventListener('load', ...)` — event ini baru dijalankan **setelah semua resource** (termasuk script `async defer`) selesai dimuat. Ini adalah pola yang sudah dipakai oleh semua halaman yang berjalan dengan benar (guru-kelas.html, preview.html, dll.):
+
+```js
+// ✅ POLA BARU (benar) — konsisten dengan halaman lain
+window.addEventListener('load', async () => {
+  AUTH.init();    // ← Google script pasti sudah siap
+  currentUser = AUTH.requireLogin('...');
+  ...
+});
+```
+
+---
+
+### 📋 Ringkasan File yang Diubah (v3-fix2)
+
+| File | Perubahan |
+|------|-----------|
+| `siswa/verifikasi-mutasi.html` | `AUTH.init()` + `DOMContentLoaded` → `window.addEventListener('load')` |
+| `siswa/mutasi.html` | `AUTH.init()` + `DOMContentLoaded` → `window.addEventListener('load')` |
+
+---
+
+### 📌 Catatan: Error 429 di Dashboard Admin
+
+Error `Sheets API 429` yang muncul terpisah di console dashboard admin adalah **rate limit Google Sheets API** — terlalu banyak request dilakukan secara bersamaan (`Promise.all` dengan 8 sheet sekaligus). Ini **bukan bug baru** dan **tidak terkait** dengan fitur mutasi. Solusinya adalah menambahkan jeda antar request (sequential fetch), namun perubahan ini berisiko memengaruhi banyak fungsi di `admin.html` dan sebaiknya dikerjakan sebagai sesi terpisah.
+
+---
+
+*Dibuat: 29 April 2025 (v3-fix2) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
