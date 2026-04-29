@@ -252,6 +252,12 @@ const AUTH = (() => {
     }
 
     // Simpan data user ke session
+    const kelasUtamaArr   = userRow[4]  ? String(userRow[4]).split(',').map(s=>s.trim()).filter(Boolean)  : [];
+    const kelasMapelArr   = userRow[10] ? String(userRow[10]).split(',').map(s=>s.trim()).filter(Boolean) : [];
+    // FIX 2025-04-29: kelasList menggabungkan kelas utama + kelas_mapel agar halaman seperti
+    // mapel-tp, input-setoran-tt, dll. dapat memberi akses ke kelas tambahan guru_kelas merangkap
+    const kelasListGabung = [...new Set([...kelasUtamaArr, ...kelasMapelArr])];
+
     const userData = {
       id_user:     userRow[0]  || '',
       email:       userRow[1]  || email,
@@ -262,6 +268,7 @@ const AUTH = (() => {
       status:      userRow[6]  || '',
       nbm:         userRow[9]  || '',   // kolom J: Nomor Baku Muhammadiyah
       kelas_mapel: userRow[10] || '',   // kolom K: kelas lain sbg guru mapel (guru_kelas merangkap)
+      kelasList:   kelasListGabung,     // gabungan kelas utama + kelas_mapel (untuk filter akses)
       loginTime:   new Date().toISOString(),
     };
 
