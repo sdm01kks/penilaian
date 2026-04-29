@@ -413,7 +413,7 @@ let pendingPayload = null;   // data yang menunggu konfirmasi modal
 /* ───────────────────────────────────────────── */
 AUTH.init();
 document.addEventListener('DOMContentLoaded', async () => {
-  currentUser = AUTH.requireLogin(['guru_kelas']);
+  currentUser = AUTH.requireLogin('guru_kelas');
   if (!currentUser) return;
 
   document.getElementById('userAvatar').textContent = (currentUser.nama||'G')[0].toUpperCase();
