@@ -164,3 +164,134 @@ Ditambahkan tombol **📋 Laporan TT** di setiap kartu status kelas, di samping 
 | `dashboard/admin.html` | Tambah seksi nav "Laporan & Rapor", 2 action card baru, tombol Laporan TT di kelas-status-card |
 
 *Dibuat: 29 April 2025 (v2) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
+## [2025-04-29 v3] — Fitur Pengajuan Mutasi Siswa (Guru Kelas & Admin)
+
+### ✨ Fitur Baru
+
+---
+
+### FEAT-004 · `assets/js/sheets.js` · Tiga fungsi baru untuk sheet MUTASI
+
+**File:** `assets/js/sheets.js`
+
+Ditambahkan tiga fungsi baru beserta definisi sheet `MUTASI` (kolom A–K):
+
+| Kolom | Field | Keterangan |
+|-------|-------|------------|
+| A | id_mutasi | ID unik (prefix `MT`) |
+| B | jenis | `masuk` atau `keluar` |
+| C | id_siswa | ID siswa (diisi untuk jenis keluar) |
+| D | nama_siswa | Nama lengkap siswa |
+| E | kelas | Kelas yang terdampak |
+| F | id_guru | ID guru pengaju |
+| G | nama_guru | Nama guru pengaju |
+| H | tanggal_pengajuan | Diisi otomatis |
+| I | status | `pending` / `disetujui` / `ditolak` |
+| J | catatan_admin | Catatan/alasan dari admin |
+| K | tanggal_keputusan | Diisi otomatis saat diputuskan |
+
+**Fungsi yang ditambahkan:**
+- `getMutasi({ status, id_guru, kelas })` — ambil pengajuan dengan filter opsional
+- `addMutasi(data)` — tambah pengajuan baru, status otomatis `pending`
+- `updateMutasiStatus(id, status, catatan)` — update keputusan admin
+
+Ketiganya sudah dieksport di bagian `return {}`.
+
+---
+
+### FEAT-005 · `siswa/mutasi.html` · Halaman pengajuan mutasi untuk guru kelas
+
+**File:** `siswa/mutasi.html` *(file baru)*
+
+Halaman khusus guru kelas dengan tiga tab:
+
+**Tab ➡️ Mutasi Keluar:**
+- Dropdown nama siswa diambil langsung dari database (`getSiswa`) — tidak perlu mengetik manual
+- Pratinjau data siswa terpilih (nama, NISN, kelas) sebelum submit
+- Tombol submit disabled selama belum ada siswa dipilih
+- Modal konfirmasi muncul sebelum data dikirim
+
+**Tab ⬅️ Mutasi Masuk:**
+- Input nama lengkap dengan validasi (hanya huruf, minimal 3 karakter)
+- Dropdown pilih kelas tujuan dari database
+- Modal konfirmasi sebelum pengiriman
+
+**Tab 📋 Riwayat Pengajuan:**
+- Menampilkan semua pengajuan dari guru yang sedang login
+- Badge status berwarna: ⏳ Menunggu / ✅ Disetujui / ❌ Ditolak
+- Catatan admin (jika ada) ikut ditampilkan
+
+---
+
+### FEAT-006 · `siswa/verifikasi-mutasi.html` · Halaman verifikasi mutasi untuk admin
+
+**File:** `siswa/verifikasi-mutasi.html` *(file baru)*
+
+Halaman khusus admin dengan tampilan kartu per pengajuan:
+
+- **Statistik ringkas** (pending / disetujui / ditolak / total)
+- **Filter** berdasarkan status, jenis, dan pencarian nama
+- **Tombol Setujui / Tolak** per pengajuan, dengan input catatan admin
+- **Modal konfirmasi** sebelum keputusan dieksekusi
+- **Efek otomatis saat Setujui:**
+  - Mutasi Masuk → `addSiswa()` dipanggil, siswa baru masuk ke kelas
+  - Mutasi Keluar → baris SISWA dikosongkan (pola konsisten dengan `hapusSiswa`)
+- Pengajuan yang sudah diputuskan tidak menampilkan tombol aksi lagi
+
+---
+
+### FEAT-007 · `dashboard/guru-kelas.html` · Nav & action card Pengajuan Mutasi
+
+**File:** `dashboard/guru-kelas.html`
+
+- Ditambahkan seksi nav baru **"Data Siswa"** dengan item **🔄 Pengajuan Mutasi** → `../siswa/mutasi.html`
+- Ditambahkan action card **"Pengajuan Mutasi Siswa"** di grid Aksi Cepat
+
+---
+
+### FEAT-008 · `dashboard/admin.html` · Nav & action card Verifikasi Mutasi
+
+**File:** `dashboard/admin.html`
+
+- Ditambahkan seksi nav baru **"Kelola Data"** dengan item **🔄 Verifikasi Mutasi** → `../siswa/verifikasi-mutasi.html`
+- Ditambahkan action card **"Verifikasi Mutasi Siswa"** di grid Aksi Cepat
+- Badge merah muncul di nav jika ada pengajuan pending
+
+---
+
+### 📋 Ringkasan Hak Akses Fitur Mutasi
+
+| Halaman | Admin | Guru Kelas | Guru Mapel |
+|---------|-------|------------|------------|
+| Ajukan Mutasi Masuk/Keluar (`siswa/mutasi.html`) | ✗ | ✅ Kelas sendiri | ✗ |
+| Lihat Riwayat Pengajuan (`siswa/mutasi.html`) | ✗ | ✅ Milik sendiri | ✗ |
+| Verifikasi & Keputusan (`siswa/verifikasi-mutasi.html`) | ✅ Semua kelas | ✗ | ✗ |
+
+---
+
+### 📋 Ringkasan File yang Diubah/Dibuat (v3)
+
+| File | Status | Keterangan |
+|------|--------|------------|
+| `assets/js/sheets.js` | Diubah | +3 fungsi MUTASI, +export |
+| `siswa/mutasi.html` | **Baru** | Halaman pengajuan untuk guru kelas |
+| `siswa/verifikasi-mutasi.html` | **Baru** | Halaman verifikasi untuk admin |
+| `dashboard/guru-kelas.html` | Diubah | +nav item, +action card |
+| `dashboard/admin.html` | Diubah | +nav item, +action card |
+
+### ⚠️ Persiapan di Google Sheets
+
+Tambahkan sheet baru bernama `MUTASI` di spreadsheet database dengan **header berikut di baris 1**:
+
+```
+id_mutasi | jenis | id_siswa | nama_siswa | kelas | id_guru | nama_guru | tanggal_pengajuan | status | catatan_admin | tanggal_keputusan
+```
+
+Kolom A hingga K. Baris 2 ke bawah akan diisi otomatis oleh aplikasi.
+
+---
+
+*Dibuat: 29 April 2025 (v3) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
