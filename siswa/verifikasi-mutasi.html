@@ -306,7 +306,7 @@ let pendingAction = null;  // { id, status, nama, jenis, id_siswa, kelas }
 /* ─── Init ──────────────────────────────────── */
 AUTH.init();
 document.addEventListener('DOMContentLoaded', async () => {
-  currentUser = AUTH.requireLogin(['admin']);
+  currentUser = AUTH.requireLogin('admin');
   if (!currentUser) return;
   document.getElementById('userAvatar').textContent = (currentUser.nama||'A')[0].toUpperCase();
   document.getElementById('userName').textContent   = currentUser.nama || 'Admin';
