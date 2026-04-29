@@ -640,6 +640,83 @@ const SHEETS = (() => {
    * @param {string} sheetName
    * @param {string} prefix - Misal 'S' → S001, S002, ...
    */
+  /* ══════════════════════════════════════════════════════
+     MUTASI SISWA — Sheet MUTASI (A:K)
+     A=id_mutasi, B=jenis(masuk/keluar), C=id_siswa,
+     D=nama_siswa, E=kelas, F=id_guru, G=nama_guru,
+     H=tanggal_pengajuan, I=status, J=catatan_admin,
+     K=tanggal_keputusan
+  ══════════════════════════════════════════════════════ */
+
+  /**
+   * Ambil semua pengajuan mutasi.
+   * @param {{ status, id_guru, kelas }} filter - opsional
+   */
+  async function getMutasi({ status = null, id_guru = null, kelas = null } = {}) {
+    const rows = await read('MUTASI!A:K');
+    let data   = rows.filter(r => r[0] && String(r[0]).startsWith('MT'));
+    if (status)   data = data.filter(r => (r[8]  || '') === status);
+    if (id_guru)  data = data.filter(r => (r[5]  || '') === id_guru);
+    if (kelas)    data = data.filter(r => (r[4]  || '') === kelas);
+    return data.map(r => ({
+      id:                r[0]  || '',
+      jenis:             r[1]  || '',   // 'masuk' | 'keluar'
+      id_siswa:          r[2]  || '',   // diisi untuk jenis keluar
+      nama_siswa:        r[3]  || '',
+      kelas:             r[4]  || '',
+      id_guru:           r[5]  || '',
+      nama_guru:         r[6]  || '',
+      tanggal_pengajuan: r[7]  || '',
+      status:            r[8]  || 'pending',  // pending | disetujui | ditolak
+      catatan_admin:     r[9]  || '',
+      tanggal_keputusan: r[10] || '',
+    }));
+  }
+
+  /**
+   * Tambah pengajuan mutasi baru (oleh guru kelas).
+   */
+  async function addMutasi(data) {
+    const id      = await _generateId('MUTASI', 'MT');
+    const tanggal = new Date().toLocaleDateString('id-ID');
+    const row     = [
+      id,
+      data.jenis        || '',
+      data.id_siswa     || '',
+      data.nama_siswa   || '',
+      data.kelas        || '',
+      data.id_guru      || '',
+      data.nama_guru    || '',
+      tanggal,
+      'pending',
+      '',   // catatan_admin
+      '',   // tanggal_keputusan
+    ];
+    await append('MUTASI', [row]);
+    return id;
+  }
+
+  /**
+   * Update status pengajuan mutasi (oleh admin).
+   * @param {string} id       - id_mutasi
+   * @param {string} status   - 'disetujui' | 'ditolak'
+   * @param {string} catatan  - catatan admin (opsional)
+   */
+  async function updateMutasiStatus(id, status, catatan = '') {
+    const rows = await read('MUTASI!A:K');
+    const idx  = rows.findIndex(r => r[0] === id);
+    if (idx < 0) throw new Error(`Pengajuan mutasi tidak ditemukan: ${id}`);
+    const tanggal = new Date().toLocaleDateString('id-ID');
+    // Pertahankan data baris, hanya ubah kolom I, J, K
+    const r       = rows[idx];
+    const row     = [
+      r[0]||'', r[1]||'', r[2]||'', r[3]||'', r[4]||'',
+      r[5]||'', r[6]||'', r[7]||'',
+      status, catatan, tanggal,
+    ];
+    await write(`MUTASI!A${idx + 1}:K${idx + 1}`, [row]);
+  }
+
   async function _generateId(sheetName, prefix) {
     // Gunakan timestamp + random agar tidak ada duplikasi saat import massal
     const ts  = Date.now().toString(36);
@@ -784,6 +861,11 @@ const SHEETS = (() => {
     saveSetoranTT,
     updateSetoranTT,
     deleteSetoranTT,
+
+    // Mutasi siswa
+    getMutasi,
+    addMutasi,
+    updateMutasiStatus,
 
     // Kalkulasi
     hitungNilaiAkhir,
