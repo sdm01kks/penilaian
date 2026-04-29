@@ -411,8 +411,8 @@ let pendingPayload = null;   // data yang menunggu konfirmasi modal
 /* ───────────────────────────────────────────── */
 /*  Init                                         */
 /* ───────────────────────────────────────────── */
-AUTH.init();
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('load', async () => {
+  AUTH.init();
   currentUser = AUTH.requireLogin('guru_kelas');
   if (!currentUser) return;
 

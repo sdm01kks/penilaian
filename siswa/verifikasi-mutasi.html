@@ -304,8 +304,8 @@ let semuaMutasi  = [];
 let pendingAction = null;  // { id, status, nama, jenis, id_siswa, kelas }
 
 /* ─── Init ──────────────────────────────────── */
-AUTH.init();
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('load', async () => {
+  AUTH.init();
   currentUser = AUTH.requireLogin('admin');
   if (!currentUser) return;
   document.getElementById('userAvatar').textContent = (currentUser.nama||'A')[0].toUpperCase();
