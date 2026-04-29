@@ -812,6 +812,14 @@ body {
     <span class="nav-icon">✅</span> Validasi & Status Kelas
   </a>
 
+  <div class="sidebar-section-label">Laporan &amp; Rapor</div>
+  <a class="nav-item" href="../rapor/preview.html">
+    <span class="nav-icon">🖨️</span> Preview &amp; Cetak Rapor
+  </a>
+  <a class="nav-item" href="../rapor/laporan-tt.html">
+    <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
+  </a>
+
   <div class="sidebar-section-label">Log</div>
   <a class="nav-item" href="#log-section" onclick="closeSidebarMobile()">
     <span class="nav-icon">🔄</span> Log Aktivitas
@@ -910,6 +918,16 @@ body {
       <div class="action-icon">🖨️</div>
       <div class="action-label">Validasi Rapor</div>
       <div class="action-desc">Review dan setujui rapor semua kelas sebelum dibagikan ke orang tua.</div>
+    </a>
+    <a class="action-card" href="../rapor/preview.html">
+      <div class="action-icon">📄</div>
+      <div class="action-label">Preview &amp; Cetak Rapor</div>
+      <div class="action-desc">Preview dan cetak rapor akademik semua kelas. Admin dapat mengakses seluruh kelas.</div>
+    </a>
+    <a class="action-card gold-act" href="../rapor/laporan-tt.html">
+      <div class="action-icon">📋</div>
+      <div class="action-label">Laporan Tahsin-Tahfizh</div>
+      <div class="action-desc">Pantau dan cetak laporan setoran Tahsin-Tahfizh semua kelas untuk semua guru.</div>
     </a>
   </div>
 
@@ -1232,6 +1250,10 @@ function renderKelasStatusDetail() {
         <a class="btn btn-sm ${allReady?'btn-primary':'btn-secondary'}"
            href="../rapor/preview.html?kelas=${namaKelas}">
           🖨️ ${allReady ? 'Cetak Rapor' : 'Preview Rapor'}
+        </a>
+        <a class="btn btn-sm btn-secondary"
+           href="../rapor/laporan-tt.html?kelas=${namaKelas}">
+          📋 Laporan TT
         </a>
         <a class="btn btn-sm btn-secondary"
            href="../penilaian/input-nilai.html?kelas=${namaKelas}">
