@@ -1,3 +1,66 @@
+## [2026-05-01] — v5.1 · Bugfix · Pengajuan Mutasi Siswa
+
+### 🐛 Perbaikan Bug
+
+---
+
+### BUG-01 · `siswa/mutasi.html` · Pengajuan mutasi selalu gagal dengan error "Cannot read properties of null (reading 'jenis')"
+
+**File:** `siswa/mutasi.html`
+
+**Gejala:** Setiap kali guru kelas menekan tombol "Ya, Kirim Pengajuan" di modal konfirmasi, muncul pesan *"⛔ Gagal mengirim pengajuan"* dengan teks error *"Cannot read properties of null (reading 'jenis')"*. Tidak ada log error di console browser. Data mutasi tidak tersimpan ke sheet.
+
+**Akar masalah:** Race condition antara `tutupModal()` dan penggunaan `pendingPayload` di dalam `kirimFinal()`.
+
+Urutan eksekusi yang bermasalah:
+
+```
+kirimFinal()
+  → tutupModal()          ← pendingPayload diset null DI SINI
+  → SHEETS.addMutasi(pendingPayload)  ← dipanggil dengan null!
+      → data.jenis        ← throws: Cannot read properties of null
+  → catch(e) → showAlert('error', ..., e.message)
+```
+
+Fungsi `tutupModal()` selalu menjalankan `pendingPayload = null` sebagai bagian dari reset modal. Karena `tutupModal()` dipanggil *sebelum* `addMutasi`, variabel `pendingPayload` sudah bernilai `null` saat data mutasi akan dikirim.
+
+**Perbaikan:** Menyimpan referensi `pendingPayload` ke variabel lokal `payload` di awal fungsi `kirimFinal()`, sebelum `tutupModal()` dipanggil. Seluruh operasi async (`addMutasi`, `showAlert`, `muatRiwayat`) menggunakan `payload` alih-alih `pendingPayload`. Baris `pendingPayload = null` yang redundan di blok `try` juga dihapus karena `tutupModal()` sudah menanganinya.
+
+**Perubahan kode (`siswa/mutasi.html`):**
+
+```diff
+ async function kirimFinal() {
+   if (!pendingPayload) return;
++  const payload = pendingPayload;   // simpan referensi lokal sebelum tutupModal() menghapus pendingPayload
+   document.getElementById('btnKirimFinal').disabled = true;
+   tutupModal();
+   showLoading('Mengirim pengajuan…');
+   try {
+-    await SHEETS.addMutasi(pendingPayload);
++    await SHEETS.addMutasi(payload);
+     showAlert('success', '✅ Pengajuan berhasil dikirim',
+-      `Pengajuan mutasi ${pendingPayload.jenis} untuk ${pendingPayload.nama_siswa} ...`);
++      `Pengajuan mutasi ${payload.jenis} untuk ${payload.nama_siswa} ...`);
+     ...
+     await muatRiwayat();
+-    pendingPayload = null;   // redundan — tutupModal() sudah menanganinya
+   } catch(e) { ...
+```
+
+---
+
+### 📋 Ringkasan File yang Diubah (v5.1)
+
+| File | Status | Keterangan |
+|------|--------|------------|
+| `siswa/mutasi.html` | **Diubah** | Bugfix `kirimFinal()`: simpan `pendingPayload` ke variabel lokal sebelum `tutupModal()` |
+
+---
+
+*Dibuat: 01 Mei 2026 (v5.1) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
 ## [2026-04-30] — v5 · Sesi 9 · Fitur Ujian Sekolah / Sumatif Akhir Jenjang (SAJ)
 
 ### ✨ Fitur Baru
