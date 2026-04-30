@@ -651,7 +651,7 @@ let selected      = new Set();   // key "surahNo-start-end"
 ════════════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
   AUTH.init();
-  currentUser = AUTH.requireLogin();
+  currentUser = AUTH.requireLogin('admin'); // FIX A-03 (v4c 2026-04-30)
   if (!currentUser) return;
 
   document.getElementById('userName').textContent   = currentUser.nama;
