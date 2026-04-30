@@ -2,7 +2,32 @@
 
 ---
 
-## [2026-04-30] — v4b · Sesi 6 · Optimasi Performa & CSS Print
+## [2026-04-30] — v4c · Sesi 7 · Pembatasan Role Halaman Setup
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### A-03 · `setup/*.html` · Halaman setup tidak ada pembatasan role — TINGGI
+
+**File:** `setup/ekskul-kktp.html`, `setup/kokurikuler.html`, `setup/mapel-tp.html`, `setup/tahsin-tahfizh.html`  
+**Dampak:** Tinggi — guru mapel bisa mengakses dan mengubah konfigurasi TP, KKTP, kokurikuler, dan pengaturan TT
+
+**Akar masalah:**  
+4 dari 8 halaman di `/setup` memanggil `AUTH.requireLogin()` tanpa parameter role.
+`requireLogin()` tanpa parameter hanya mengecek apakah user sudah login, tidak membatasi role.
+Guru mapel yang mengetahui URL halaman setup bisa langsung mengakses dan memodifikasi konfigurasi sekolah.
+
+**Halaman yang sudah benar (tidak diubah):**  
+`data-siswa.html`, `ekskul.html`, `kelola-guru.html`, `profil-sekolah.html` — sudah pakai `requireLogin('admin')`.
+
+**Perbaikan:**  
+Ganti `AUTH.requireLogin()` → `AUTH.requireLogin('admin')` di 4 halaman di atas.
+`AUTH.requireLogin('admin')` akan otomatis redirect ke dashboard yang sesuai jika role bukan admin.
+
+---
+
+
 
 ### 🐛 Bug yang Diperbaiki
 
