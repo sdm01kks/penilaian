@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview & Cetak SKL — SDM01KKS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+/* ── Screen base ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;scroll-behavior:smooth}
+:root{
+  --green-deep:#0f3226;--green-dark:#1e4d3b;--green-mid:#2d7055;
+  --green-light:#4aa07a;--green-pale:#e5f2ec;--green-ghost:#f0f7f3;
+  --gold:#c9882a;--cream:#faf8f4;--white:#ffffff;
+  --ink:#1c1b18;--ink-mid:#4a4840;--ink-muted:#7d7a72;
+  --red:#c0392b;--red-light:#fdecea;--yellow:#f39c12;--yellow-light:#fef9e7;
+  --blue:#2980b9;--blue-light:#ebf5fb;
+  --sidebar-w:260px;--topbar-h:64px;--radius:12px;
+  --shadow-card:0 4px 24px rgba(15,50,38,.08);--border:rgba(30,77,59,.10);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh;overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.brand-name{font-family:'Amiri',serif;font-size:14px;font-weight:700;color:#fff;line-height:1.1}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.55)}
+.topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.18);flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);flex:1}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-mid);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.25)}
+.user-name{font-size:12px;font-weight:600;color:#fff}
+.btn-logout{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.75);font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.12);color:#fff}
+.sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--topbar-h));background:var(--white);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:20px 0 40px;transition:transform .3s ease}
+.sidebar-section-label{font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-muted);padding:14px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--ink-mid);text-decoration:none;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--green-ghost);color:var(--green-dark);border-left-color:var(--green-light)}
+.nav-item.active{background:var(--green-pale);color:var(--green-dark);font-weight:600;border-left-color:var(--green-dark)}
+.nav-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.sidebar-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:28px 28px 60px;min-height:calc(100vh - var(--topbar-h))}
+.page-header{margin-bottom:20px}
+.page-header h1{font-family:'Amiri',serif;font-size:24px;color:var(--green-deep);font-weight:700}
+.page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-card);border:1px solid var(--border);padding:18px 20px;margin-bottom:16px}
+.sel{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s;min-width:140px}
+.sel:focus{border-color:var(--green-light)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;border:none;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--green-dark);color:#fff}
+.btn-primary:hover{background:var(--green-mid)}
+.btn-secondary{background:var(--white);color:var(--green-dark);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--green-ghost)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#b07420}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover{background:#1f6fa0}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* Mode tabs */
+.mode-tabs{display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid var(--border);width:fit-content;margin-bottom:16px}
+.mode-tab{padding:8px 20px;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--white);color:var(--ink-mid);border:none;font-family:inherit;transition:all .2s}
+.mode-tab.active{background:var(--green-dark);color:#fff}
+/* Config bar */
+.config-bar{display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:var(--yellow-light);border:1px solid rgba(243,156,18,.25);border-radius:10px;padding:10px 16px;margin-bottom:16px}
+.config-label{font-size:12px;font-weight:700;color:var(--ink-mid)}
+.bobot-input{width:52px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:center;font-family:inherit;outline:none}
+.bobot-input:focus{border-color:var(--gold)}
+/* Alert */
+.alert{border-radius:var(--radius);padding:14px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:16px}
+.alert.error{background:var(--red-light);border:1px solid rgba(192,57,43,.2)}
+.alert.success{background:var(--green-pale);border:1px solid rgba(30,77,59,.15)}
+.alert.warning{background:var(--yellow-light);border:1px solid rgba(243,156,18,.25)}
+.alert.info{background:var(--blue-light);border:1px solid rgba(41,128,185,.2)}
+.alert-icon{font-size:18px;flex-shrink:0}
+.alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.alert-text{font-size:12px;color:var(--ink-mid);line-height:1.6}
+/* Preview card */
+.preview-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-card);margin-bottom:20px;overflow:hidden;animation:fadeUp .4s ease both}
+.preview-header-bar{background:var(--green-dark);color:#fff;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.preview-header-bar .nama-siswa{font-size:14px;font-weight:700}
+.preview-header-bar .meta{font-size:11.5px;color:rgba(255,255,255,.7)}
+.preview-body{padding:18px}
+/* Screen preview table */
+.tbl-preview{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px}
+.tbl-preview th{background:var(--green-pale);color:var(--green-dark);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;border-bottom:2px solid var(--border);text-align:left}
+.tbl-preview th.center{text-align:center}
+.tbl-preview td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl-preview tr:last-child td{border-bottom:none}
+.tbl-preview tr:nth-child(even) td{background:var(--green-ghost)}
+.tbl-preview td.num{text-align:center;font-weight:600;color:var(--green-dark);font-size:13px}
+.tbl-preview td.num.final{color:var(--green-deep);font-size:14px;font-weight:700}
+.tbl-preview td.ismuba-cell{background:rgba(201,136,42,.05)!important;color:var(--gold)}
+.badge-ismuba{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:rgba(201,136,42,.15);color:var(--gold);margin-left:4px}
+.section-sep{padding:6px 12px;background:var(--cream);border-top:1px solid var(--border);border-bottom:1px solid var(--border);font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-muted);margin:0}
+/* Incomplete warning */
+.chip-warn{display:inline-block;font-size:9px;padding:1px 6px;border-radius:8px;background:var(--red-light);color:var(--red);font-weight:700;margin-left:4px}
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.loading-overlay.hidden{display:none}
+.spinner-lg{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green-light);border-radius:50%;animation:spin .8s linear infinite}
+.loading-overlay p{color:rgba(255,255,255,.8);font-size:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .sidebar-toggle{display:block}
+  .main{margin-left:0;padding:20px 14px 60px}
+  .brand-sub,.user-info{display:none}
+}
+
+/* ══════════════════════════════════════════════════════
+   PRINT STYLES — dokumen A4 portrait
+══════════════════════════════════════════════════════ */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .topbar,.sidebar,.sidebar-overlay,.loading-overlay,
+  .control-panel,.no-print{display:none!important}
+  .main{margin:0;padding:0}
+  body{background:#fff;font-size:11pt}
+
+  .skl-doc{
+    display:block!important;
+    width:190mm;
+    margin:0 auto;
+    padding:0;
+    font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .skl-doc .preview-card{
+    box-shadow:none;border:none;border-radius:0;margin:0;padding:0;
+    page-break-inside:avoid;
+    break-inside:avoid;
+  }
+  .skl-doc .preview-card + .preview-card{
+    page-break-before:always;
+    break-before:always;
+    margin-top:0;
+  }
+  /* Print document header */
+  .print-header{
+    display:flex!important;
+    align-items:center;
+    gap:14px;
+    border-bottom:3px solid #1e4d3b;
+    padding-bottom:10px;
+    margin-bottom:14px;
+  }
+  .print-logo{width:70px;height:70px;object-fit:contain;flex-shrink:0}
+  .print-school-info{flex:1;text-align:center}
+  .print-school-name{font-family:'Amiri',serif;font-size:16pt;font-weight:700;color:#1e4d3b;line-height:1.2}
+  .print-school-sub{font-size:9pt;color:#4a4840;margin-top:2px}
+  /* Print biodata */
+  .print-biodata{margin-bottom:12px}
+  .print-biodata table{width:100%;border-collapse:collapse;font-size:10pt}
+  .print-biodata td{padding:2px 8px 2px 0;vertical-align:top;line-height:1.6}
+  .print-biodata td:nth-child(2){width:10px;text-align:center;padding:2px 6px}
+  /* Print table */
+  .print-tbl{width:100%;border-collapse:collapse;font-size:10pt;margin-bottom:10px}
+  .print-tbl th{border:1px solid #1e4d3b;padding:5px 8px;background:#e5f2ec;color:#1e4d3b;font-size:9pt;text-align:center}
+  .print-tbl td{border:1px solid #ccc;padding:4px 8px;vertical-align:middle}
+  .print-tbl td.num{text-align:center;font-weight:600}
+  .print-tbl td.num.final{font-weight:700;background:#e5f2ec}
+  .print-tbl .ismuba-row td{background:rgba(201,136,42,.07)}
+  /* Print section label */
+  .print-section-label{font-size:10pt;font-weight:700;color:#1e4d3b;margin:10px 0 6px;padding:3px 8px;background:#e5f2ec;border-left:4px solid #1e4d3b}
+  /* Print signature */
+  .print-signature{display:flex!important;justify-content:flex-end;margin-top:20px;page-break-inside:avoid;break-inside:avoid}
+  .print-signature-box{text-align:center;width:200px}
+  .print-signature-line{border-bottom:1px solid #333;margin-top:50px;margin-bottom:4px}
+  .print-signature-name{font-weight:700;font-size:10pt}
+  .print-signature-nip{font-size:9pt;color:#4a4840}
+  /* Judul dokumen */
+  .print-doc-title{text-align:center;font-family:'Amiri',serif;font-size:16pt;font-weight:700;color:#1e4d3b;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+  .print-doc-subtitle{text-align:center;font-size:9pt;color:#4a4840;margin-bottom:14px}
+  /* Hide screen-only elements */
+  .preview-header-bar,.preview-body{display:block!important;padding:0;background:transparent!important;color:var(--ink)!important}
+  .preview-header-bar{border-radius:0;padding:0;margin-bottom:0}
+  /* Show print-only elements */
+  .print-only{display:block!important}
+  /* Bobot note */
+  .print-bobot-note{font-size:8.5pt;color:#7d7a72;font-style:italic;margin-top:6px}
+}
+
+/* Screen: hide print-only elements */
+.print-only{display:none}
+.print-header{display:none}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat data…</p>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Topbar -->
+<header class="topbar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <a class="topbar-logo" href="../index.html">
+    <div>
+      <div class="brand-name">SD Muhammadiyah 01 Kukusan</div>
+      <div class="brand-sub">Sistem Penilaian Kurikulum Merdeka</div>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Preview & Cetak SKL / Transkrip Nilai</div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-avatar" id="userAvatar">G</div>
+      <div class="user-info"><div class="user-name" id="userName">Memuat…</div></div>
+    </div>
+    <button class="btn-logout" onclick="AUTH.logout()">⎋ Keluar</button>
+  </div>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section-label">Ujian Sekolah / SAJ</div>
+  <a class="nav-item" href="input-rata-rapor.html"><span class="nav-icon">📊</span> Nilai Rata-Rata Rapor</a>
+  <a class="nav-item" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
+  <a class="nav-item active" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview & Cetak SKL</a>
+  <div class="sidebar-section-label">Kembali</div>
+  <a class="nav-item" id="navBack" href="../dashboard/guru-kelas.html"><span class="nav-icon">🏠</span> Dashboard</a>
+</nav>
+
+<!-- Main -->
+<main class="main">
+  <div class="page-header">
+    <h1>Preview & Cetak SKL / Transkrip Nilai</h1>
+    <p>Pratinjau dan cetak Surat Keterangan Lulus (SKL) beserta transkrip nilai untuk pendaftaran SMP.</p>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="card control-panel no-print">
+    <!-- Mode selector -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Mode Dokumen</div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setMode('skl')" id="tabSKL">🎓 SKL / Ijazah</button>
+        <button class="mode-tab" onclick="setMode('smp')" id="tabSMP">🏫 Pendaftaran SMP Negeri</button>
+      </div>
+      <div id="modeDesc" style="font-size:11.5px;color:var(--ink-muted);margin-top:6px;">
+        Mode SKL/Ijazah: nilai rata-rata rapor semester 9–12 + nilai ujian sekolah. ISMUBA pada lampiran terpisah.
+      </div>
+    </div>
+
+    <!-- Bobot -->
+    <div class="config-bar" id="bobotBar">
+      <span class="config-label">⚖️ Proporsi Nilai Ijazah:</span>
+      <span class="config-label">Rata-rata Rapor</span>
+      <input type="number" class="bobot-input" id="bobotRapor" value="60" min="0" max="100" oninput="updateBobotDesc()"> %
+      <span class="config-label">+</span>
+      <span class="config-label">Ujian Sekolah</span>
+      <input type="number" class="bobot-input" id="bobotUS" value="40" min="0" max="100" oninput="updateBobotDesc()"> %
+      <span id="bobotWarn" style="font-size:11px;color:var(--red);font-weight:600;display:none;">⚠️ Total harus 100%</span>
+      <span id="bobotFormula" style="font-size:11.5px;color:var(--ink-muted);flex:1;"></span>
+    </div>
+
+    <!-- Selector -->
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;">
+      <label style="font-size:11.5px;font-weight:700;color:var(--ink-mid);">Kelas</label>
+      <select class="sel" id="selKelas" onchange="gantiKelas()"><option value="">-- Pilih Kelas --</option></select>
+      <label style="font-size:11.5px;font-weight:700;color:var(--ink-mid);">Siswa</label>
+      <select class="sel" id="selSiswa" disabled><option value="">-- Semua Siswa --</option></select>
+      <button class="btn btn-primary" id="btnLoad" onclick="loadPreview()" disabled>🔍 Tampilkan</button>
+      <button class="btn btn-gold" id="btnPrint" onclick="window.print()" disabled>🖨️ Cetak / Simpan PDF</button>
+    </div>
+  </div>
+
+  <div id="alertArea"></div>
+
+  <!-- SKL Document(s) will render here -->
+  <div id="sklDocs" class="skl-doc"></div>
+
+  <div id="emptyState" style="text-align:center;padding:60px;color:var(--ink-muted);">
+    <div style="font-size:48px;margin-bottom:14px;">🎓</div>
+    <div style="font-size:14px;font-weight:600;">Pilih kelas lalu klik Tampilkan</div>
+    <div style="font-size:12px;margin-top:6px;">Dokumen SKL akan muncul di sini sebelum dicetak</div>
+  </div>
+</main>
+
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+/* ── State ─────────────────────────────────────────── */
+let currentUser = null;
+let allSiswa    = [];
+let allMapel    = [];
+let config      = {};
+let activeMode  = 'skl'; // 'skl' | 'smp'
+let activeKelas = null;
+let profilSekolah = {};
+
+/* ── Helpers ──────────────────────────────────────── */
+const ISMUBA_KEYWORDS = ['arab', 'muhammadiyah', 'ismuba'];
+function isISMUBA(m) { const n=(m.nama||'').toLowerCase(); return ISMUBA_KEYWORDS.some(k=>n.includes(k)); }
+
+// Rata-rata dari array (hanya nilai yang ada/non-null)
+function rataFilter(vals) {
+  const v = vals.filter(x => x !== null && x !== undefined);
+  if (!v.length) return null;
+  return v.reduce((a,b)=>a+b,0) / v.length;
+}
+
+// Ambil nilai rata-rata rapor per mapel dari data NILAI_RAPOR_RERATA
+// mode 'skl' → sem 9-12  |  mode 'smp' → sem 7-11
+function hitungRataRapor(nilaiRaporRows, id_mapel, mode) {
+  const semList = mode === 'skl' ? ['9','10','11','12'] : ['7','8','9','10','11'];
+  const vals = semList.map(s => {
+    const r = nilaiRaporRows.find(x => x.id_mapel === id_mapel && String(x.semester) === s);
+    return r && r.nilai !== null ? r.nilai : null;
+  });
+  return rataFilter(vals);
+}
+
+// Hitung nilai US dari nilai_tertulis + nilai_praktik dengan bobot
+function hitungNilaiUS(nt, np, bt, bp) {
+  const hasT = nt !== null && nt !== undefined;
+  const hasP = np !== null && np !== undefined;
+  if (!hasT && !hasP) return null;
+  if (!hasT) return np;
+  if (!hasP) return nt;
+  return (nt * bt / 100) + (np * bp / 100);
+}
+
+// Hitung nilai akhir ijazah
+function hitungNilaiIjazah(rataRapor, nilaiUS, br, bu) {
+  const hasR = rataRapor !== null && rataRapor !== undefined;
+  const hasU = nilaiUS   !== null && nilaiUS   !== undefined;
+  if (!hasR && !hasU) return null;
+  if (!hasR) return nilaiUS;
+  if (!hasU) return rataRapor;
+  return (rataRapor * br / 100) + (nilaiUS * bu / 100);
+}
+
+function fmt(v, dec=2) { if(v===null||v===undefined) return '—'; return parseFloat(v).toFixed(dec); }
+function round2(v) { if(v===null||v===undefined) return null; return Math.round(v*100)/100; }
+
+/* ── Mode & bobot ─────────────────────────────────── */
+function setMode(m) {
+  activeMode = m;
+  document.getElementById('tabSKL').classList.toggle('active', m==='skl');
+  document.getElementById('tabSMP').classList.toggle('active', m==='smp');
+  document.getElementById('bobotBar').style.display = m==='skl' ? 'flex' : 'none';
+
+  const desc = m === 'skl'
+    ? 'Mode SKL/Ijazah: nilai rata-rata rapor semester 9–12 + nilai ujian sekolah. ISMUBA pada lampiran terpisah.'
+    : 'Mode SMP Negeri: nilai rata-rata rapor semester 7–11 saja. ISMUBA tetap disertakan dalam tabel.';
+  document.getElementById('modeDesc').textContent = desc;
+  updateBobotDesc();
+}
+
+function updateBobotDesc() {
+  const br = parseInt(document.getElementById('bobotRapor').value)||0;
+  const bu = parseInt(document.getElementById('bobotUS').value)||0;
+  const ok = Math.abs(br+bu-100)<0.01;
+  document.getElementById('bobotWarn').style.display = ok?'none':'inline';
+  document.getElementById('bobotFormula').textContent =
+    ok ? `Nilai Ijazah = (Rata-rata Rapor × ${br}%) + (Nilai US × ${bu}%)` : '';
+}
+
+/* ── Init ─────────────────────────────────────────── */
+window.addEventListener('load', async () => {
+  AUTH.init();
+  currentUser = AUTH.requireLogin(['admin','guru_kelas','guru_mapel']);
+  if (!currentUser) return;
+
+  document.getElementById('userName').textContent   = currentUser.nama;
+  document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
+
+  const backLink = document.getElementById('navBack');
+  if (currentUser.role === 'admin') backLink.href = '../dashboard/admin.html';
+  else if (currentUser.role === 'guru_mapel') backLink.href = '../dashboard/guru-mapel.html';
+  else backLink.href = '../dashboard/guru-kelas.html';
+
+  updateBobotDesc();
+  showLoading('Memuat data…');
+  try {
+    [config, allMapel] = await Promise.all([SHEETS.getConfig(), SHEETS.getMapel()]);
+
+    // Coba load profil sekolah untuk header cetak
+    try {
+      const profRows = await SHEETS.read('PROFIL!A:B');
+      profRows.forEach(r => { if(r[0]) profilSekolah[r[0]] = r[1]||''; });
+    } catch(_) {}
+
+    const allKelas = await SHEETS.getKelas();
+    const kelas6   = allKelas.filter(k => String(k.tingkat)==='6' || String(k.nama).match(/^6/));
+    const selKelas = document.getElementById('selKelas');
+
+    let kelasList = [];
+    if (currentUser.role === 'admin') {
+      kelasList = kelas6;
+    } else {
+      const myKelas = currentUser.kelasList || (currentUser.kelas?currentUser.kelas.split(',').map(s=>s.trim()):[]);
+      kelasList = kelas6.filter(k => myKelas.some(mk => mk.trim()===k.nama.trim()||mk.trim()===k.id));
+    }
+
+    kelasList.forEach(k => {
+      const o = document.createElement('option');
+      o.value=k.nama; o.textContent=k.nama; selKelas.appendChild(o);
+    });
+
+    if (kelasList.length===1) { selKelas.value=kelasList[0].nama; await gantiKelas(); }
+    hideLoading();
+  } catch(e) { showAlert('error','⛔ Gagal memuat',e.message); hideLoading(); }
+});
+
+async function gantiKelas() {
+  activeKelas = document.getElementById('selKelas').value;
+  if (!activeKelas) return;
+  document.getElementById('selSiswa').disabled = true;
+  document.getElementById('selSiswa').innerHTML = '<option value="">-- Semua Siswa --</option>';
+  document.getElementById('btnLoad').disabled   = true;
+  document.getElementById('sklDocs').innerHTML  = '';
+  document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('btnPrint').disabled  = true;
+
+  showLoading('Memuat daftar siswa…');
+  try {
+    allSiswa = await SHEETS.getSiswa(activeKelas);
+    const sel = document.getElementById('selSiswa');
+    allSiswa.sort((a,b)=>a.nama.localeCompare(b.nama)).forEach(s => {
+      const o=document.createElement('option'); o.value=s.id; o.textContent=s.nama; sel.appendChild(o);
+    });
+    sel.disabled=false;
+    document.getElementById('btnLoad').disabled=false;
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+}
+
+/* ── Load & Render Preview ─────────────────────────── */
+async function loadPreview() {
+  if (!activeKelas) return;
+  const br = parseInt(document.getElementById('bobotRapor').value)||0;
+  const bu = parseInt(document.getElementById('bobotUS').value)||0;
+  if (activeMode==='skl' && Math.abs(br+bu-100)>0.01) {
+    showAlert('warning','⚠️ Bobot tidak valid','Total bobot rata-rata rapor + ujian sekolah harus 100%.');
+    return;
+  }
+
+  const selectedSiswaId = document.getElementById('selSiswa').value;
+  const siswaTampil = selectedSiswaId
+    ? allSiswa.filter(s => s.id === selectedSiswaId)
+    : allSiswa.sort((a,b)=>a.nama.localeCompare(b.nama));
+
+  if (!siswaTampil.length) { showAlert('warning','⚠️','Tidak ada siswa ditemukan.'); return; }
+
+  showLoading('Memuat nilai semua siswa…');
+  try {
+    // Ambil semua nilai rata-rata rapor & nilai US untuk kelas ini sekaligus
+    const [allRapor, allUS] = await Promise.all([
+      SHEETS.getNilaiRaporRerata({ kelas: activeKelas }),
+      activeMode==='skl' ? SHEETS.getNilaiUS({ kelas: activeKelas }) : Promise.resolve([]),
+    ]);
+
+    document.getElementById('sklDocs').innerHTML = '';
+    document.getElementById('emptyState').style.display = 'none';
+
+    siswaTampil.forEach(siswa => {
+      const raporSiswa = allRapor.filter(r => r.id_siswa === siswa.id);
+      const usSiswa    = allUS.filter(r => r.id_siswa === siswa.id);
+      document.getElementById('sklDocs').appendChild(
+        buildSKLCard(siswa, raporSiswa, usSiswa, br, bu)
+      );
+    });
+
+    document.getElementById('btnPrint').disabled = false;
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+}
+
+function buildSKLCard(siswa, raporRows, usRows, br, bu) {
+  const tp     = config['tahun_pelajaran']  || '—';
+  const tglLulus = config['tgl_kelulusan'] || '—';
+
+  // Pisahkan mapel: regular vs ISMUBA
+  const mapelRegular = allMapel.filter(m => !isISMUBA(m));
+  const mapelISMUBA  = allMapel.filter(m =>  isISMUBA(m));
+
+  // Hitung nilai per mapel
+  const buildRows = (mapelList) => mapelList.map(m => {
+    const rataRapor = round2(hitungRataRapor(raporRows, m.id, activeMode));
+    const usRow     = usRows.find(r => r.id_mapel === m.id);
+    const nt = usRow?.nilai_tertulis ?? null;
+    const np = usRow?.nilai_praktik  ?? null;
+    const nilaiUS  = activeMode==='skl' ? round2(hitungNilaiUS(nt, np, 60, 40)) : null;
+
+    // Untuk mode SMP: tidak ada komponen US, nilai akhir = rataRapor
+    let nilaiAkhir = null;
+    if (activeMode === 'skl') {
+      nilaiAkhir = round2(hitungNilaiIjazah(rataRapor, nilaiUS, br, bu));
+    } else {
+      nilaiAkhir = rataRapor;
+    }
+
+    const incomplete = rataRapor === null || (activeMode==='skl' && nilaiUS === null);
+    return { mapel: m, rataRapor, nilaiUS, nt, np, nilaiAkhir, incomplete };
+  });
+
+  const rowsRegular = buildRows(mapelRegular);
+  const rowsISMUBA  = buildRows(mapelISMUBA);
+
+  // ── Screen card ─────────────────────────────────────
+  const card = document.createElement('div');
+  card.className = 'preview-card';
+  card.dataset.siswaId = siswa.id;
+
+  // Header bar (screen)
+  const headerBar = document.createElement('div');
+  headerBar.className = 'preview-header-bar no-print';
+  headerBar.innerHTML = `
+    <div>
+      <div class="nama-siswa">👤 ${siswa.nama}</div>
+      <div class="meta">NISN: ${siswa.nisn||'—'} · Kelas ${activeKelas} · TP ${tp}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="font-size:11px;color:rgba(255,255,255,.6);">
+        ${activeMode==='skl'?'SKL / Ijazah':'Pendaftaran SMP Negeri'}
+      </span>
+    </div>`;
+  card.appendChild(headerBar);
+
+  // Body
+  const body = document.createElement('div');
+  body.className = 'preview-body';
+
+  // ── PRINT-ONLY header ────────────────────────────────
+  const printHeader = `
+    <div class="print-only print-header">
+      <div class="print-school-info">
+        <div class="print-school-name">SD Muhammadiyah 01 Kukusan</div>
+        <div class="print-school-sub">Jl. Kukusan Raya, Kukusan, Beji, Kota Depok · NPSN: ${profilSekolah['npsn']||'—'}</div>
+      </div>
+    </div>
+    <div class="print-only print-doc-title">
+      ${activeMode==='skl'
+        ? 'Transkrip Nilai / Daftar Nilai Kelulusan'
+        : 'Daftar Nilai Rata-Rata Rapor'}
+    </div>
+    <div class="print-only print-doc-subtitle">
+      ${activeMode==='skl'
+        ? `Semester 9 s.d. 12 + Ujian Sekolah · Tahun Pelajaran ${tp}`
+        : `Semester 7 s.d. 11 · Tahun Pelajaran ${tp}`}
+    </div>
+    <div class="print-only print-biodata">
+      <table>
+        <tr>
+          <td style="width:120px;">Nama Siswa</td><td>:</td>
+          <td><strong>${siswa.nama}</strong></td>
+          <td style="width:100px;">NISN</td><td>:</td>
+          <td><strong>${siswa.nisn||'—'}</strong></td>
+        </tr>
+        <tr>
+          <td>Kelas</td><td>:</td><td>${activeKelas}</td>
+          <td>Tahun Pelajaran</td><td>:</td><td>${tp}</td>
+        </tr>
+      </table>
+    </div>`;
+
+  // ── Incomplete warning (screen) ─────────────────────
+  const hasIncomplete = [...rowsRegular,...rowsISMUBA].some(r=>r.incomplete);
+  const warnHtml = hasIncomplete ? `
+    <div class="alert warning no-print" style="margin-bottom:12px;">
+      <div class="alert-icon">⚠️</div>
+      <div><div class="alert-title">Data belum lengkap</div>
+      <div class="alert-text">Beberapa mata pelajaran belum memiliki nilai rata-rata rapor${activeMode==='skl'?' atau nilai ujian sekolah':''}. Lengkapi di halaman input terlebih dahulu.</div></div>
+    </div>` : '';
+
+  // ── Screen table (regular mapel) ────────────────────
+  const screenTable = (rows, title) => {
+    const headerUS = activeMode==='skl'
+      ? '<th class="center">Nilai US</th><th class="center">Nilai Akhir</th>'
+      : '<th class="center">Nilai Akhir</th>';
+    let html = `
+      <div class="section-sep">${title}</div>
+      <table class="tbl-preview no-print">
+        <thead><tr>
+          <th>Mata Pelajaran</th>
+          <th class="center">Rata-rata Rapor${activeMode==='skl'?' (Sem 9–12)':' (Sem 7–11)'}</th>
+          ${headerUS}
+        </tr></thead>
+        <tbody>`;
+    rows.forEach((r,i) => {
+      const ic = r.incomplete ? '<span class="chip-warn">!belum lengkap</span>' : '';
+      const usCol = activeMode==='skl'
+        ? `<td class="num">${r.nilaiUS!==null?fmt(r.nilaiUS):'—'}</td>`
+        : '';
+      html += `
+        <tr>
+          <td>${r.mapel.nama}${ic}</td>
+          <td class="num">${r.rataRapor!==null?fmt(r.rataRapor):'—'}</td>
+          ${usCol}
+          <td class="num final">${r.nilaiAkhir!==null?fmt(r.nilaiAkhir):'—'}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    return html;
+  };
+
+  // ── Print table (regular mapel) ─────────────────────
+  const printTable = (rows, title, noUS=false) => {
+    const showUS = activeMode==='skl' && !noUS;
+    let html = `
+      <div class="print-only print-section-label">${title}</div>
+      <table class="print-only print-tbl">
+        <thead><tr>
+          <th style="width:40px;text-align:center;">No</th>
+          <th>Mata Pelajaran</th>
+          <th>Rata-rata Rapor${activeMode==='skl'?' (Sem 9–12)':' (Sem 7–11)'}</th>
+          ${showUS?'<th>Nilai US</th><th>Nilai Akhir</th>':'<th>Nilai Akhir</th>'}
+        </tr></thead>
+        <tbody>`;
+    rows.forEach((r, i) => {
+      html += `
+        <tr>
+          <td class="num">${i+1}</td>
+          <td>${r.mapel.nama}</td>
+          <td class="num">${r.rataRapor!==null?fmt(r.rataRapor):'—'}</td>
+          ${showUS?`<td class="num">${r.nilaiUS!==null?fmt(r.nilaiUS):'—'}</td>`:''}
+          <td class="num final">${r.nilaiAkhir!==null?fmt(r.nilaiAkhir):'—'}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    if (showUS) {
+      html += `<p class="print-only print-bobot-note">Nilai Akhir = Rata-rata Rapor × ${br}% + Nilai US × ${bu}%</p>`;
+    }
+    return html;
+  };
+
+  // ── Signature block (print only) ────────────────────
+  const printSign = `
+    <div class="print-only print-signature">
+      <div class="print-signature-box">
+        <div>Depok, ${tglLulus||'____________'}</div>
+        <div>Kepala Sekolah,</div>
+        <div class="print-signature-line"></div>
+        <div class="print-signature-name">${profilSekolah['kepala_sekolah']||'_____________________'}</div>
+        <div class="print-signature-nip">NIP. ${profilSekolah['nip_kepsek']||'—'}</div>
+      </div>
+    </div>`;
+
+  // ── ISMUBA section label ─────────────────────────────
+  // Untuk SKL: ISMUBA tampil terpisah (keterangan lampiran berbeda)
+  const ismubaNoteScreen = activeMode==='skl'
+    ? '<div class="no-print" style="margin-top:6px;font-size:11px;color:var(--gold);font-style:italic;">★ Nilai ISMUBA dicetak pada lampiran ijazah tersendiri.</div>'
+    : '';
+  const ismubaNoteprint  = activeMode==='skl'
+    ? '<p class="print-only print-bobot-note">★ Nilai ISMUBA dicetak pada lampiran ijazah tersendiri.</p>'
+    : '';
+
+  body.innerHTML = printHeader + warnHtml +
+    screenTable(rowsRegular, 'Mata Pelajaran Umum') +
+    printTable(rowsRegular, 'Mata Pelajaran Umum') +
+    (rowsISMUBA.length ? (
+      screenTable(rowsISMUBA, 'Muatan Yayasan (ISMUBA)') +
+      printTable(rowsISMUBA, 'Muatan Yayasan (ISMUBA)', activeMode==='skl') +
+      ismubaNoteScreen + ismubaNoteprint
+    ) : '') +
+    printSign;
+
+  card.appendChild(body);
+  return card;
+}
+
+/* ── UI helpers ─────────────────────────────────────── */
+function showAlert(type, title, text) {
+  document.getElementById('alertArea').innerHTML = `
+    <div class="alert ${type}">
+      <div class="alert-icon">${type==='success'?'✅':type==='warning'?'⚠️':'⛔'}</div>
+      <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
+    </div>`;
+  setTimeout(()=>{const a=document.getElementById('alertArea');if(a)a.innerHTML='';},7000);
+}
+function showLoading(msg){document.getElementById('loadingText').textContent=msg||'Memuat…';document.getElementById('loadingOverlay').classList.remove('hidden')}
+function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden')}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open')}
+</script>
+</body>
+</html>

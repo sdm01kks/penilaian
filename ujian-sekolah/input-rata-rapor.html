@@ -1,1 +1,657 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Input Nilai Rata-Rata Rapor — SDM01KKS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;scroll-behavior:smooth}
+:root{
+  --green-deep:#0f3226;--green-dark:#1e4d3b;--green-mid:#2d7055;
+  --green-light:#4aa07a;--green-pale:#e5f2ec;--green-ghost:#f0f7f3;
+  --gold:#c9882a;--gold-light:#f5c97a;--cream:#faf8f4;--white:#ffffff;
+  --ink:#1c1b18;--ink-mid:#4a4840;--ink-muted:#7d7a72;
+  --red:#c0392b;--red-light:#fdecea;--yellow:#f39c12;--yellow-light:#fef9e7;
+  --blue:#2980b9;--blue-light:#ebf5fb;
+  --sidebar-w:260px;--topbar-h:64px;--radius:12px;
+  --shadow:0 2px 16px rgba(15,50,38,.10);--shadow-card:0 4px 24px rgba(15,50,38,.08);
+  --border:rgba(30,77,59,.10);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh;overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.brand-name{font-family:'Amiri',serif;font-size:14px;font-weight:700;color:#fff;line-height:1.1}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.55)}
+.topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.18);flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);flex:1}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-mid);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.25)}
+.user-name{font-size:12px;font-weight:600;color:#fff}
+.btn-logout{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.75);font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.12);color:#fff}
+.sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--topbar-h));background:var(--white);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:20px 0 40px;transition:transform .3s ease}
+.sidebar-section-label{font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-muted);padding:14px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--ink-mid);text-decoration:none;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--green-ghost);color:var(--green-dark);border-left-color:var(--green-light)}
+.nav-item.active{background:var(--green-pale);color:var(--green-dark);font-weight:600;border-left-color:var(--green-dark)}
+.nav-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.sidebar-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:28px 28px 60px;min-height:calc(100vh - var(--topbar-h))}
+.page-header{margin-bottom:20px}
+.page-header h1{font-family:'Amiri',serif;font-size:24px;color:var(--green-deep);font-weight:700}
+.page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
+.alert{border-radius:var(--radius);padding:14px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:16px}
+.alert.warning{background:var(--yellow-light);border:1px solid rgba(243,156,18,.25)}
+.alert.error{background:var(--red-light);border:1px solid rgba(192,57,43,.2)}
+.alert.success{background:var(--green-pale);border:1px solid rgba(30,77,59,.15)}
+.alert.info{background:var(--blue-light);border:1px solid rgba(41,128,185,.2)}
+.alert-icon{font-size:18px;flex-shrink:0}
+.alert-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.alert-text{font-size:12px;color:var(--ink-mid);line-height:1.6}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-card);border:1px solid var(--border);padding:18px 20px;margin-bottom:20px}
+.selector-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.selector-bar label{font-size:11.5px;font-weight:700;color:var(--ink-mid);white-space:nowrap}
+.sel{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s;min-width:150px}
+.sel:focus{border-color:var(--green-light)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;border:none;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--green-dark);color:#fff}
+.btn-primary:hover{background:var(--green-mid)}
+.btn-secondary{background:var(--white);color:var(--green-dark);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--green-ghost)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#b07420}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover{background:#1f6fa0}
+.btn-sm{padding:5px 10px;font-size:11.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.section-label{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+/* Semester tabs */
+.sem-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.sem-tab{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:var(--white);color:var(--ink-mid);transition:all .2s}
+.sem-tab:hover{border-color:var(--green-light);color:var(--green-dark)}
+.sem-tab.active{background:var(--green-dark);color:#fff;border-color:var(--green-dark)}
+.sem-tab.has-data{border-color:var(--green-light)}
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{background:var(--green-pale);color:var(--green-dark);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl th.center{text-align:center}
+.tbl td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--ink-mid);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:nth-child(even) td{background:var(--green-ghost)}
+.tbl tr:hover td{background:var(--green-pale)}
+.tbl td.ismuba{background:rgba(201,136,42,.06)!important}
+.mapel-tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;background:var(--blue-light);color:var(--blue)}
+.mapel-tag.ismuba{background:rgba(201,136,42,.15);color:var(--gold)}
+/* Nilai input cell */
+.nval{width:64px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;text-align:center;outline:none;transition:border-color .2s;background:var(--white)}
+.nval:focus{border-color:var(--green-light);box-shadow:0 0 0 2px rgba(74,160,122,.15)}
+.nval.changed{border-color:var(--gold);background:rgba(201,136,42,.05)}
+.nval.empty{background:var(--green-ghost);color:var(--ink-muted)}
+/* Info bar */
+.info-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.info-pill{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--green-pale);color:var(--green-dark)}
+.info-pill.gold{background:rgba(201,136,42,.12);color:var(--gold)}
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.loading-overlay.hidden{display:none}
+.spinner-lg{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green-light);border-radius:50%;animation:spin .8s linear infinite}
+.loading-overlay p{color:rgba(255,255,255,.8);font-size:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.2)}
+  .sidebar-overlay.open{display:block}
+  .sidebar-toggle{display:block}
+  .main{margin-left:0;padding:20px 14px 60px}
+  .brand-sub,.user-info{display:none}
+}
+</style>
+</head>
+<body>
 
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat data…</p>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- Topbar -->
+<header class="topbar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <a class="topbar-logo" href="../index.html">
+    <div>
+      <div class="brand-name">SD Muhammadiyah 01 Kukusan</div>
+      <div class="brand-sub">Sistem Penilaian Kurikulum Merdeka</div>
+    </div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Nilai Rata-Rata Rapor — Ujian Sekolah</div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-avatar" id="userAvatar">G</div>
+      <div class="user-info"><div class="user-name" id="userName">Memuat…</div></div>
+    </div>
+    <button class="btn-logout" onclick="AUTH.logout()">⎋ Keluar</button>
+  </div>
+</header>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section-label">Ujian Sekolah / SAJ</div>
+  <a class="nav-item active" href="input-rata-rapor.html">
+    <span class="nav-icon">📊</span> Nilai Rata-Rata Rapor
+  </a>
+  <a class="nav-item" href="input-nilai-us.html">
+    <span class="nav-icon">✏️</span> Nilai Ujian Sekolah
+  </a>
+  <a class="nav-item" href="preview-skl.html">
+    <span class="nav-icon">🎓</span> Preview & Cetak SKL
+  </a>
+  <div class="sidebar-section-label">Kembali</div>
+  <a class="nav-item" id="navBack" href="../dashboard/guru-kelas.html">
+    <span class="nav-icon">🏠</span> Dashboard
+  </a>
+</nav>
+
+<!-- Main -->
+<main class="main">
+  <div class="page-header">
+    <h1>Nilai Rata-Rata Rapor</h1>
+    <p>Input nilai rata-rata per mata pelajaran untuk setiap semester (7–12). Kelas 4 (semester 7–8) bersifat opsional. Nilai ini digunakan sebagai komponen nilai ijazah/SKL.</p>
+  </div>
+
+  <div id="alertArea"></div>
+
+  <!-- Selector bar -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="selector-bar">
+      <label>Kelas</label>
+      <select class="sel" id="selKelas" onchange="gantiKelas()">
+        <option value="">-- Pilih Kelas --</option>
+      </select>
+      <label>Siswa</label>
+      <select class="sel" id="selSiswa" onchange="pilihSiswa()" disabled>
+        <option value="">-- Pilih Siswa --</option>
+      </select>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-gold btn-sm" id="btnTarik" onclick="tarikNilaiSem12()" disabled title="Ambil otomatis dari nilai semester aktif (sem 12/genap kelas 6)">
+          ⬇️ Tarik Nilai Sem 12
+        </button>
+        <button class="btn btn-blue btn-sm" id="btnExport" onclick="exportCSV()" disabled>📥 Ekspor CSV</button>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;" id="labelImport">
+          📤 Impor CSV
+          <input type="file" id="fileImport" accept=".csv" style="display:none" onchange="importCSV(event)">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Semester toggle note -->
+  <div class="card" style="padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+    <div style="font-size:12px;color:var(--ink-muted);flex:1;">
+      <strong style="color:var(--ink);">💡 Keterangan Semester:</strong>
+      Sem 7–8 = Kelas 4 (opsional) · Sem 9–10 = Kelas 5 · Sem 11–12 = Kelas 6
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span style="font-size:11px;font-weight:700;color:var(--gold);">◆ ISMUBA</span>
+      <span style="font-size:11px;color:var(--ink-muted);">= Bahasa Arab & Kemuhammadiyahan (lampiran ijazah tersendiri)</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div id="tableArea" style="display:none;animation:fadeUp .4s ease both;">
+    <div class="info-bar" id="infoBar"></div>
+    <div class="section-label">Nilai Per Mata Pelajaran</div>
+
+    <!-- Save bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:12px;color:var(--ink-muted);" id="statusSave">Belum ada perubahan.</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="resetChanges()">↩️ Reset</button>
+        <button class="btn btn-primary" id="btnSave" onclick="simpanSemua()" disabled>💾 Simpan Semua</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="tbl" id="tblNilai">
+        <thead>
+          <tr id="theadRow">
+            <th style="min-width:200px;">Mata Pelajaran</th>
+            <th class="center" style="color:var(--ink-muted);font-size:10px;">Sem 7<br><span style="font-weight:400;">(Kls 4 opsional)</span></th>
+            <th class="center" style="color:var(--ink-muted);font-size:10px;">Sem 8<br><span style="font-weight:400;">(Kls 4 opsional)</span></th>
+            <th class="center">Sem 9</th>
+            <th class="center">Sem 10</th>
+            <th class="center">Sem 11</th>
+            <th class="center">Sem 12</th>
+            <th class="center" style="background:var(--green-pale);">Rata-rata<br>(Sem 9–12)</th>
+            <th class="center" style="background:var(--blue-light);color:var(--blue);">Rata-rata<br>(Sem 7–11)</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyNilai"></tbody>
+      </table>
+    </div>
+    <p style="font-size:11px;color:var(--ink-muted);margin-top:8px;">* Rata-rata hanya menghitung semester yang terisi. Kolom yang kosong tidak dihitung.</p>
+  </div>
+
+  <div id="emptyState" style="text-align:center;padding:48px;color:var(--ink-muted);">
+    <div style="font-size:44px;margin-bottom:12px;">📊</div>
+    <div style="font-size:14px;font-weight:600;">Pilih kelas dan siswa</div>
+    <div style="font-size:12px;margin-top:6px;">untuk menampilkan tabel input nilai rata-rata rapor</div>
+  </div>
+</main>
+
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+let currentUser = null;
+let allSiswa    = [];
+let allMapel    = [];
+let config      = {};
+let nilaiData   = {};   // key: id_mapel-semester → nilai
+let dirty       = {};   // track changed cells
+let activeSiswa = null;
+let activeKelas = null;
+
+// Semester list
+const SEMESTERS = ['7','8','9','10','11','12'];
+const SEM_LABEL = { '7':'Kls 4 Ganjil','8':'Kls 4 Genap','9':'Kls 5 Ganjil','10':'Kls 5 Genap','11':'Kls 6 Ganjil','12':'Kls 6 Genap' };
+
+function isISMUBA(mapel) {
+  const nm = (mapel.nama || '').toLowerCase();
+  return nm.includes('arab') || nm.includes('muhammadiyah') || nm.includes('ismuba');
+}
+
+window.addEventListener('load', async () => {
+  AUTH.init();
+  currentUser = AUTH.requireLogin(['admin','guru_kelas','guru_mapel']);
+  if (!currentUser) return;
+
+  document.getElementById('userName').textContent  = currentUser.nama;
+  document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
+
+  // Set back link
+  const backLink = document.getElementById('navBack');
+  if (currentUser.role === 'admin') backLink.href = '../dashboard/admin.html';
+  else if (currentUser.role === 'guru_mapel') backLink.href = '../dashboard/guru-mapel.html';
+  else backLink.href = '../dashboard/guru-kelas.html';
+
+  showLoading('Memuat data…');
+  try {
+    [config, allMapel] = await Promise.all([SHEETS.getConfig(), SHEETS.getMapel()]);
+
+    // Populate kelas dropdown — only kelas 6 (unless admin shows all)
+    const allKelas = await SHEETS.getKelas();
+    const kelas6 = allKelas.filter(k => String(k.tingkat) === '6' || String(k.nama).match(/^6/));
+    const selKelas = document.getElementById('selKelas');
+
+    let kelasList = [];
+    if (currentUser.role === 'admin') {
+      kelasList = kelas6;
+    } else {
+      const myKelas = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
+      kelasList = kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
+    }
+
+    kelasList.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k.nama;
+      opt.textContent = k.nama;
+      selKelas.appendChild(opt);
+    });
+
+    // Auto-select if only one kelas or if user has specific kelas
+    if (kelasList.length === 1) {
+      selKelas.value = kelasList[0].nama;
+      await gantiKelas();
+    }
+
+    hideLoading();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal memuat data', e.message);
+    hideLoading();
+  }
+});
+
+async function gantiKelas() {
+  activeKelas = document.getElementById('selKelas').value;
+  if (!activeKelas) return;
+  document.getElementById('selSiswa').disabled = true;
+  document.getElementById('selSiswa').innerHTML = '<option value="">-- Memuat siswa… --</option>';
+  document.getElementById('tableArea').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'block';
+
+  showLoading('Memuat data siswa…');
+  try {
+    allSiswa = await SHEETS.getSiswa(activeKelas);
+    const selSiswa = document.getElementById('selSiswa');
+    selSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+    allSiswa.sort((a,b) => a.nama.localeCompare(b.nama)).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.nama;
+      selSiswa.appendChild(opt);
+    });
+    selSiswa.disabled = false;
+    hideLoading();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal memuat siswa', e.message);
+    hideLoading();
+  }
+}
+
+async function pilihSiswa() {
+  const sid = document.getElementById('selSiswa').value;
+  if (!sid) {
+    document.getElementById('tableArea').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    return;
+  }
+  activeSiswa = allSiswa.find(s => s.id === sid);
+  document.getElementById('emptyState').style.display = 'none';
+
+  showLoading('Memuat nilai…');
+  try {
+    const rows = await SHEETS.getNilaiRaporRerata({ id_siswa: sid });
+    nilaiData = {};
+    rows.forEach(r => { nilaiData[`${r.id_mapel}-${r.semester}`] = r.nilai; });
+    dirty = {};
+
+    renderTable();
+    document.getElementById('tableArea').style.display = 'block';
+    document.getElementById('btnTarik').disabled  = false;
+    document.getElementById('btnExport').disabled = false;
+    document.getElementById('statusSave').textContent = 'Data tersimpan.';
+    document.getElementById('btnSave').disabled = true;
+
+    // Info bar
+    const tp = config['tahun_pelajaran'] || '—';
+    document.getElementById('infoBar').innerHTML = `
+      <div class="info-pill">👤 ${activeSiswa.nama}</div>
+      <div class="info-pill">🏫 Kelas ${activeKelas}</div>
+      <div class="info-pill gold">TP ${tp}</div>
+    `;
+    hideLoading();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal memuat nilai', e.message);
+    hideLoading();
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbodyNilai');
+  tbody.innerHTML = '';
+
+  allMapel.forEach(m => {
+    const ismuba = isISMUBA(m);
+    const tr = document.createElement('tr');
+
+    // Mapel name cell
+    let nameCell = `<td class="${ismuba ? 'ismuba' : ''}">
+      <div style="font-weight:600;color:var(--ink);font-size:13px;">${m.nama}</div>
+      <div>${ismuba ? '<span class="mapel-tag ismuba">ISMUBA</span>' : `<span class="mapel-tag">${m.kelompok||''}</span>`}</div>
+    </td>`;
+
+    // Semester cells
+    let semCells = '';
+    SEMESTERS.forEach(s => {
+      const key = `${m.id}-${s}`;
+      const val = nilaiData[key];
+      const displayVal = val !== null && val !== undefined ? val : '';
+      const optional = (s === '7' || s === '8');
+      semCells += `<td class="${ismuba ? 'ismuba' : ''}">
+        <input type="number" class="nval ${displayVal==='' ? 'empty' : ''}" 
+               min="0" max="100" step="0.01"
+               data-mapel="${m.id}" data-sem="${s}"
+               value="${displayVal}"
+               placeholder="${optional ? '-' : '0'}"
+               oninput="onNilaiChange(this)"
+               title="${SEM_LABEL[s]} — ${m.nama}">
+      </td>`;
+    });
+
+    // Avg 9-12 (SKL)
+    const vals912 = ['9','10','11','12'].map(s => nilaiData[`${m.id}-${s}`]).filter(v => v !== null && v !== undefined);
+    const avg912 = vals912.length > 0 ? (vals912.reduce((a,b)=>a+b,0)/vals912.length) : null;
+
+    // Avg 7-11 (SMP Negeri)
+    const vals711 = ['7','8','9','10','11'].map(s => nilaiData[`${m.id}-${s}`]).filter(v => v !== null && v !== undefined);
+    const avg711 = vals711.length > 0 ? (vals711.reduce((a,b)=>a+b,0)/vals711.length) : null;
+
+    const fmtAvg = v => v !== null ? `<strong>${v.toFixed(2)}</strong>` : '<span style="color:var(--ink-muted)">—</span>';
+
+    tr.innerHTML = nameCell + semCells +
+      `<td class="center" style="background:var(--green-pale);">${fmtAvg(avg912)}</td>` +
+      `<td class="center" style="background:var(--blue-light);">${fmtAvg(avg711)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function onNilaiChange(el) {
+  const mapel = el.dataset.mapel;
+  const sem   = el.dataset.sem;
+  const key   = `${mapel}-${sem}`;
+  const raw   = el.value.trim();
+  const val   = raw === '' ? null : parseFloat(raw);
+
+  if (raw !== '' && (isNaN(val) || val < 0 || val > 100)) {
+    el.style.borderColor = 'var(--red)';
+    return;
+  }
+
+  el.style.borderColor = '';
+  el.classList.remove('empty');
+  el.classList.add('changed');
+  dirty[key] = { id_mapel: mapel, semester: sem, nilai: val };
+
+  // Update averages
+  updateAverages(mapel);
+
+  document.getElementById('btnSave').disabled = false;
+  document.getElementById('statusSave').textContent = `${Object.keys(dirty).length} perubahan belum disimpan.`;
+}
+
+function updateAverages(id_mapel) {
+  // Get current values from all inputs for this mapel
+  const allVals = {};
+  document.querySelectorAll(`input[data-mapel="${id_mapel}"]`).forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) allVals[inp.dataset.sem] = v;
+  });
+
+  // Avg 9-12
+  const v912 = ['9','10','11','12'].map(s => allVals[s]).filter(v => v !== undefined);
+  const avg912 = v912.length > 0 ? v912.reduce((a,b)=>a+b,0)/v912.length : null;
+
+  // Avg 7-11
+  const v711 = ['7','8','9','10','11'].map(s => allVals[s]).filter(v => v !== undefined);
+  const avg711 = v711.length > 0 ? v711.reduce((a,b)=>a+b,0)/v711.length : null;
+
+  // Update cells in the row
+  const row = document.querySelector(`input[data-mapel="${id_mapel}"]`)?.closest('tr');
+  if (!row) return;
+  const cells = row.querySelectorAll('td');
+  const fmtAvg = v => v !== null ? `<strong>${v.toFixed(2)}</strong>` : '<span style="color:var(--ink-muted)">—</span>';
+  // Avg cells are at index 7 (0-based) and 8
+  if (cells[7]) cells[7].innerHTML = fmtAvg(avg912);
+  if (cells[8]) cells[8].innerHTML = fmtAvg(avg711);
+}
+
+function resetChanges() {
+  if (!confirm('Reset semua perubahan yang belum disimpan?')) return;
+  dirty = {};
+  renderTable();
+  document.getElementById('btnSave').disabled = true;
+  document.getElementById('statusSave').textContent = 'Perubahan direset.';
+}
+
+async function simpanSemua() {
+  if (!activeSiswa || Object.keys(dirty).length === 0) return;
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+
+  showLoading('Menyimpan nilai…');
+  try {
+    const tp = config['tahun_pelajaran'] || '';
+    for (const [key, d] of Object.entries(dirty)) {
+      await SHEETS.saveNilaiRaporRerata({
+        id_siswa:        activeSiswa.id,
+        id_mapel:        d.id_mapel,
+        kelas:           activeKelas,
+        semester:        d.semester,
+        tahun_pelajaran: tp,
+        nilai:           d.nilai,
+      });
+      // update local cache
+      nilaiData[key] = d.nilai;
+    }
+    dirty = {};
+    renderTable();
+    document.getElementById('statusSave').textContent = 'Semua nilai berhasil disimpan ✓';
+    showAlert('success', '✅ Tersimpan', 'Nilai rata-rata rapor berhasil disimpan ke database.');
+    hideLoading();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal simpan', e.message);
+    btn.disabled = false;
+    hideLoading();
+  }
+}
+
+// Tarik nilai semester 12 dari sheet NILAI (sumatif akhir semester genap kelas 6)
+async function tarikNilaiSem12() {
+  if (!activeSiswa) return;
+  if (!confirm('Ambil otomatis nilai akhir semester 12 (semester genap kelas 6) per mata pelajaran?\nNilai yang sudah ada di kolom Sem 12 akan ditimpa.')) return;
+
+  showLoading('Mengambil nilai akhir semester 12…');
+  try {
+    // Hanya butuh nilai_akhir per mapel — tidak perlu TP/KKTP
+    const allNilai = await SHEETS.getNilai({
+      id_siswa: activeSiswa.id,
+      kelas:    activeKelas,
+      semester: '2',
+    });
+
+    // Kelompokkan per id_mapel, rata-ratakan nilai_akhir
+    const perMapel = {};
+    allNilai.forEach(n => {
+      if (!n.id_mapel || !n.nilai_akhir) return;
+      if (!perMapel[n.id_mapel]) perMapel[n.id_mapel] = [];
+      perMapel[n.id_mapel].push(n.nilai_akhir);
+    });
+
+    let count = 0;
+    Object.entries(perMapel).forEach(([id_mapel, vals]) => {
+      const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+      const key = `${id_mapel}-12`;
+      nilaiData[key] = avg;
+      dirty[key] = { id_mapel, semester: '12', nilai: avg };
+      count++;
+    });
+
+    renderTable();
+    document.getElementById('btnSave').disabled = count === 0;
+    document.getElementById('statusSave').textContent = count > 0
+      ? `${count} mata pelajaran ditarik dari semester 12. Klik Simpan untuk menyimpan.`
+      : 'Tidak ada nilai akhir semester 12 yang ditemukan di database.';
+    hideLoading();
+  } catch(e) {
+    showAlert('error', '⛔ Gagal menarik nilai', e.message);
+    hideLoading();
+  }
+}
+
+// Export CSV
+function exportCSV() {
+  if (!activeSiswa || !allMapel.length) return;
+
+  const rows = [['NISN','Nama','Mapel','Kelompok','ISMUBA','Sem7','Sem8','Sem9','Sem10','Sem11','Sem12']];
+  allMapel.forEach(m => {
+    const row = [
+      activeSiswa.nisn || '',
+      activeSiswa.nama,
+      m.nama,
+      m.kelompok || '',
+      isISMUBA(m) ? 'Y' : 'N',
+    ];
+    SEMESTERS.forEach(s => {
+      const v = nilaiData[`${m.id}-${s}`];
+      row.push(v !== null && v !== undefined ? v : '');
+    });
+    rows.push(row);
+  });
+
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `rata-rapor_${activeKelas}_${activeSiswa.nama.replace(/\s+/g,'_')}.csv`;
+  a.click();
+}
+
+// Import CSV
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file || !activeSiswa) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.replace(/^\uFEFF/,'').split('\n').filter(l=>l.trim());
+    if (lines.length < 2) { showAlert('error','⛔ CSV kosong','File tidak memiliki data.'); return; }
+
+    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+    const semIdx  = { '7': headers.indexOf('Sem7'), '8': headers.indexOf('Sem8'), '9': headers.indexOf('Sem9'),
+                      '10': headers.indexOf('Sem10'), '11': headers.indexOf('Sem11'), '12': headers.indexOf('Sem12') };
+    const mapelIdx = headers.indexOf('Mapel');
+    if (mapelIdx < 0) { showAlert('error','⛔ Format CSV salah','Kolom "Mapel" tidak ditemukan.'); return; }
+
+    let count = 0;
+    lines.slice(1).forEach(line => {
+      const cols = line.match(/("(?:[^"]|"")*"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g)
+                   ?.map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"').trim()) || [];
+      const mapelNama = cols[mapelIdx] || '';
+      const m = allMapel.find(mp => mp.nama.toLowerCase() === mapelNama.toLowerCase());
+      if (!m) return;
+
+      SEMESTERS.forEach(s => {
+        const idx = semIdx[s];
+        if (idx < 0 || !cols[idx] || cols[idx] === '') return;
+        const val = parseFloat(cols[idx]);
+        if (isNaN(val)) return;
+        const key = `${m.id}-${s}`;
+        nilaiData[key] = val;
+        dirty[key] = { id_mapel: m.id, semester: s, nilai: val };
+        count++;
+      });
+    });
+
+    renderTable();
+    document.getElementById('btnSave').disabled = count === 0;
+    document.getElementById('statusSave').textContent = count > 0
+      ? `${count} nilai diimpor dari CSV. Klik Simpan untuk menyimpan.`
+      : 'Tidak ada nilai yang dapat diimpor (periksa format CSV).';
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function showAlert(type, title, text) {
+  document.getElementById('alertArea').innerHTML = `
+    <div class="alert ${type}">
+      <div class="alert-icon">${type==='success'?'✅':type==='warning'?'⚠️':'⛔'}</div>
+      <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
+    </div>`;
+  setTimeout(() => { const a = document.getElementById('alertArea'); if(a) a.innerHTML=''; }, 6000);
+}
+function showLoading(msg) { document.getElementById('loadingText').textContent=msg||'Memuat…'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
+</script>
+</body>
+</html>
