@@ -2,6 +2,133 @@
 
 ---
 
+## [2026-04-30] — v4c-fix · Sesi 7 · Perbaikan Regresi Akibat FIX A-01 & A-03
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### A-01b · `dashboard/admin.html` · `AUTH` tidak terdefinisi → dashboard admin tidak bisa dimuat — KRITIS
+
+**File:** `dashboard/admin.html`  
+**Dampak:** Kritis — admin tidak bisa login; dashboard berhenti di "Memuat data dashboard" dengan error `ReferenceError: AUTH is not defined` di console  
+**Versi penyebab:** FIX A-01 (v4 2026-04-30)
+
+**Akar masalah:**  
+FIX A-01 mengganti cek sesi manual di `admin.html` dengan `AUTH.requireLogin('admin')` dan `AUTH.getToken()`, tetapi **lupa menambahkan `<script src="../assets/js/auth.js"></script>`** sebelum inline script. Akibatnya seluruh objek `AUTH` tidak pernah dimuat → `ReferenceError` saat `window.load` dijalankan.
+
+Perbandingan dengan halaman lain yang sudah benar:
+```html
+<!-- guru-kelas.html & guru-mapel.html — pola yang benar -->
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+  window.addEventListener('load', async () => {
+    currentUser = AUTH.requireLogin('guru_kelas');
+    ...
+  });
+</script>
+
+<!-- admin.html setelah FIX A-01 — pola yang keliru -->
+<!-- ← auth.js tidak pernah disertakan! -->
+<script>
+  window.addEventListener('load', async () => {
+    currentUser = AUTH.requireLogin('admin'); // ← ReferenceError!
+    ...
+  });
+</script>
+```
+
+Selain itu, fungsi `logout()` di `admin.html` masih menggunakan kode manual lama:
+```js
+// ❌ Lama — tidak revoke token, redirect path tidak dihitung dengan benar
+function logout() {
+  if (!confirm('Yakin ingin keluar?')) return;
+  sessionStorage.clear();
+  google.accounts.id.disableAutoSelect();
+  window.location.href = '../index.html';
+}
+```
+
+**Perbaikan:**
+- Tambahkan `<script src="../assets/js/auth.js"></script>` sebelum inline `<script>` block
+- Ganti fungsi `logout()` manual dengan `AUTH.logout()` agar konsisten dengan halaman lain dan mendapatkan manfaat token revoke + path calculation yang benar dari modul auth
+
+---
+
+### A-03b · `assets/js/auth.js` + 4 halaman setup · Pembatasan role keliru → guru bidang studi terkunci dari halaman TP — TINGGI
+
+**File:** `assets/js/auth.js`, `setup/mapel-tp.html`, `setup/tahsin-tahfizh.html`, `setup/ekskul-kktp.html`, `setup/kokurikuler.html`  
+**Dampak:** Tinggi — guru_mapel tidak bisa mengakses `mapel-tp.html` (setup TP mata pelajaran yang diampunya); guru TT (juga role guru_mapel) tidak bisa mengakses `setup/tahsin-tahfizh.html`  
+**Versi penyebab:** FIX A-03 (v4c 2026-04-30) — *jika diterapkan sesuai deskripsi CHANGELOG*
+
+**Akar masalah — dua lapisan:**
+
+**Lapisan 1 — `requireLogin()` tidak mendukung array:**  
+`AUTH.requireLogin()` di `auth.js` menggunakan perbandingan string sederhana:
+```js
+// ❌ Tidak mendukung multi-role
+if (requiredRole && user.role !== requiredRole) { redirect... }
+```
+Jika dipanggil dengan array (`requireLogin(['admin', 'guru_mapel'])`), kondisi `user.role !== ['admin','guru_mapel']` selalu `true` → semua user diredirect, termasuk yang seharusnya diizinkan.
+
+**Lapisan 2 — Pemetaan role per halaman keliru:**  
+FIX A-03 mendeskripsikan penggantian `requireLogin()` → `requireLogin('admin')` secara seragam di 4 halaman. Ini benar untuk `ekskul-kktp.html` dan `kokurikuler.html`, tetapi **salah** untuk:
+- `mapel-tp.html` — halaman ini dirancang eksplisit untuk `admin`, `guru_mapel`, dan `guru_kelas` (ada branch `if (currentUser.role === 'guru_mapel')` untuk filter mapel yang diampu)
+- `tahsin-tahfizh.html` — guru TT (role `guru_mapel`) perlu mengakses halaman ini untuk setup KKTP, target hafalan, dan bobot TT miliknya
+
+**Perbaikan:**
+
+**1. `auth.js` — normalisasi `requiredRole` ke array:**
+```js
+// ✅ Mendukung string maupun array
+if (requiredRole) {
+  const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+  if (!allowedRoles.includes(user.role)) { redirect... }
+}
+```
+
+**2. Pemetaan role yang benar per halaman:**
+
+| Halaman | Sebelum (salah) | Sesudah (benar) | Alasan |
+|---------|-----------------|-----------------|--------|
+| `setup/mapel-tp.html` | `requireLogin()` | `requireLogin(['admin', 'guru_mapel', 'guru_kelas'])` | Ketiga role punya logika di halaman ini |
+| `setup/tahsin-tahfizh.html` | `requireLogin()` | `requireLogin(['admin', 'guru_mapel'])` | Guru TT adalah guru_mapel |
+| `setup/ekskul-kktp.html` | `requireLogin()` | `requireLogin(['admin', 'guru_kelas'])` | Kode internal sudah memblokir guru_mapel secara eksplisit |
+| `setup/kokurikuler.html` | `requireLogin()` | `requireLogin(['admin', 'guru_kelas'])` | Nav halaman hanya menangani dua role ini |
+
+---
+
+### 📋 Ringkasan File yang Diubah (v4c-fix)
+
+| File | Perubahan |
+|------|-----------|
+| `dashboard/admin.html` | Tambah `<script src="../assets/js/auth.js">` yang terlewat; ganti `logout()` manual → `AUTH.logout()` |
+| `assets/js/auth.js` | `requireLogin()`: normalisasi `requiredRole` ke array — support string & array |
+| `setup/mapel-tp.html` | `requireLogin()` → `requireLogin(['admin', 'guru_mapel', 'guru_kelas'])` |
+| `setup/tahsin-tahfizh.html` | `requireLogin()` → `requireLogin(['admin', 'guru_mapel'])` |
+| `setup/ekskul-kktp.html` | `requireLogin()` → `requireLogin(['admin', 'guru_kelas'])` |
+| `setup/kokurikuler.html` | `requireLogin()` → `requireLogin(['admin', 'guru_kelas'])` |
+
+### ✅ Matriks Akses Halaman Setup (setelah v4c-fix)
+
+| Halaman | Admin | Guru Kelas | Guru Mapel |
+|---------|:-----:|:----------:|:----------:|
+| `setup/mapel-tp.html` | ✅ | ✅ | ✅ |
+| `setup/tahsin-tahfizh.html` | ✅ | ✗ | ✅ |
+| `setup/ekskul-kktp.html` | ✅ | ✅ | ✗ |
+| `setup/kokurikuler.html` | ✅ | ✅ | ✗ |
+| `setup/data-siswa.html` | ✅ | ✗ | ✗ |
+| `setup/ekskul.html` | ✅ | ✗ | ✗ |
+| `setup/kelola-guru.html` | ✅ | ✗ | ✗ |
+| `setup/profil-sekolah.html` | ✅ | ✗ | ✗ |
+
+---
+
+*Dibuat: 30 April 2026 (v4c-fix) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
 ## [2026-04-30] — v4c · Sesi 7 · Pembatasan Role Halaman Setup
 
 ### 🐛 Bug yang Diperbaiki
