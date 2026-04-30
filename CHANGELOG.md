@@ -2,7 +2,55 @@
 
 ---
 
-## [2026-04-30] — v4 · Sesi 5 · Perbaikan Kritis: Duplikasi Nilai, Keamanan Sesi, Rate Limit
+## [2026-04-30] — v4b · Sesi 6 · Optimasi Performa & CSS Print
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### D-01 · `leger-mapel.html` · `getTPKKTP()` dalam loop — N serial HTTP requests — TINGGI
+
+**File:** `rapor/leger-mapel.html`  
+**Dampak:** Tinggi — pada jaringan mobile 500ms latency, +1–2 detik loading per tingkatan yang diampu guru
+
+**Akar masalah:**  
+Loop `for (const t of tingkatanUniq)` memanggil `await SHEETS.getTPKKTP({ id_mapel, kelas: t })` satu per satu.
+Guru yang mengampu di 6 tingkatan kelas menghasilkan 6 serial HTTP requests.
+
+**Perbaikan:**  
+- Ganti loop dengan satu pemanggilan `SHEETS.getTPKKTP({ id_mapel: idMapel })` — ambil semua TP untuk mapel tersebut sekaligus
+- Filter berdasarkan `tingkatanUniq` dilakukan di JavaScript (tidak ada network call tambahan)
+- Deduplikasi `id_tp` tetap dipertahankan sebagai jaga-jaga
+
+---
+
+### D-02 · `laporan-tt.html` · CSS Print dual-property tidak konsisten — TINGGI
+
+**File:** `rapor/laporan-tt.html`  
+**Dampak:** Tinggi — tanda tangan terpotong saat cetak PDF di Chromebook / WebKit lama
+
+**Akar masalah:**  
+Beberapa selector CSS hanya menggunakan properti modern (`break-inside`, `break-after`, `break-before`)
+tanpa fallback `page-break-*` yang dikenali WebKit lama. Sebagian selector lain hanya punya `page-break-*`
+tanpa properti modern. Konsistensi dual-property tidak diterapkan merata.
+
+**Perbaikan — semua selector kini memiliki kedua properti:**
+
+| Selector | Sebelum | Sesudah |
+|---|---|---|
+| `.lpr-section-title` | `page-break-after: avoid` | + `break-after: avoid` |
+| `.lpr-stat` | `break-inside: avoid` | + `page-break-inside: avoid` |
+| `.hafalan-item` | `break-inside: avoid` | + `page-break-inside: avoid` |
+| `.narasi-box` | `break-inside: avoid` | + `page-break-inside: avoid` |
+| `.aspek-item` | `break-inside: avoid` | + `page-break-inside: avoid` |
+| `.ttd-section` | `page-break-inside/before` | + `break-inside: avoid; break-before: auto` |
+| `.page-break-after` | `page-break-after: always` | + `break-after: always` |
+| `.no-break` | `break-inside: avoid` | + `page-break-inside: avoid` |
+| `.keep-with-next` | `break-after: avoid` | + `page-break-after: avoid` |
+
+---
+
+
 
 ### 🐛 Bug yang Diperbaiki
 
