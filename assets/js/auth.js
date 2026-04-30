@@ -110,7 +110,10 @@ const AUTH = (() => {
    * FIX A-02 (v4 2026-04-30): Tambah cek sdm01_token_expiry.
    *   Sebelumnya token expired tidak terdeteksi → guru bisa lolos cek sesi
    *   meski token > 1 jam, lalu logout mendadak saat operasi Sheets API gagal 401.
-   * @param {string} requiredRole - 'admin' | 'guru_kelas' | 'guru_mapel' | null (semua role)
+   * FIX A-03 (v4c 2026-04-30): Parameter requiredRole kini mendukung string ATAU array.
+   *   Contoh: requireLogin('admin') atau requireLogin(['admin', 'guru_mapel'])
+   *   Sebelumnya hanya menerima string → penggunaan array selalu gagal (role !== array).
+   * @param {string|string[]} requiredRole - role yang diizinkan, atau null (semua role)
    * @returns {object|null} data user jika valid
    */
   function requireLogin(requiredRole = null) {
@@ -125,13 +128,17 @@ const AUTH = (() => {
     }
 
     // Cek role jika diperlukan
-    if (requiredRole && user.role !== requiredRole) {
-      // Arahkan ke dashboard yang sesuai
-      const dest = REDIRECT[user.role];
-      if (dest && !window.location.href.includes(dest.replace('../', ''))) {
-        window.location.href = dest;
+    // FIX A-03: normalisasi ke array agar mendukung string maupun array
+    if (requiredRole) {
+      const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+      if (!allowedRoles.includes(user.role)) {
+        // Arahkan ke dashboard yang sesuai
+        const dest = REDIRECT[user.role];
+        if (dest && !window.location.href.includes(dest.replace('../', ''))) {
+          window.location.href = dest;
+        }
+        return null;
       }
-      return null;
     }
 
     // Jadwalkan refresh token
