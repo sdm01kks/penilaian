@@ -2,7 +2,105 @@
 
 ---
 
-## [2025-04-29] — Perbaikan Bug Pembagian Tugas Guru
+## [2026-04-30] — v4 · Sesi 5 · Perbaikan Kritis: Duplikasi Nilai, Keamanan Sesi, Rate Limit
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### C-01 · `sheets.js` · `getNilai()` tidak filter `id_tp` — KRITIS
+
+**File:** `assets/js/sheets.js`  
+**Fungsi:** `getNilai()`  
+**Dampak:** Kritis — cek duplikat di `saveNilai()` tidak akurat (prasyarat B-01)
+
+**Akar masalah:**  
+Parameter `id_tp` tidak ada di destructuring `getNilai({ id_siswa, id_mapel, kelas, semester, tahun })`.
+Saat `saveNilai()` memanggil `getNilai({ id_siswa, id_tp, semester, tahun })`, parameter `id_tp` diabaikan diam-diam.
+Akibatnya cek duplikat hanya berdasarkan `id_siswa + semester + tahun` — bukan per TP.
+
+**Perbaikan:**  
+- Tambah `id_tp` ke destructuring parameter
+- Tambah filter `if (id_tp) data = data.filter(r => r[2] === id_tp)`
+
+---
+
+### B-01 · `sheets.js` · `saveNilai()` selalu APPEND — duplikasi nilai masif — KRITIS
+
+**File:** `assets/js/sheets.js`  
+**Fungsi:** `saveNilai()`  
+**Dampak:** Kritis — setiap simpan ulang nilai membuat baris baru; sheet NILAI penuh duplikat
+
+**Akar masalah:**  
+Cabang `if (existing.length > 0)` mengandung komentar `TODO: update baris yang ada` namun tetap memanggil `append()`.
+Selain itu, karena C-01 menyebabkan cek duplikat tidak akurat per TP, `existing` sering salah deteksi.
+
+**Perbaikan:**  
+- Ganti logika dengan pembacaan raw rows (`read('NILAI!A:K')`)
+- Cari baris yang cocok berdasarkan `id_siswa + id_tp + semester + tahun_pelajaran` (4-key unique key)
+- Jika ditemukan: `write()` ke baris yang tepat (1-based sheet row = array index + 1), pertahankan `id_nilai` lama
+- Jika tidak ditemukan: `append()` baris baru dengan ID yang di-generate
+- Fungsi kini mengembalikan `id_nilai` (string) untuk keperluan caller
+
+**Catatan pasca-fix:**  
+Sheet NILAI mungkin sudah memiliki duplikat dari bug yang ada sebelum perbaikan ini.
+Lakukan audit: cari baris dengan kombinasi `id_siswa + id_tp + semester + tahun_pelajaran` yang sama
+dan hapus yang lebih lama. Bisa dilakukan via Google Sheets formula atau Apps Script.
+
+---
+
+### A-02 · `auth.js` · `requireLogin()` tidak cek token expired — KRITIS
+
+**File:** `assets/js/auth.js`  
+**Fungsi:** `requireLogin()`  
+**Dampak:** Tinggi — guru bisa lolos cek sesi meski token > 1 jam, lalu logout mendadak saat operasi Sheets API gagal 401
+
+**Akar masalah:**  
+Token expiry disimpan di `sessionStorage` sebagai `sdm01_token_expiry` saat login (`_onTokenReceived`),
+namun `requireLogin()` tidak pernah membacanya. Cek hanya melihat keberadaan `user` dan `token` string,
+bukan validitas waktunya.
+
+**Perbaikan:**  
+- Baca `sdm01_token_expiry` dari sessionStorage di awal `requireLogin()`
+- Tambah kondisi: `if (!user || !token || (expiry > 0 && Date.now() > expiry)) → _redirectToLogin()`
+- Guard `expiry > 0` memastikan halaman yang belum punya data expiry tidak ter-redirect paksa (backward compat)
+
+---
+
+### A-01 · `admin.html` · Bypass `AUTH.requireLogin()` — KRITIS
+
+**File:** `dashboard/admin.html`  
+**Dampak:** Keamanan — token refresh timer tidak dijadwalkan; perilaku berbeda dari dashboard guru
+
+**Akar masalah:**  
+`admin.html` melakukan cek sesi manual via raw `sessionStorage.getItem('sdm01_user')` dan
+memeriksa role secara manual. `AUTH.requireLogin('admin')` tidak pernah dipanggil.
+Akibatnya: (1) `_scheduleTokenRefresh()` tidak dijalankan, (2) cek expired A-02 tidak berlaku.
+
+**Perbaikan:**  
+- Ganti blok cek manual dengan `currentUser = AUTH.requireLogin('admin')`
+- `token` diambil via `AUTH.getToken()` agar konsisten dengan modul auth
+
+---
+
+### Rate Limit 429 · `admin.html` · 8 request paralel → error 429 — TINGGI
+
+**File:** `dashboard/admin.html`  
+**Fungsi:** `loadDashboard()`  
+**Dampak:** Tinggi — dashboard admin error 429 secara intermiten saat memuat
+
+**Akar masalah:**  
+`loadDashboard()` memanggil 8 fungsi sekaligus via `Promise.all()`.
+Google Sheets API membatasi request per detik per user → error 429 intermiten.
+
+**Perbaikan:**  
+- Ganti `Promise.all([...])` dengan loop `for...of` sequential
+- Tambah `await new Promise(r => setTimeout(r, 80))` (jeda 80ms) antar setiap request
+- Total waktu tambahan: ~560ms — tidak signifikan untuk UX karena setiap fetch tetap lambat
+
+---
+
+
 
 ### 🐛 Bug yang Diperbaiki
 
