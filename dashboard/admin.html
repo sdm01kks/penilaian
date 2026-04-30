@@ -977,27 +977,16 @@ let sheetsData  = {};
 
 /* ── Init ──────────────────────────────────────────── */
 window.addEventListener('load', async () => {
-  // Cek session
-  const saved = sessionStorage.getItem('sdm01_user');
-  token       = sessionStorage.getItem('sdm01_token');
+  // FIX A-01 (v4 2026-04-30): Gunakan AUTH.requireLogin('admin') — sebelumnya
+  // admin.html melakukan cek sesi manual via raw sessionStorage, sehingga token
+  // refresh timer tidak dijadwalkan dan keamanan berbeda dari dashboard guru.
+  currentUser = AUTH.requireLogin('admin');
+  if (!currentUser) return;
 
-  if (!saved || !token) {
-    window.location.href = '../index.html';
-    return;
-  }
-
-  currentUser = JSON.parse(saved);
-
-  // Hanya admin yang boleh masuk
-  if (currentUser.role !== 'admin') {
-    window.location.href = currentUser.role === 'guru_kelas'
-      ? 'guru-kelas.html'
-      : 'guru-mapel.html';
-    return;
-  }
+  token = AUTH.getToken();
 
   // Tampilkan info user
-  document.getElementById('userName').textContent  = currentUser.nama;
+  document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'A';
 
   // Load semua data
@@ -1008,16 +997,23 @@ window.addEventListener('load', async () => {
 async function loadDashboard() {
   showLoading('Mengambil data dari Google Sheets…');
   try {
-    await Promise.all([
-      loadConfig(),
-      loadSiswa(),
-      loadGuru(),
-      loadKelas(),
-      loadNilai(),
-      loadKokurikuler(),
-      loadAbsensi(),
-      loadSyncLog(),
-    ]);
+    // FIX Rate Limit (v4 2026-04-30): Ganti Promise.all (8 request serentak → error 429)
+    // dengan sequential fetch + jeda 80ms antar request.
+    // Risiko regresi minimal — hanya urutan eksekusi yang berubah, bukan logika data.
+    const loaders = [
+      loadConfig,
+      loadSiswa,
+      loadGuru,
+      loadKelas,
+      loadNilai,
+      loadKokurikuler,
+      loadAbsensi,
+      loadSyncLog,
+    ];
+    for (const fn of loaders) {
+      await fn();
+      await new Promise(r => setTimeout(r, 80)); // jeda 80ms mencegah 429
+    }
     buildChecklist();
     renderKelasStatusDetail();
     hideLoading();
