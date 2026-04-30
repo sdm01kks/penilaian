@@ -412,7 +412,17 @@ function buildSeksiMapel(nilaiSiswa, isISMUBA) {
     const namaMapel = mapel.id === 'MP07' ? 'Seni Budaya' : mapel.nama;
 
     const tpMapel = allTP.filter(tp => tp.id_mapel === mapel.id);
-    if (!tpMapel.length) return null;  // Mapel belum ada TP untuk tingkatan ini → skip dari rapor
+    if (!tpMapel.length) {
+      // Khusus ISMUBA di Fase A (kelas 1–2): tampilkan baris kosong dengan keterangan placeholder
+      if (isISMUBA && parseInt(activeKelas) <= 2) {
+        const isBahAsb = mapel.nama?.toLowerCase().includes('arab');
+        const faseADesc = isBahAsb
+          ? 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Pengenalan kosakata dan ungkapan bahasa Arab dasar diintegrasikan dalam mata pelajaran Al-Islam dan kegiatan Tahsin-Tahfizh.'
+          : 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Nilai-nilai ke-Muhammadiyahan ditanamkan melalui pembiasaan dan keteladanan dalam keseharian di sekolah.';
+        return { mapel: {...mapel, nama: mapel.nama}, nilaiAkhir: null, descBest: '', descWorst: '', faseAPlaceholder: true, faseADesc };
+      }
+      return null;  // Mapel belum ada TP untuk tingkatan ini → skip dari rapor
+    }
 
     // Nilai akhir per TP
     const tpNilai = tpMapel.map(tp => {
@@ -683,11 +693,14 @@ function buildRaporHTML(d) {
 
 function buildRowMapel(no, item) {
   if (item.nilaiAkhir === null) {
+    const desc = item.faseAPlaceholder
+      ? `<em>${item.faseADesc}</em>`
+      : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
     return `<tr>
       <td class="td-no">${no}</td>
       <td class="td-mapel">${item.mapel.nama}</td>
       <td class="td-nilai" style="font-size:10px;color:#999">—</td>
-      <td class="td-capaian" style="color:#999;font-style:italic">Belum ada nilai</td>
+      <td class="td-capaian">${desc}</td>
     </tr>`;
   }
   const best  = item.descBest  ? 'Mencapai kompetensi dengan sangat baik dalam ' + item.descBest : '';
@@ -959,7 +972,10 @@ function buildBodyPrint(d) {
 
 function buildRowPrint(no, item) {
   if (item.nilaiAkhir === null) {
-    return `<tr><td class="td-no">${no}</td><td class="td-mapel">${item.mapel.nama}</td><td class="td-nilai" style="font-size:9pt;color:#999">—</td><td class="td-capaian" style="color:#999;font-style:italic">Belum ada nilai</td></tr>`;
+    const desc = item.faseAPlaceholder
+      ? `<em>${item.faseADesc}</em>`
+      : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
+    return `<tr><td class="td-no">${no}</td><td class="td-mapel">${item.mapel.nama}</td><td class="td-nilai" style="font-size:9pt;color:#999">—</td><td class="td-capaian">${desc}</td></tr>`;
   }
   const best  = item.descBest  ? 'Mencapai kompetensi dengan sangat baik dalam ' + item.descBest  : '';
   const worst = item.descWorst ? 'Perlu peningkatan dalam ' + item.descWorst : '';
