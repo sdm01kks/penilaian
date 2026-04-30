@@ -107,14 +107,19 @@ const AUTH = (() => {
   /**
    * Cek apakah user sudah login dan session masih valid.
    * Jika tidak valid, redirect ke halaman login.
+   * FIX A-02 (v4 2026-04-30): Tambah cek sdm01_token_expiry.
+   *   Sebelumnya token expired tidak terdeteksi → guru bisa lolos cek sesi
+   *   meski token > 1 jam, lalu logout mendadak saat operasi Sheets API gagal 401.
    * @param {string} requiredRole - 'admin' | 'guru_kelas' | 'guru_mapel' | null (semua role)
    * @returns {object|null} data user jika valid
    */
   function requireLogin(requiredRole = null) {
-    const user  = getUser();
-    const token = getToken();
+    const user   = getUser();
+    const token  = getToken();
+    const expiry = parseInt(sessionStorage.getItem('sdm01_token_expiry') || '0');
 
-    if (!user || !token) {
+    // FIX A-02: jika token expired (dan expiry tersimpan), paksa login ulang
+    if (!user || !token || (expiry > 0 && Date.now() > expiry)) {
       _redirectToLogin();
       return null;
     }

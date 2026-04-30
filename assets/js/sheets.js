@@ -448,12 +448,14 @@ const SHEETS = (() => {
 
   /**
    * Ambil nilai siswa, filter per kelas & semester.
+   * FIX C-01 (v4 2026-04-30): Tambah id_tp ke destructuring & filter.
    */
-  async function getNilai({ id_siswa, id_mapel, kelas, semester, tahun } = {}) {
+  async function getNilai({ id_siswa, id_tp, id_mapel, kelas, semester, tahun } = {}) {
     const rows = await read('NILAI!A:K');
     let data   = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai');
 
     if (id_siswa) data = data.filter(r => r[1] === id_siswa);
+    if (id_tp)    data = data.filter(r => r[2] === id_tp);   // FIX C-01
     if (id_mapel) data = data.filter(r => r[3] === id_mapel);
     if (kelas)    data = data.filter(r => r[4] === kelas);
     if (semester) data = data.filter(r => r[5] === semester);
@@ -476,37 +478,56 @@ const SHEETS = (() => {
 
   /**
    * Simpan nilai siswa (upsert — update jika ada, tambah jika tidak ada).
+   * FIX B-01 (v4 2026-04-30): Implementasi UPDATE baris yang tepat via write().
+   *   Sebelumnya selalu memanggil append() meski data sudah ada → duplikasi masif.
+   *   Kini: baca raw rows → cari index baris → write() ke baris itu, atau append() jika baru.
    */
   async function saveNilai(nilai) {
-    // Cek apakah sudah ada
-    const existing = await getNilai({
-      id_siswa: nilai.id_siswa,
-      id_tp:    nilai.id_tp,
-      semester: nilai.semester,
-      tahun:    nilai.tahun_pelajaran,
-    });
+    // Baca semua baris NILAI untuk mencari posisi baris yang ada
+    const rows = await read('NILAI!A:K');
 
-    const row = [
-      nilai.id || '',
-      nilai.id_siswa       || '',
-      nilai.id_tp          || '',
-      nilai.id_mapel       || '',
-      nilai.kelas          || '',
-      nilai.semester       || '',
-      nilai.tahun_pelajaran|| '',
-      nilai.nilai_slm      || '',
-      nilai.nilai_sas      || '',
-      nilai.nilai_akhir    || '',
-      nilai.level_kktp     || '',
+    // Cari baris yang cocok: id_siswa + id_tp + semester + tahun_pelajaran (FIX C-01 memastikan id_tp dipakai)
+    let existingRowIndex = -1;  // 0-based index di array rows[]
+    let existingId       = '';
+    for (let i = 2; i < rows.length; i++) {  // skip 2 baris header
+      const r = rows[i];
+      if (
+        r[0] && r[0] !== 'id_nilai' &&
+        r[1] === nilai.id_siswa &&
+        r[2] === nilai.id_tp &&
+        r[5] === nilai.semester &&
+        r[6] === nilai.tahun_pelajaran
+      ) {
+        existingRowIndex = i;
+        existingId       = r[0];
+        break;
+      }
+    }
+
+    const buildRow = (id) => [
+      id,
+      nilai.id_siswa         || '',
+      nilai.id_tp            || '',
+      nilai.id_mapel         || '',
+      nilai.kelas            || '',
+      nilai.semester         || '',
+      nilai.tahun_pelajaran  || '',
+      nilai.nilai_slm        !== undefined ? nilai.nilai_slm  : '',
+      nilai.nilai_sas        !== undefined ? nilai.nilai_sas  : '',
+      nilai.nilai_akhir      !== undefined ? nilai.nilai_akhir: '',
+      nilai.level_kktp       || '',
     ];
 
-    if (existing.length > 0) {
-      // TODO: update baris yang ada (perlu row index)
-      await append('NILAI', [row]);
+    if (existingRowIndex >= 0) {
+      // UPDATE — tulis ke baris yang sudah ada (1-based sheet row = index + 1)
+      const sheetRow = existingRowIndex + 1;
+      await write(`NILAI!A${sheetRow}:K${sheetRow}`, [buildRow(existingId)]);
+      return existingId;
     } else {
+      // INSERT — baris baru
       const id = await _generateId('NILAI', 'NL');
-      row[0]   = id;
-      await append('NILAI', [row]);
+      await append('NILAI', [buildRow(id)]);
+      return id;
     }
   }
 
