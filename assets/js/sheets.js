@@ -854,6 +854,164 @@ const SHEETS = (() => {
     await deleteRow(sheetId, idx);
   }
 
+  /* ══════════════════════════════════════════════════════
+     UJIAN SEKOLAH / SUMATIF AKHIR JENJANG
+     Sheet NILAI_RAPOR_RERATA (A:G):
+       A=id, B=id_siswa, C=id_mapel, D=kelas,
+       E=semester (7–12), F=tahun_pelajaran, G=nilai
+     Sheet NILAI_US (A:G):
+       A=id, B=id_siswa, C=id_mapel, D=kelas,
+       E=tahun_pelajaran, F=nilai_tertulis, G=nilai_praktik
+  ══════════════════════════════════════════════════════ */
+
+  /**
+   * Ambil nilai rata-rata rapor dari sheet NILAI_RAPOR_RERATA.
+   * @param {{ id_siswa, id_mapel, kelas, semester }} filter
+   */
+  async function getNilaiRaporRerata({ id_siswa, id_mapel, kelas, semester } = {}) {
+    const rows = await read('NILAI_RAPOR_RERATA!A:G');
+    let data = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai_rapor' && String(r[0]).startsWith('NR'));
+
+    if (id_siswa) data = data.filter(r => r[1] === id_siswa);
+    if (id_mapel) data = data.filter(r => r[2] === id_mapel);
+    if (kelas)    data = data.filter(r => r[3] === kelas);
+    if (semester) data = data.filter(r => String(r[4]) === String(semester));
+
+    return data.map(r => ({
+      id:              r[0] || '',
+      id_siswa:        r[1] || '',
+      id_mapel:        r[2] || '',
+      kelas:           r[3] || '',
+      semester:        r[4] || '',
+      tahun_pelajaran: r[5] || '',
+      nilai:           r[6] !== '' && r[6] !== undefined ? parseFloat(r[6]) : null,
+    }));
+  }
+
+  /**
+   * Simpan nilai rata-rata rapor (upsert per siswa+mapel+semester).
+   * @param {Object} item — { id_siswa, id_mapel, kelas, semester, tahun_pelajaran, nilai }
+   * @returns {string} id yang digunakan
+   */
+  async function saveNilaiRaporRerata(item) {
+    const rows = await read('NILAI_RAPOR_RERATA!A:G');
+
+    let existingRowIndex = -1;
+    let existingId       = '';
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      if (
+        r[0] && String(r[0]).startsWith('NR') &&
+        r[1] === item.id_siswa &&
+        r[2] === item.id_mapel &&
+        String(r[4]) === String(item.semester)
+      ) {
+        existingRowIndex = i;
+        existingId       = r[0];
+        break;
+      }
+    }
+
+    const buildRow = (id) => [
+      id,
+      item.id_siswa        || '',
+      item.id_mapel        || '',
+      item.kelas           || '',
+      String(item.semester || ''),
+      item.tahun_pelajaran || '',
+      item.nilai !== null && item.nilai !== undefined ? item.nilai : '',
+    ];
+
+    if (existingRowIndex >= 0) {
+      const sheetRow = existingRowIndex + 1;
+      await write(`NILAI_RAPOR_RERATA!A${sheetRow}:G${sheetRow}`, [buildRow(existingId)]);
+      return existingId;
+    } else {
+      const id = 'NR' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      await append('NILAI_RAPOR_RERATA', [buildRow(id)]);
+      return id;
+    }
+  }
+
+  /**
+   * Simpan banyak nilai rata-rata rapor sekaligus (batch upsert).
+   * @param {Array} items — array of { id_siswa, id_mapel, kelas, semester, tahun_pelajaran, nilai }
+   */
+  async function saveNilaiRaporReataBatch(items) {
+    for (const item of items) {
+      await saveNilaiRaporRerata(item);
+    }
+  }
+
+  /**
+   * Ambil nilai ujian sekolah dari sheet NILAI_US.
+   * @param {{ id_siswa, id_mapel, kelas, tahun }} filter
+   */
+  async function getNilaiUS({ id_siswa, id_mapel, kelas, tahun } = {}) {
+    const rows = await read('NILAI_US!A:G');
+    let data = rows.slice(2).filter(r => r[0] && r[0] !== 'id_nilai_us' && String(r[0]).startsWith('NU'));
+
+    if (id_siswa) data = data.filter(r => r[1] === id_siswa);
+    if (id_mapel) data = data.filter(r => r[2] === id_mapel);
+    if (kelas)    data = data.filter(r => r[3] === kelas);
+    if (tahun)    data = data.filter(r => r[4] === tahun);
+
+    return data.map(r => ({
+      id:              r[0] || '',
+      id_siswa:        r[1] || '',
+      id_mapel:        r[2] || '',
+      kelas:           r[3] || '',
+      tahun_pelajaran: r[4] || '',
+      nilai_tertulis:  r[5] !== '' && r[5] !== undefined ? parseFloat(r[5]) : null,
+      nilai_praktik:   r[6] !== '' && r[6] !== undefined ? parseFloat(r[6]) : null,
+    }));
+  }
+
+  /**
+   * Simpan nilai ujian sekolah (upsert per siswa+mapel+kelas).
+   * @param {Object} item — { id_siswa, id_mapel, kelas, tahun_pelajaran, nilai_tertulis, nilai_praktik }
+   * @returns {string} id yang digunakan
+   */
+  async function saveNilaiUS(item) {
+    const rows = await read('NILAI_US!A:G');
+
+    let existingRowIndex = -1;
+    let existingId       = '';
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      if (
+        r[0] && String(r[0]).startsWith('NU') &&
+        r[1] === item.id_siswa &&
+        r[2] === item.id_mapel &&
+        r[3] === item.kelas
+      ) {
+        existingRowIndex = i;
+        existingId       = r[0];
+        break;
+      }
+    }
+
+    const buildRow = (id) => [
+      id,
+      item.id_siswa        || '',
+      item.id_mapel        || '',
+      item.kelas           || '',
+      item.tahun_pelajaran || '',
+      item.nilai_tertulis !== null && item.nilai_tertulis !== undefined ? item.nilai_tertulis : '',
+      item.nilai_praktik  !== null && item.nilai_praktik  !== undefined ? item.nilai_praktik  : '',
+    ];
+
+    if (existingRowIndex >= 0) {
+      const sheetRow = existingRowIndex + 1;
+      await write(`NILAI_US!A${sheetRow}:G${sheetRow}`, [buildRow(existingId)]);
+      return existingId;
+    } else {
+      const id = 'NU' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      await append('NILAI_US', [buildRow(id)]);
+      return id;
+    }
+  }
+
   // ── Expose publik API ───────────────────────────────── 
   return {
     // CRUD dasar
@@ -887,6 +1045,13 @@ const SHEETS = (() => {
     getMutasi,
     addMutasi,
     updateMutasiStatus,
+
+    // Ujian Sekolah / Sumatif Akhir Jenjang
+    getNilaiRaporRerata,
+    saveNilaiRaporRerata,
+    saveNilaiRaporReataBatch,
+    getNilaiUS,
+    saveNilaiUS,
 
     // Kalkulasi
     hitungNilaiAkhir,
