@@ -562,13 +562,14 @@ function konfirmasiMasuk() {
 /* ───────────────────────────────────────────── */
 async function kirimFinal() {
   if (!pendingPayload) return;
+  const payload = pendingPayload;   // simpan referensi lokal sebelum tutupModal() menghapus pendingPayload
   document.getElementById('btnKirimFinal').disabled = true;
   tutupModal();
   showLoading('Mengirim pengajuan…');
   try {
-    await SHEETS.addMutasi(pendingPayload);
+    await SHEETS.addMutasi(payload);
     showAlert('success', '✅ Pengajuan berhasil dikirim',
-      `Pengajuan mutasi ${pendingPayload.jenis} untuk ${pendingPayload.nama_siswa} telah dikirim ke admin. Anda dapat memantau statusnya di tab Riwayat Pengajuan.`);
+      `Pengajuan mutasi ${payload.jenis} untuk ${payload.nama_siswa} telah dikirim ke admin. Anda dapat memantau statusnya di tab Riwayat Pengajuan.`);
 
     // Reset form
     document.getElementById('selSiswaKeluar').value  = '';
@@ -577,7 +578,6 @@ async function kirimFinal() {
     document.getElementById('btnAjukanKeluar').disabled = true;
 
     await muatRiwayat();
-    pendingPayload = null;
   } catch(e) {
     showAlert('error', '⛔ Gagal mengirim pengajuan', e.message);
   } finally {
