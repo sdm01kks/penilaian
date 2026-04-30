@@ -663,7 +663,7 @@ let config       = {};
 ════════════════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
   AUTH.init();
-  currentUser = AUTH.requireLogin('admin'); // FIX A-03 (v4c 2026-04-30)
+  currentUser = AUTH.requireLogin();
   if (!currentUser) return;
 
   document.getElementById('userName').textContent   = currentUser.nama;
