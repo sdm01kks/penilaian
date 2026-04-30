@@ -276,6 +276,17 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
     <span class="nav-badge warn" id="badgeMutasi" style="display:none;">!</span>
   </a>
 
+  <div class="sidebar-section-label" id="navSAJLabel" style="display:none;">Ujian Sekolah / SAJ</div>
+  <a class="nav-item" id="navRataRapor" href="../ujian-sekolah/input-rata-rapor.html" style="display:none;">
+    <span class="nav-icon">📊</span> Nilai Rata-Rata Rapor
+  </a>
+  <a class="nav-item" id="navNilaiUS" href="../ujian-sekolah/input-nilai-us.html" style="display:none;">
+    <span class="nav-icon">✏️</span> Nilai Ujian Sekolah
+  </a>
+  <a class="nav-item" id="navSKL" href="../ujian-sekolah/preview-skl.html" style="display:none;">
+    <span class="nav-icon">🎓</span> Preview &amp; Cetak SKL
+  </a>
+
   <div class="sidebar-section-label">Kurikulum</div>
   <a class="nav-item" href="../setup/mapel-tp.html">
     <span class="nav-icon">📚</span> TP & KKTP Mapel Saya
@@ -384,6 +395,11 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
       <div class="action-label">Pengajuan Mutasi Siswa</div>
       <div class="action-desc">Ajukan mutasi masuk atau keluar siswa untuk diverifikasi oleh admin.</div>
     </a>
+    <a class="action-card" id="cardSAJ" href="../ujian-sekolah/input-rata-rapor.html" style="display:none;">
+      <div class="action-icon" style="background:var(--green-pale);color:var(--green-dark);">🎓</div>
+      <div class="action-label">Ujian Sekolah / SAJ</div>
+      <div class="action-desc">Input nilai rata-rata rapor, nilai ujian sekolah, dan cetak SKL kelas 6.</div>
+    </a>
   </div>
 
   <!-- Daftar siswa -->
@@ -431,6 +447,16 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent  = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
   document.getElementById('userKelas').textContent  = 'Wali Kelas ' + (currentUser.kelas || '—');
+
+  // Tampilkan menu Ujian Sekolah / SAJ hanya jika guru memiliki kelas 6
+  const kelasList = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
+  const hasKelas6 = kelasList.some(k => String(k).startsWith('6'));
+  if (hasKelas6) {
+    ['navSAJLabel','navRataRapor','navNilaiUS','navSKL','cardSAJ'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
+  }
 
   showLoading('Memuat data kelas…');
   try {
