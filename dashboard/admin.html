@@ -963,6 +963,10 @@ body {
 
 </main>
 
+<!-- FIX A-01b (v4c-fix 2026-04-30): Tambah include auth.js yang terlewat saat FIX A-01.
+     AUTH.requireLogin() dan AUTH.getToken() tidak bisa dipanggil tanpa modul ini dimuat. -->
+<script src="../assets/js/auth.js"></script>
+
 <script>
 /* ── Konfigurasi ───────────────────────────────────── */
 const CFG = {
@@ -1415,11 +1419,11 @@ function closeSidebarMobile() {
 }
 
 /* ── Logout ─────────────────────────────────────────── */
+// FIX A-01b (v4c-fix 2026-04-30): Gunakan AUTH.logout() agar konsisten — sebelumnya
+// admin.html masih memakai kode logout manual (sessionStorage.clear + disableAutoSelect)
+// yang tidak merevoke token dan tidak menghitung depth path dengan benar.
 function logout() {
-  if (!confirm('Yakin ingin keluar dari sistem?')) return;
-  sessionStorage.clear();
-  google.accounts.id.disableAutoSelect();
-  window.location.href = '../index.html';
+  AUTH.logout();
 }
 </script>
 </body>
