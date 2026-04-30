@@ -2,6 +2,100 @@
 
 ---
 
+## ⚠️ PANDUAN ANTI-REGRESI — Wajib Dibaca Sebelum Merge File
+
+> Regresi berulang terjadi karena file lama (yang belum mengandung fix) dijadikan basis untuk pekerjaan baru, lalu hasil pekerjaan baru menimpa file yang sudah berisi fix.
+> **Pola ini sudah terjadi 3 kali:** A-01b, A-03b, dan R-01 di bawah.
+
+### ✅ Checklist Sebelum Mengerjakan File yang Pernah Diubah
+
+Setiap kali akan mengedit file yang sudah tercatat di CHANGELOG ini, lakukan langkah berikut:
+
+1. **Gunakan file terbaru dari repo** — jangan gunakan file yang diunduh/disimpan sebelum sesi terakhir sebagai basis pekerjaan baru.
+2. **Cari nama file di CHANGELOG** — baca semua fix yang pernah dilakukan pada file tersebut.
+3. **Verifikasi fix lama masih ada** — grep atau cari penanda kode kunci (lihat kolom "Penanda Kode" di tabel di bawah) di file yang akan diedit. Jika tidak ada → file yang digunakan adalah versi lama, **jangan lanjutkan**.
+4. **Setelah selesai mengedit** — grep ulang semua penanda kode untuk memastikan tidak ada yang hilang.
+
+### 🔍 Penanda Kode Kritis per File
+
+| File | Fix | Penanda Kode — harus selalu ada |
+|------|-----|----------------------------------|
+| `rapor/preview.html` | R-01 | `faseAPlaceholder` |
+| `rapor/preview.html` | R-01 | `faseADesc` |
+| `rapor/preview.html` | R-01 | `isBahAsb` |
+| `rapor/preview.html` | (fase naik kelas) | `faseKelas(` |
+| `rapor/preview.html` | (tinggal kelas) | `tingkatanKelas(` |
+| `rapor/preview.html` | (print no-break) | `class="no-break"` |
+| `assets/js/auth.js` | A-03b | `Array.isArray(requiredRole)` |
+| `dashboard/admin.html` | A-01b | `src="../assets/js/auth.js"` |
+
+---
+
+## [2026-04-30] — v4c-fix2 · Sesi 8 · Regresi Placeholder ISMUBA Fase A
+
+### 🐛 Bug yang Diperbaiki
+
+---
+
+### R-01 · `rapor/preview.html` · Placeholder keterangan ISMUBA Fase A hilang akibat merge file lama — TINGGI
+
+**File:** `rapor/preview.html`  
+**Dampak:** Tinggi — untuk siswa kelas 1 dan 2, bagian A.2 Muatan Yayasan (Bahasa Arab & Kemuhammadiyahan) kembali menampilkan tabel kosong tanpa keterangan apapun, padahal fix ini sudah dikerjakan di sesi sebelumnya.  
+**Versi penyebab:** `preview_baru.html` — file yang digunakan sebagai basis pekerjaan baru (penambahan NBM wali kelas) adalah versi yang belum mengandung fix placeholder ISMUBA dari sesi sebelumnya.
+
+**Akar masalah:**  
+Fix placeholder ISMUBA (sesi sebelumnya) diterapkan pada satu salinan `preview.html`. Secara terpisah, perbaikan NBM wali kelas dikerjakan pada salinan lain (`preview_baru.html`) yang berasal dari versi sebelum fix ISMUBA. Ketika `preview_baru.html` dijadikan file resmi, tiga blok kode yang membentuk fitur placeholder ISMUBA hilang seluruhnya:
+
+| # | Lokasi | Yang hilang |
+|---|--------|-------------|
+| 1 | `buildSeksiMapel()` | Kondisi `if (isISMUBA && parseInt(activeKelas) <= 2)` + pembuatan objek `faseAPlaceholder` |
+| 2 | `buildRowMapel()` | Handler `item.faseAPlaceholder` → render `<em>faseADesc</em>` (screen) |
+| 3 | `buildRowPrint()` | Handler `item.faseAPlaceholder` → render `<em>faseADesc</em>` (cetak PDF) |
+
+**Kode yang hilang dan dikembalikan:**
+
+```javascript
+// 1. buildSeksiMapel() — deteksi dan buat placeholder
+if (!tpMapel.length) {
+  if (isISMUBA && parseInt(activeKelas) <= 2) {
+    const isBahAsb = mapel.nama?.toLowerCase().includes('arab');
+    const faseADesc = isBahAsb
+      ? 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Pengenalan kosakata dan ungkapan bahasa Arab dasar diintegrasikan dalam mata pelajaran Al-Islam dan kegiatan Tahsin-Tahfizh.'
+      : 'Belum menjadi fokus tersendiri di Fase A (kelas 1 dan 2). Nilai-nilai ke-Muhammadiyahan ditanamkan melalui pembiasaan dan keteladanan dalam keseharian di sekolah.';
+    return { mapel: {...mapel, nama: mapel.nama}, nilaiAkhir: null, descBest: '', descWorst: '', faseAPlaceholder: true, faseADesc };
+  }
+  return null;
+}
+
+// 2. buildRowMapel() dan buildRowPrint() — render placeholder
+const desc = item.faseAPlaceholder
+  ? `<em>${item.faseADesc}</em>`
+  : '<span style="color:#999;font-style:italic">Belum ada nilai</span>';
+```
+
+**Deteksi mapel berbasis nama** (bukan ID) memastikan tidak tergantung urutan MP12/MP13 di sheet:
+- Nama mengandung `"arab"` → deskripsi Bahasa Arab
+- Selainnya → deskripsi Kemuhammadiyahan
+
+**Jaminan tidak merusak kelas 3–6:** Kelas 3–6 memiliki TP nyata → `tpMapel.length > 0` → kondisi baru tidak pernah dicapai.
+
+**Pencegahan ke depan:**  
+Lihat **Panduan Anti-Regresi** di bagian atas dokumen ini. Penanda kode yang harus selalu ada di `rapor/preview.html`: `faseAPlaceholder`, `faseADesc`, `isBahAsb`.
+
+---
+
+### 📋 Ringkasan File yang Diubah (v4c-fix2)
+
+| File | Perubahan |
+|------|-----------|
+| `rapor/preview.html` | Kembalikan 3 blok kode placeholder ISMUBA Fase A yang hilang akibat merge file lama |
+
+---
+
+*Dibuat: 30 April 2026 (v4c-fix2) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+
+---
+
 ## [2026-04-30] — v4c-fix · Sesi 7 · Perbaikan Regresi Akibat FIX A-01 & A-03
 
 ### 🐛 Bug yang Diperbaiki
