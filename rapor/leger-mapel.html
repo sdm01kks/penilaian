@@ -403,13 +403,21 @@ async function tampilkanLeger() {
       ? [kelas.replace(/[^0-9]/g,'')]
       : allAllowedKelas.map(k => String(k).replace(/[^0-9]/g,''));
 
-    // Kumpulkan TP dari semua tingkatan yang relevan
-    let allTP = [];
+    // FIX D-01 (v4 2026-04-30): Ganti for...of loop N serial HTTP requests dengan
+    // satu getTPKKTP({ id_mapel }) lalu filter tingkatan di JS.
+    // Pada jaringan mobile 500ms latency, sebelumnya bisa +1–2 dtk per tingkatan diampu.
     const tingkatanUniq = [...new Set(tingkatanList)];
-    for (const t of tingkatanUniq) {
-      const tpList = await SHEETS.getTPKKTP({ id_mapel: idMapel, kelas: t });
-      tpList.forEach(tp => { if (!allTP.find(x=>x.id_tp===tp.id_tp)) allTP.push(tp); });
-    }
+    const allTPRaw = await SHEETS.getTPKKTP({ id_mapel: idMapel });
+    const tingkatanSet = new Set(tingkatanUniq);
+    let allTP = allTPRaw.filter(tp => {
+      if (tingkatanSet.size === 0) return true;
+      const tpTingkatan = String(tp.kelas).replace(/[^0-9]/g, '');
+      return tingkatanSet.has(tpTingkatan);
+    });
+    // Deduplikasi id_tp (jaga-jaga)
+    const _seenTP = new Map();
+    allTP.forEach(tp => { if (!_seenTP.has(tp.id_tp)) _seenTP.set(tp.id_tp, tp); });
+    allTP = [..._seenTP.values()];
     allTP.sort((a,b) => (parseInt(a.nomor_tp)||0) - (parseInt(b.nomor_tp)||0));
 
     // Ambil siswa
