@@ -100,10 +100,14 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 .info-pill{padding:4px 12px;border-radius:20px;font-size:11.5px;font-weight:600;background:var(--green-pale);color:var(--green-dark)}
 .info-pill.gold{background:rgba(201,136,42,.12);color:var(--gold)}
 /* Loading */
-.loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
 .loading-overlay.hidden{display:none}
 .spinner-lg{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green-light);border-radius:50%;animation:spin .8s linear infinite}
 .loading-overlay p{color:rgba(255,255,255,.8);font-size:14px}
+/* Progress bar */
+.progress-wrap{width:260px;background:rgba(255,255,255,.15);border-radius:20px;height:8px;overflow:hidden;display:none}
+.progress-bar{height:100%;background:var(--green-light);border-radius:20px;transition:width .3s ease}
+.progress-label{font-size:12px;color:rgba(255,255,255,.65);text-align:center}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:768px){
@@ -119,8 +123,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 <body>
 
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="spinner-lg"></div>
+  <div class="spinner-lg" id="spinnerEl"></div>
   <p id="loadingText">Memuat data…</p>
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar" id="progressBar" style="width:0%"></div>
+  </div>
+  <div class="progress-label" id="progressLabel"></div>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
@@ -501,33 +509,38 @@ function resetChanges() {
 
 async function simpanSemua() {
   if (!activeSiswa || Object.keys(dirty).length === 0) return;
-  const btn = document.getElementById('btnSave');
+  const btn   = document.getElementById('btnSave');
+  const total = Object.keys(dirty).length;
   btn.disabled = true;
 
-  showLoading('Menyimpan nilai…');
+  showProgress(0, total, 'Menyiapkan data…');
   try {
-    const tp = config['tahun_pelajaran'] || '';
-    for (const [key, d] of Object.entries(dirty)) {
-      await SHEETS.saveNilaiRaporRerata({
-        id_siswa:        activeSiswa.id,
-        id_mapel:        d.id_mapel,
-        kelas:           activeKelas,
-        semester:        d.semester,
-        tahun_pelajaran: tp,
-        nilai:           d.nilai,
-      });
-      // update local cache
-      nilaiData[key] = d.nilai;
-    }
+    const tp    = config['tahun_pelajaran'] || '';
+    const items = Object.entries(dirty).map(([key, d]) => ({
+      id_siswa:        activeSiswa.id,
+      id_mapel:        d.id_mapel,
+      kelas:           activeKelas,
+      semester:        d.semester,
+      tahun_pelajaran: tp,
+      nilai:           d.nilai,
+    }));
+
+    // Update local cache sekarang (optimis)
+    Object.entries(dirty).forEach(([key, d]) => { nilaiData[key] = d.nilai; });
+
+    await SHEETS.saveNilaiRaporReataBatch(items, (done, tot) => {
+      showProgress(done, tot, `Menyimpan ${done}/${tot} nilai…`);
+    });
+
     dirty = {};
     renderTable();
+    hideProgress();
     document.getElementById('statusSave').textContent = 'Semua nilai berhasil disimpan ✓';
     showAlert('success', '✅ Tersimpan', 'Nilai rata-rata rapor berhasil disimpan ke database.');
-    hideLoading();
   } catch(e) {
+    hideProgress();
     showAlert('error', '⛔ Gagal simpan', e.message);
     btn.disabled = false;
-    hideLoading();
   }
 }
 
@@ -602,33 +615,56 @@ function exportCSV() {
   a.click();
 }
 
+// ── Parser CSV yang robust (handle quoted fields, BOM, CRLF) ──────────────────
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = false;
+      } else cur += ch;
+    } else {
+      if (ch === '"') { inQ = true; }
+      else if (ch === ',') { result.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
 // Import CSV
 function importCSV(event) {
   const file = event.target.files[0];
   if (!file || !activeSiswa) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const lines = e.target.result.replace(/^\uFEFF/,'').split('\n').filter(l=>l.trim());
+    const raw = e.target.result.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = raw.split('\n').filter(l => l.trim());
     if (lines.length < 2) { showAlert('error','⛔ CSV kosong','File tidak memiliki data.'); return; }
 
-    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
-    const semIdx  = { '7': headers.indexOf('Sem7'), '8': headers.indexOf('Sem8'), '9': headers.indexOf('Sem9'),
-                      '10': headers.indexOf('Sem10'), '11': headers.indexOf('Sem11'), '12': headers.indexOf('Sem12') };
+    const headers  = parseCSVLine(lines[0]);
     const mapelIdx = headers.indexOf('Mapel');
     if (mapelIdx < 0) { showAlert('error','⛔ Format CSV salah','Kolom "Mapel" tidak ditemukan.'); return; }
 
+    const semIdx = {};
+    ['7','8','9','10','11','12'].forEach(s => { semIdx[s] = headers.indexOf('Sem' + s); });
+
     let count = 0;
     lines.slice(1).forEach(line => {
-      const cols = line.match(/("(?:[^"]|"")*"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g)
-                   ?.map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"').trim()) || [];
-      const mapelNama = cols[mapelIdx] || '';
+      if (!line.trim()) return;
+      const cols       = parseCSVLine(line);
+      const mapelNama  = cols[mapelIdx] || '';
       const m = allMapel.find(mp => mp.nama.toLowerCase() === mapelNama.toLowerCase());
       if (!m) return;
 
       SEMESTERS.forEach(s => {
         const idx = semIdx[s];
-        if (idx < 0 || !cols[idx] || cols[idx] === '') return;
-        const val = parseFloat(cols[idx]);
+        if (idx < 0 || idx >= cols.length || cols[idx] === '') return;
+        const val = parseFloat(cols[idx].replace(',', '.'));
         if (isNaN(val)) return;
         const key = `${m.id}-${s}`;
         nilaiData[key] = val;
@@ -641,7 +677,7 @@ function importCSV(event) {
     document.getElementById('btnSave').disabled = count === 0;
     document.getElementById('statusSave').textContent = count > 0
       ? `${count} nilai diimpor dari CSV. Klik Simpan untuk menyimpan.`
-      : 'Tidak ada nilai yang dapat diimpor (periksa format CSV).';
+      : 'Tidak ada nilai yang dapat diimpor (periksa format CSV, pastikan kolom Mapel sesuai nama di database).';
     event.target.value = '';
   };
   reader.readAsText(file, 'UTF-8');
@@ -655,8 +691,23 @@ function showAlert(type, title, text) {
     </div>`;
   setTimeout(() => { const a = document.getElementById('alertArea'); if(a) a.innerHTML=''; }, 6000);
 }
-function showLoading(msg) { document.getElementById('loadingText').textContent=msg||'Memuat…'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg || 'Memuat…';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('spinnerEl').style.display    = 'block';
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
 function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function showProgress(done, total, msg) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('loadingText').textContent     = msg || 'Menyimpan…';
+  document.getElementById('progressWrap').style.display  = 'block';
+  document.getElementById('spinnerEl').style.display     = done >= total ? 'none' : 'block';
+  document.getElementById('progressBar').style.width     = pct + '%';
+  document.getElementById('progressLabel').textContent   = pct + '%';
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideProgress() { document.getElementById('loadingOverlay').classList.add('hidden'); }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('open'); }
 </script>
 </body>
