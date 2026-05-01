@@ -1,275 +1,243 @@
-## [2026-05-01] — v5.1 · Bugfix · Pengajuan Mutasi Siswa
-
-### 🐛 Perbaikan Bug
-
----
-
-### BUG-01 · `siswa/mutasi.html` · Pengajuan mutasi selalu gagal dengan error "Cannot read properties of null (reading 'jenis')"
-
-**File:** `siswa/mutasi.html`
-
-**Gejala:** Setiap kali guru kelas menekan tombol "Ya, Kirim Pengajuan" di modal konfirmasi, muncul pesan *"⛔ Gagal mengirim pengajuan"* dengan teks error *"Cannot read properties of null (reading 'jenis')"*. Tidak ada log error di console browser. Data mutasi tidak tersimpan ke sheet.
-
-**Akar masalah:** Race condition antara `tutupModal()` dan penggunaan `pendingPayload` di dalam `kirimFinal()`.
-
-Urutan eksekusi yang bermasalah:
-
-```
-kirimFinal()
-  → tutupModal()          ← pendingPayload diset null DI SINI
-  → SHEETS.addMutasi(pendingPayload)  ← dipanggil dengan null!
-      → data.jenis        ← throws: Cannot read properties of null
-  → catch(e) → showAlert('error', ..., e.message)
-```
-
-Fungsi `tutupModal()` selalu menjalankan `pendingPayload = null` sebagai bagian dari reset modal. Karena `tutupModal()` dipanggil *sebelum* `addMutasi`, variabel `pendingPayload` sudah bernilai `null` saat data mutasi akan dikirim.
-
-**Perbaikan:** Menyimpan referensi `pendingPayload` ke variabel lokal `payload` di awal fungsi `kirimFinal()`, sebelum `tutupModal()` dipanggil. Seluruh operasi async (`addMutasi`, `showAlert`, `muatRiwayat`) menggunakan `payload` alih-alih `pendingPayload`. Baris `pendingPayload = null` yang redundan di blok `try` juga dihapus karena `tutupModal()` sudah menanganinya.
-
-**Perubahan kode (`siswa/mutasi.html`):**
-
-```diff
- async function kirimFinal() {
-   if (!pendingPayload) return;
-+  const payload = pendingPayload;   // simpan referensi lokal sebelum tutupModal() menghapus pendingPayload
-   document.getElementById('btnKirimFinal').disabled = true;
-   tutupModal();
-   showLoading('Mengirim pengajuan…');
-   try {
--    await SHEETS.addMutasi(pendingPayload);
-+    await SHEETS.addMutasi(payload);
-     showAlert('success', '✅ Pengajuan berhasil dikirim',
--      `Pengajuan mutasi ${pendingPayload.jenis} untuk ${pendingPayload.nama_siswa} ...`);
-+      `Pengajuan mutasi ${payload.jenis} untuk ${payload.nama_siswa} ...`);
-     ...
-     await muatRiwayat();
--    pendingPayload = null;   // redundan — tutupModal() sudah menanganinya
-   } catch(e) { ...
-```
-
----
-
-### 📋 Ringkasan File yang Diubah (v5.1)
-
-| File | Status | Keterangan |
-|------|--------|------------|
-| `siswa/mutasi.html` | **Diubah** | Bugfix `kirimFinal()`: simpan `pendingPayload` ke variabel lokal sebelum `tutupModal()` |
-
----
-
-*Dibuat: 01 Mei 2026 (v5.1) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
-
----
-
-## [2026-04-30] — v5 · Sesi 9 · Fitur Ujian Sekolah / Sumatif Akhir Jenjang (SAJ)
+## [2026-05-01] — v6 · Sesi 10 · Generate Dokumen SKL (.docx)
 
 ### ✨ Fitur Baru
 
 ---
 
-### SAJ-01 · `assets/js/sheets.js` · Lima fungsi baru untuk sheet NILAI_RAPOR_RERATA dan NILAI_US
+### SKL-01 · `ujian-sekolah/templates/tpl_skl.docx` · Template SKL *(file baru)*
+
+Template Word Surat Keterangan Lulus yang sudah dikonversi dari format MERGEFIELD Word menjadi sintaks `{field}` docxtemplater. Semua teks merah (placeholder) di dokumen asli kini menjadi variabel yang diisi otomatis saat generate.
+
+**Field yang tersedia:**
+
+| Field | Isi |
+|-------|-----|
+| `{no_surat}` | Nomor surat lengkap, misal `101/KET/III.4.AU/A/2025` |
+| `{nama_siswa}` | Nama siswa huruf kapital |
+| `{tempat_lahir}` | Tempat lahir siswa |
+| `{tgl_lahir}` | Tanggal lahir format "18 Juni 2013" |
+| `{nama_orang_tua}` | Nama wali/orang tua |
+| `{nis}` | Nomor Induk Sekolah |
+| `{nisn}` | Nomor Induk Siswa Nasional |
+| `{rerata}` | Rata-rata nilai ijazah, 2 desimal pakai koma (misal `84,80`) |
+
+---
+
+### SKL-02 · `ujian-sekolah/templates/tpl_lampiran.docx` · Template Lampiran SKL *(file baru)*
+
+Template Word Lampiran Nilai Ijazah, dikonversi dengan cara yang sama. Berisi tabel nilai per mata pelajaran.
+
+**Field yang tersedia:** semua field SKL-01 di atas, ditambah:
+
+| Field | Mata Pelajaran |
+|-------|----------------|
+| `{pai}` | Pendidikan Agama Islam dan Budi Pekerti |
+| `{pp}` | Pendidikan Pancasila |
+| `{bind}` | Bahasa Indonesia |
+| `{mtk}` | Matematika |
+| `{ipas}` | Ilmu Pengetahuan Alam dan Sosial |
+| `{sb}` | Seni Budaya |
+| `{pjok}` | Pend. Jasmani, Olahraga, dan Kesehatan |
+| `{bing}` | Bahasa Inggris |
+| `{bsund}` | Bahasa dan Sastra Sunda (Mulok) |
+| `{tik}` | Informatika/TIK |
+| `{kka}` | Koding dan Kecerdasan Artifisial |
+
+Nilai di lampiran menggunakan **bilangan bulat** (dibulatkan), bukan desimal.
+
+**Catatan teknis:** Field `{kka}` sebelumnya hardcoded angka merah `84` di template asli (tanpa MERGEFIELD). Telah dikonversi menjadi placeholder `{kka}` secara programatik. Field dengan nilai `null`/kosong akan tampil sebagai string kosong (bukan error).
+
+---
+
+### SKL-03 · `ujian-sekolah/config-skl.html` · Halaman Konfigurasi SKL *(file baru)*
+
+**Hak akses:** `admin` saja.
+
+Halaman pengaturan terpusat untuk semua data statis yang digunakan dalam dokumen SKL. Data disimpan ke sheet `CONFIG` via `SHEETS.setConfig()`.
+
+**Empat seksi konfigurasi:**
+
+**1. Nomor Surat SKL**
+- `skl_no_urut_awal` — nomor urut dimulai (tiga digit). Setiap siswa mendapat nomor urut yang berbeda secara berurutan. Preview nomor surat ditampilkan langsung.
+- `skl_no_surat_suffix` — bagian tetap setelah nomor urut, misal `/KET/III.4.AU/A/2025`.
+
+**2. Tanggal & Tahun Ajaran**
+- `skl_tahun_ajaran` — format strip: `2024-2025`
+- `skl_tahun_ajaran_slash` — format slash: `2024/2025`
+- `skl_tgl_rapat` — tanggal rapat dewan guru (teks bebas)
+- `skl_tgl_penetapan` — tanggal penetapan/tanda tangan SKL
+
+**3. Kepala Sekolah & Sekolah**
+- `skl_kepsek_nama` — nama kepala sekolah
+- `skl_kepsek_nbm` — NBM kepala sekolah
+- `skl_no_sk` — nomor SK kelulusan kepala sekolah
+- `skl_kota` — kota penetapan (default: Depok)
+
+**4. Pemetaan Mata Pelajaran**
+Memetakan field template (`pai`, `pp`, dst.) ke nama mapel di database sheet MAPEL. Pencocokan bersifat case-insensitive. Jika mapel tidak ada di sekolah, kosongkan.
+
+**5. Proporsi Nilai Ijazah**
+- `skl_bobot_rapor` — bobot rata-rata rapor (%) dalam nilai ijazah
+- `skl_bobot_us` — bobot nilai ujian sekolah (%) dalam nilai ijazah
+- `skl_bobot_us_tertulis` — bobot ujian tertulis dalam nilai US
+- `skl_bobot_us_praktik` — bobot ujian praktik dalam nilai US
+
+Total bobot divalidasi sebelum disimpan (harus 100%).
+
+---
+
+### SKL-04 · `ujian-sekolah/generate-skl.html` · Halaman Generate Dokumen SKL *(file baru)*
+
+**Hak akses:** `admin`, `guru_kelas` (kelas 6).
+
+Halaman utama untuk membuat file `.docx` SKL dan Lampiran per siswa, kemudian mengunduhnya sebagai arsip ZIP.
+
+**Library yang digunakan (CDN, tanpa instalasi):**
+- `PizZip 3.1.6` — membaca file DOCX (ZIP-based)
+- `Docxtemplater 3.50.0` — mengisi template `{field}`
+- `JSZip 3.10.1` — menggabungkan banyak DOCX ke satu ZIP
+- `FileSaver.js 2.0.5` — mengunduh file dari browser
+
+**Alur kerja:**
+1. Pilih kelas → daftar siswa kelas 6 muncul sebagai card checklist
+2. Centang siswa yang akan digenerate (atau "Pilih Semua")
+3. Pilih jenis dokumen: SKL, Lampiran, atau keduanya
+4. Klik **Generate & Unduh ZIP** → sistem:
+   - Mengambil nilai rata-rata rapor dan nilai US dari database
+   - Menghitung nilai ijazah per mapel (formula sesuai bobot di config)
+   - Mengisi template dengan data siswa
+   - Menampilkan progress real-time per siswa
+5. Klik **Unduh ZIP** → file diunduh
+
+**Logika nilai:**
+- `Nilai US mapel = (Tertulis × bobotT%) + (Praktik × bobotP%)`
+- `Nilai Ijazah mapel = (Rata-rata Rapor × bobotR%) + (Nilai US × bobotU%)`
+- SKL → `rerata` = rata-rata nilai ijazah seluruh mapel, format `84,80` (2 desimal, koma)
+- Lampiran → nilai per mapel dibulatkan ke bilangan bulat
+
+**Penomoran surat:** Siswa pertama di daftar mendapat nomor `no_urut_awal`, siswa berikutnya `+1`, dst. Urutan mengikuti urutan alfabet nama.
+
+**Format nama file output:**
+- SKL: `SKL_101_AFIFA_NAHDA_HAIRA.docx`
+- Lampiran: `Lampiran_101_AFIFA_NAHDA_HAIRA.docx`
+- ZIP: `SKL_6A_2026-05-01.zip`
+
+**Peringatan data tidak lengkap:**
+- Siswa dengan TTL kosong ditandai `⚠️ TTL kosong` pada card
+- Siswa dengan nama wali kosong ditandai `⚠️ nama wali kosong`
+- Field kosong pada output DOCX akan tampil sebagai teks kosong (tidak crash)
+
+---
+
+### SKL-05 · `assets/js/sheets.js` · Tiga kolom baru di sheet SISWA (M, N, O)
 
 **File:** `assets/js/sheets.js`
 
-Ditambahkan dua sheet baru beserta fungsi akses data-nya.
+Tiga field baru ditambahkan ke struktur data siswa untuk kebutuhan dokumen SKL:
 
-**Sheet NILAI_RAPOR_RERATA** (kolom A–G):
+| Kolom Sheet | Field JS | Keterangan |
+|-------------|----------|------------|
+| M | `tempat_lahir` | Tempat lahir siswa |
+| N | `tgl_lahir` | Tanggal lahir format `YYYY-MM-DD` (dari `<input type="date">`) |
+| O | `nama_wali` | Nama wali/orang tua untuk dokumen resmi |
 
-| Kolom | Field | Keterangan |
-|-------|-------|------------|
-| A | id | ID unik (prefix `NR`) |
-| B | id_siswa | ID siswa |
-| C | id_mapel | ID mata pelajaran |
-| D | kelas | Kelas (misal `6A`) |
-| E | semester | Nomor semester 7–12 |
-| F | tahun_pelajaran | TP aktif saat input |
-| G | nilai | Nilai akhir angka (0–100) |
+**Perubahan fungsi:**
+- `getSiswa()` — range baca diperluas `SISWA!A:L` → `SISWA!A:O`, objek return ditambah 3 field baru
+- `addSiswa()` — row yang di-append diperluas dengan 3 kolom baru (kolom M, N, O)
 
-**Sheet NILAI_US** (kolom A–G):
-
-| Kolom | Field | Keterangan |
-|-------|-------|------------|
-| A | id | ID unik (prefix `NU`) |
-| B | id_siswa | ID siswa |
-| C | id_mapel | ID mata pelajaran |
-| D | kelas | Kelas |
-| E | tahun_pelajaran | TP aktif saat input |
-| F | nilai_tertulis | Nilai ujian tertulis (0–100) |
-| G | nilai_praktik | Nilai ujian praktik/projek (0–100) |
-
-**Fungsi yang ditambahkan dan diekspos:**
-
-| Fungsi | Keterangan |
-|--------|------------|
-| `getNilaiRaporRerata({ id_siswa, id_mapel, kelas, semester })` | Baca nilai rata-rata rapor dengan filter opsional |
-| `saveNilaiRaporRerata(item)` | Upsert nilai rata-rata rapor (4-key: siswa+mapel+semester) |
-| `saveNilaiRaporReataBatch(items)` | Simpan banyak baris sekaligus |
-| `getNilaiUS({ id_siswa, id_mapel, kelas, tahun })` | Baca nilai ujian sekolah dengan filter opsional |
-| `saveNilaiUS(item)` | Upsert nilai ujian sekolah (3-key: siswa+mapel+kelas) |
-
-**Catatan desain:** Kedua sheet hanya menyimpan **nilai akhir angka** per mata pelajaran. Tidak ada ketergantungan pada TP/KKTP dari sheet NILAI — berbeda dari alur penilaian rapor reguler.
+**Backward compatible:** Siswa yang sudah ada di sheet (kolom M–O kosong) akan mengembalikan string kosong untuk ketiga field baru, tidak error.
 
 ---
 
-### SAJ-02 · `ujian-sekolah/input-rata-rapor.html` · Halaman input nilai rata-rata rapor *(file baru)*
+### SKL-06 · `setup/data-siswa.html` · Form input TTL dan nama wali
 
-**File:** `ujian-sekolah/input-rata-rapor.html`
+**File:** `setup/data-siswa.html`
 
-Halaman untuk menginput nilai rata-rata rapor per siswa per mata pelajaran untuk setiap semester (7–12).
+Ditambahkan tiga field baru di formulir input/edit data siswa, di bawah seksi Nomor HP dengan pemisah visual:
 
-**Fitur utama:**
-
-- **Tabel nilai** — baris = mata pelajaran, kolom = semester 7–12
-  - Semester 7 dan 8 (kelas 4) bersifat **opsional** — placeholder "–" dan tidak diwajibkan
-  - Semester 9–10 = kelas 5, semester 11–12 = kelas 6
-- **Kolom rata-rata otomatis** (dihitung di sisi klien, tidak disimpan):
-  - **Sem 9–12** — digunakan untuk komponen nilai SKL/ijazah
-  - **Sem 7–11** — digunakan untuk pendaftaran SMP Negeri
-- **Rumus rata-rata hanya menghitung semester yang terisi** — semester kosong tidak dihitung. Ini menangani kasus: siswa pindahan (tidak punya nilai ISMUBA/B.Inggris/TIK dari sekolah lama), mapel baru seperti KKA yang belum ada di tahun ajaran sebelumnya.
-- **Tarik Nilai Sem 12** — ambil otomatis nilai akhir semester genap kelas 6 dari sheet NILAI, rata-ratakan per mapel (`nilai_akhir`), tanpa menyentuh TP/KKTP.
-- **Ekspor CSV** — per siswa, dengan kolom: NISN, Nama, Mapel, Kelompok, ISMUBA, Sem7–Sem12.
-- **Impor CSV** — mapping berdasarkan nama mata pelajaran (case-insensitive).
-- **Highlight ISMUBA** — latar kuning, badge khusus; tetap diinput bersama mapel lain.
-- **Dirty tracking** — tombol Simpan aktif hanya jika ada perubahan; menampilkan jumlah cell yang belum disimpan.
-
-**Hak akses:** `admin`, `guru_kelas`, `guru_mapel` (halaman filter kelas 6 otomatis).
-
----
-
-### SAJ-03 · `ujian-sekolah/input-nilai-us.html` · Halaman input nilai ujian sekolah *(file baru)*
-
-**File:** `ujian-sekolah/input-nilai-us.html`
-
-Halaman untuk menginput nilai ujian sekolah tertulis dan praktik/projek per siswa per mata pelajaran.
-
-**Fitur utama:**
-
-- **Dua kolom input per mapel:** Tertulis & Praktik
-- **Bobot konfigurasibel** — default 60% tertulis + 40% praktik; total harus 100%; divalidasi sebelum simpan.
-- **Kolom Nilai US** dihitung live: `round((Tertulis × bobotT%) + (Praktik × bobotP%))`.
-- **Dirty tracking** per mapel.
-- Nilai ISMUBA tetap diinput dalam halaman ini (tidak dipisahkan di tahap input).
-
-**Hak akses:** `admin`, `guru_kelas`, `guru_mapel`.
-
----
-
-### SAJ-04 · `ujian-sekolah/preview-skl.html` · Preview & Cetak SKL / Transkrip Nilai *(file baru)*
-
-**File:** `ujian-sekolah/preview-skl.html`
-
-Halaman pratinjau dan cetak dokumen SKL (Surat Keterangan Lulus) serta transkrip nilai untuk pendaftaran SMP.
-
-**Dua mode dokumen:**
-
-| Mode | Komponen Nilai | Rentang Semester Rapor | ISMUBA |
-|------|---------------|------------------------|--------|
-| SKL / Ijazah | Rata-rata Rapor + Nilai US | Sem 9–12 | Bagian terpisah di tabel + catatan "lampiran ijazah tersendiri" |
-| Pendaftaran SMP Negeri | Rata-rata Rapor saja | Sem 7–11 | Disertakan dalam tabel yang sama |
-
-**Formula nilai akhir (mode SKL):**
 ```
-Nilai Akhir = (Rata-rata Rapor × BobotRapor%) + (Nilai US × BobotUS%)
-```
-Bobot dikonfigurasi per sesi cetak (default 60% rapor + 40% US), tidak disimpan ke database.
-
-**Formula rata-rata rapor:** hanya semester yang terisi / jumlah semester terisi (sama dengan SAJ-02).
-
-**Fitur lain:**
-- Pilih kelas → pilih siswa (atau "Semua Siswa" untuk cetak seluruh kelas sekaligus)
-- Peringatan `! belum lengkap` per baris jika nilai rata-rata rapor atau nilai US belum diinput
-- **Print layout A4 ready**: kop sekolah, judul dokumen, biodata siswa, tabel bernomor urut, catatan rumus, blok tanda tangan kepala sekolah
-- Satu siswa = satu halaman saat dicetak (`page-break-before: always`)
-- Data kop diambil dari sheet `PROFIL` (nama kepala sekolah, NIP, NPSN)
-
-**Hak akses:** `admin`, `guru_kelas`, `guru_mapel`.
-
----
-
-### SAJ-05 · `dashboard/guru-kelas.html` · Menu dan action card Ujian Sekolah/SAJ
-
-**File:** `dashboard/guru-kelas.html`
-
-**Nav sidebar** — seksi baru "Ujian Sekolah / SAJ" dengan tiga item:
-- 📊 Nilai Rata-Rata Rapor → `../ujian-sekolah/input-rata-rapor.html`
-- ✏️ Nilai Ujian Sekolah → `../ujian-sekolah/input-nilai-us.html`
-- 🎓 Preview & Cetak SKL → `../ujian-sekolah/preview-skl.html`
-
-**Action card** — "Ujian Sekolah / SAJ" di grid Aksi Cepat.
-
-**Visibilitas kondisional:** Menu dan card hanya ditampilkan jika guru memiliki minimal satu kelas 6 dalam `kelasList`-nya (gabungan kelas utama + kelas_mapel). Ini dilakukan via pengecekan `hasKelas6` di `window.addEventListener('load', ...)`.
-
-```javascript
-const hasKelas6 = kelasList.some(k => String(k).startsWith('6'));
-if (hasKelas6) {
-  ['navSAJLabel','navRataRapor','navNilaiUS','navSKL','cardSAJ']
-    .forEach(id => { document.getElementById(id).style.display = ''; });
-}
+── Data Kelahiran & Wali ──────────────────────────
+Tempat Lahir        [input text]
+Tanggal Lahir       [input date]
+Nama Wali / Orang Tua (untuk dokumen SKL/ijazah)
+                    [input text]
 ```
 
----
+**Perubahan teknis:**
+- `populateForm()` — mengisi ketiga field saat mode edit
+- `resetForm()` — menghapus nilai ketiga field saat reset
+- `saveData()` — menyertakan `tempat_lahir`, `tgl_lahir`, `nama_wali` dalam objek data
+- Inline edit write range: `SISWA!A:L` → `SISWA!A:O`, row data diperluas 3 kolom
+- Delete (blank row): array dikosongkan diperluas dari 12 ke 15 elemen
 
-### SAJ-06 · `dashboard/admin.html` · Menu dan action card Ujian Sekolah/SAJ
+**Catatan `nama_wali`:** Dipisahkan dari `nama_ayah`/`nama_ibu` karena di dokumen resmi (SKL/ijazah) yang muncul adalah satu nama, biasanya nama ayah atau wali yang secara resmi bertanggung jawab. Kolom `nama_ayah`, `nama_ibu`, dll. tetap ada untuk rapor.
 
-**File:** `dashboard/admin.html`
-
-**Nav sidebar** — seksi baru "Ujian Sekolah / SAJ" disisipkan sebelum seksi "Log", dengan tiga item nav yang sama seperti SAJ-05.
-
-**Action card** — "Ujian Sekolah / SAJ" ditambahkan ke grid Aksi Cepat (selalu tampil untuk admin, tanpa cek kelas).
-
----
-
-### ⚠️ Persiapan di Google Sheets
-
-Tambahkan dua sheet baru di spreadsheet database dengan header berikut **di baris 1**:
-
-**Sheet `NILAI_RAPOR_RERATA`** (baris 1):
-```
-id | id_siswa | id_mapel | kelas | semester | tahun_pelajaran | nilai
-```
-
-**Sheet `NILAI_US`** (baris 1):
-```
-id | id_siswa | id_mapel | kelas | tahun_pelajaran | nilai_tertulis | nilai_praktik
-```
-
-Header di baris 1 wajib ada persis seperti di atas (kolom A hingga G masing-masing). Baris 2 ke bawah diisi otomatis oleh aplikasi.
+Pada generate dokumen SKL, field `nama_orang_tua` diisi dengan prioritas: `nama_wali` → fallback ke `nama_ayah`.
 
 ---
 
-### 📋 Matriks Hak Akses Fitur SAJ
+### SKL-07 · Navbar ujian-sekolah — tambah menu Generate & Konfigurasi SKL
 
-| Halaman | Admin | Guru Kelas (kelas 6) | Guru Kelas (bukan kelas 6) | Guru Mapel |
-|---------|:-----:|:-------------------:|:-------------------------:|:----------:|
-| `ujian-sekolah/input-rata-rapor.html` | ✅ | ✅ | ✅* | ✅* |
-| `ujian-sekolah/input-nilai-us.html` | ✅ | ✅ | ✅* | ✅* |
-| `ujian-sekolah/preview-skl.html` | ✅ | ✅ | ✅* | ✅* |
-| Menu sidebar di dashboard | ✅ | ✅ | ✗ (tersembunyi) | — |
+**File yang dimodifikasi:** `input-rata-rapor.html`, `input-nilai-us.html`, `preview-skl.html`, `dashboard/admin.html`, `dashboard/guru-kelas.html`
 
-\* Halaman dapat diakses langsung via URL, tetapi dropdown kelas hanya menampilkan kelas 6 yang dimiliki pengguna. Guru bukan kelas 6 tidak akan mendapat pilihan kelas.
+Dua nav item baru ditambahkan di semua sidebar modul Ujian Sekolah/SAJ:
+- 📄 **Generate Dokumen SKL** → `generate-skl.html`
+- ⚙️ **Konfigurasi SKL** → `config-skl.html` *(admin saja, tapi link tetap tampil — halaman akan memblokir jika bukan admin)*
+
+Di `guru-kelas.html`, `navGenerateSKL` ditambahkan ke array toggle `hasKelas6` sehingga juga tersembunyi untuk guru non-kelas-6.
 
 ---
 
-### 📋 Ringkasan File yang Diubah/Dibuat (v5)
+### ⚠️ Persiapan Tambahan
+
+**Sheet SISWA — kolom baru (M, N, O):**
+Tidak perlu membuat sheet baru, cukup tambahkan header di baris pertama kolom yang masih kosong:
+
+| Kolom | Header |
+|-------|--------|
+| M | `tempat_lahir` |
+| N | `tgl_lahir` |
+| O | `nama_wali` |
+
+**Folder templates:**
+Letakkan kedua file template di dalam folder `ujian-sekolah/templates/`:
+```
+ujian-sekolah/
+  templates/
+    tpl_skl.docx
+    tpl_lampiran.docx
+```
+File template ini diakses langsung dari browser via `fetch()`, pastikan server dapat menyajikan file `.docx`.
+
+---
+
+### 📋 Ringkasan File yang Diubah/Dibuat (v6)
 
 | File | Status | Keterangan |
 |------|--------|------------|
-| `assets/js/sheets.js` | **Diubah** | +5 fungsi (getNilaiRaporRerata, saveNilaiRaporRerata, saveNilaiRaporReataBatch, getNilaiUS, saveNilaiUS) |
-| `ujian-sekolah/input-rata-rapor.html` | **Baru** | Input nilai rata-rata rapor sem 7–12 per siswa |
-| `ujian-sekolah/input-nilai-us.html` | **Baru** | Input nilai ujian sekolah tertulis & praktik |
-| `ujian-sekolah/preview-skl.html` | **Baru** | Preview & cetak SKL / transkrip nilai |
-| `dashboard/guru-kelas.html` | **Diubah** | +nav SAJ (kondisional kelas 6), +action card |
-| `dashboard/admin.html` | **Diubah** | +nav SAJ, +action card |
+| `ujian-sekolah/templates/tpl_skl.docx` | **Baru** | Template SKL dengan placeholder `{field}` |
+| `ujian-sekolah/templates/tpl_lampiran.docx` | **Baru** | Template Lampiran dengan placeholder `{field}` |
+| `ujian-sekolah/config-skl.html` | **Baru** | Konfigurasi data statis SKL (admin only) |
+| `ujian-sekolah/generate-skl.html` | **Baru** | Generate & unduh DOCX SKL per siswa dalam ZIP |
+| `ujian-sekolah/input-rata-rapor.html` | **Diubah** | +nav Generate & Konfigurasi SKL |
+| `ujian-sekolah/input-nilai-us.html` | **Diubah** | +nav Generate & Konfigurasi SKL |
+| `ujian-sekolah/preview-skl.html` | **Diubah** | +nav Generate & Konfigurasi SKL |
+| `assets/js/sheets.js` | **Diubah** | +kolom M–O (tempat_lahir, tgl_lahir, nama_wali) di getSiswa & addSiswa |
+| `setup/data-siswa.html` | **Diubah** | +form fields TTL & nama wali, write range A:O |
+| `dashboard/admin.html` | **Diubah** | +nav Generate & Konfigurasi SKL |
+| `dashboard/guru-kelas.html` | **Diubah** | +nav Generate SKL (toggle kelas 6) |
 
 ### 🔍 Penanda Kode Baru — tambahkan ke tabel Anti-Regresi
 
 | File | Penanda Kode — harus selalu ada |
 |------|----------------------------------|
-| `assets/js/sheets.js` | `getNilaiRaporRerata` |
-| `assets/js/sheets.js` | `saveNilaiUS` |
-| `dashboard/guru-kelas.html` | `hasKelas6` |
-| `dashboard/guru-kelas.html` | `navSAJLabel` |
+| `assets/js/sheets.js` | `tempat_lahir` (getSiswa map) |
+| `assets/js/sheets.js` | `SISWA!A:O` |
+| `setup/data-siswa.html` | `f_tempat_lahir` |
+| `setup/data-siswa.html` | `f_nama_wali` |
+| `ujian-sekolah/generate-skl.html` | `PizZip` |
+| `ujian-sekolah/generate-skl.html` | `Docxtemplater` |
 
 ---
 
-*Dibuat: 30 April 2026 (v5) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+*Dibuat: 1 Mei 2026 (v6) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
