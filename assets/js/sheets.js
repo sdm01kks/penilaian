@@ -229,7 +229,7 @@ const SHEETS = (() => {
    * @returns {Array}
    */
   async function getSiswa(kelas = null) {
-    const rows = await read('SISWA!A:L');
+    const rows = await read('SISWA!A:O');
     let siswa  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_siswa');
 
     if (kelas) {
@@ -257,6 +257,9 @@ const SHEETS = (() => {
       pekerjaan_ayah:  r[9]  || '',
       pekerjaan_ibu:   r[10] || '',
       no_hp:           r[11] || '',
+      tempat_lahir:    r[12] || '',
+      tgl_lahir:       r[13] || '',
+      nama_wali:       r[14] || '',
     }));
   }
 
@@ -285,6 +288,9 @@ const SHEETS = (() => {
       siswa.pekerjaan_ayah || '',
       siswa.pekerjaan_ibu  || '',
       fmtNum(siswa.no_hp),
+      siswa.tempat_lahir || '',
+      siswa.tgl_lahir    || '',
+      siswa.nama_wali    || '',
     ];
     await append('SISWA', [row]);
     return id;
