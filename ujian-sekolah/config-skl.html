@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Konfigurasi SKL — SDM01KKS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green-deep:#0f3226;--green-dark:#1e4d3b;--green-mid:#2d7055;--green-light:#4aa07a;
+  --green-pale:#e5f2ec;--green-ghost:#f0f7f3;--gold:#c9882a;--white:#ffffff;
+  --ink:#1c1b18;--ink-mid:#4a4840;--ink-muted:#7d7a72;
+  --red:#c0392b;--red-light:#fdecea;--yellow-light:#fef9e7;--blue:#2980b9;
+  --sidebar-w:260px;--topbar-h:64px;--radius:12px;
+  --shadow-card:0 4px 24px rgba(15,50,38,.08);--border:rgba(30,77,59,.10);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh}
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.brand-name{font-family:'Amiri',serif;font-size:14px;font-weight:700;color:#fff;line-height:1.1}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.55)}
+.topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.18)}
+.topbar-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);flex:1}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-mid);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.25)}
+.user-name{font-size:12px;font-weight:600;color:#fff}
+.btn-logout{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.75);font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.12);color:#fff}
+.sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--topbar-h));background:var(--white);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:20px 0 40px}
+.sidebar-section-label{font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-muted);padding:14px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--ink-mid);text-decoration:none;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--green-ghost);color:var(--green-dark);border-left-color:var(--green-light)}
+.nav-item.active{background:var(--green-pale);color:var(--green-dark);font-weight:600;border-left-color:var(--green-dark)}
+.nav-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.sidebar-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:28px 28px 60px}
+.page-header h1{font-family:'Amiri',serif;font-size:24px;color:var(--green-deep);font-weight:700}
+.page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-card);border:1px solid var(--border);padding:22px 24px;margin-bottom:18px}
+.section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-muted);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+label{font-size:12px;font-weight:600;color:var(--ink-mid)}
+label .hint{font-size:10.5px;font-weight:400;color:var(--ink-muted);margin-left:4px}
+input,select,textarea{padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink);outline:none;transition:border-color .2s;width:100%;background:var(--white)}
+input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shadow:0 0 0 2px rgba(74,160,122,.12)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;border:none}
+.btn-primary{background:var(--green-dark);color:#fff}
+.btn-primary:hover{background:var(--green-mid)}
+.alert{border-radius:var(--radius);padding:14px 16px;display:flex;gap:12px;margin-bottom:16px}
+.alert.success{background:var(--green-pale);border:1px solid rgba(30,77,59,.15)}
+.alert.error{background:var(--red-light);border:1px solid rgba(192,57,43,.2)}
+.alert-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.alert-text{font-size:12px;color:var(--ink-mid)}
+.preview-box{background:var(--green-ghost);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:12.5px;color:var(--ink-mid);margin-top:8px;font-family:monospace}
+.loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.loading-overlay.hidden{display:none}
+.spinner-lg{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green-light);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:768px){.sidebar-toggle{display:block}.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.sidebar-overlay.open{display:block}.main{margin-left:0}.form-grid{grid-template-columns:1fr}.brand-sub,.user-info{display:none}}
+</style>
+</head>
+<body>
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat…</p>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<header class="topbar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <a href="../index.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+    <div><div class="brand-name">SD Muhammadiyah 01 Kukusan</div><div class="brand-sub">Sistem Penilaian Kurikulum Merdeka</div></div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Konfigurasi SKL</div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-avatar" id="userAvatar">A</div>
+      <div style="display:flex;flex-direction:column;"><div class="user-name" id="userName">Memuat…</div></div>
+    </div>
+    <button class="btn-logout" onclick="AUTH.logout()">⎋ Keluar</button>
+  </div>
+</header>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section-label">Ujian Sekolah / SAJ</div>
+  <a class="nav-item" href="input-rata-rapor.html"><span class="nav-icon">📊</span> Nilai Rata-Rata Rapor</a>
+  <a class="nav-item" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
+  <a class="nav-item" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview &amp; Cetak SKL</a>
+  <a class="nav-item" href="generate-skl.html"><span class="nav-icon">📄</span> Generate Dokumen SKL</a>
+  <a class="nav-item active" href="config-skl.html"><span class="nav-icon">⚙️</span> Konfigurasi SKL</a>
+  <div class="sidebar-section-label">Kembali</div>
+  <a class="nav-item" href="../dashboard/admin.html"><span class="nav-icon">🏠</span> Dashboard Admin</a>
+</nav>
+
+<main class="main">
+  <div class="page-header" style="margin-bottom:20px;">
+    <h1>Konfigurasi SKL</h1>
+    <p>Atur data statis yang digunakan pada Surat Keterangan Lulus dan Lampirannya. Konfigurasi ini berlaku untuk seluruh siswa yang diluluskan.</p>
+  </div>
+  <div id="alertArea"></div>
+
+  <!-- Nomor Surat -->
+  <div class="card">
+    <div class="section-title">⬡ Nomor Surat SKL</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nomor Urut Awal <span class="hint">(tiga angka pertama, berlanjut per siswa)</span></label>
+        <input type="number" id="skl_no_urut_awal" value="101" min="1" max="999">
+      </div>
+      <div class="form-group">
+        <label>Suffix Nomor Surat <span class="hint">(bagian tetap setelah nomor urut)</span></label>
+        <input type="text" id="skl_no_surat_suffix" value="/KET/III.4.AU/A/2025">
+      </div>
+      <div class="form-group full">
+        <label>Contoh nomor surat siswa pertama:</label>
+        <div class="preview-box" id="previewNoSurat">101/KET/III.4.AU/A/2025</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tanggal & Tahun -->
+  <div class="card">
+    <div class="section-title">📅 Tanggal &amp; Tahun Ajaran</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tahun Ajaran <span class="hint">(format: 2024-2025)</span></label>
+        <input type="text" id="skl_tahun_ajaran" value="2024-2025">
+      </div>
+      <div class="form-group">
+        <label>Tahun Ajaran Format Slash <span class="hint">(format: 2024/2025)</span></label>
+        <input type="text" id="skl_tahun_ajaran_slash" value="2024/2025">
+      </div>
+      <div class="form-group">
+        <label>Tanggal Rapat Dewan Guru <span class="hint">(untuk isi surat)</span></label>
+        <input type="text" id="skl_tgl_rapat" placeholder="28 Mei 2025">
+      </div>
+      <div class="form-group">
+        <label>Tanggal Penetapan SKL</label>
+        <input type="text" id="skl_tgl_penetapan" placeholder="2 Juni 2025">
+      </div>
+    </div>
+  </div>
+
+  <!-- Kepala Sekolah -->
+  <div class="card">
+    <div class="section-title">🏫 Kepala Sekolah &amp; Sekolah</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nama Kepala Sekolah</label>
+        <input type="text" id="skl_kepsek_nama" placeholder="Mudzakkir Walad, S.Pd">
+      </div>
+      <div class="form-group">
+        <label>NBM Kepala Sekolah</label>
+        <input type="text" id="skl_kepsek_nbm" placeholder="1167327">
+      </div>
+      <div class="form-group">
+        <label>Nomor SK Kelulusan <span class="hint">(full nomor SK kepala sekolah)</span></label>
+        <input type="text" id="skl_no_sk" placeholder="101/KEP/III.4.AU/A/2025">
+      </div>
+      <div class="form-group">
+        <label>Kota Penetapan</label>
+        <input type="text" id="skl_kota" value="Depok">
+      </div>
+    </div>
+  </div>
+
+  <!-- Mapel → Field Mapping -->
+  <div class="card">
+    <div class="section-title">📚 Pemetaan Mata Pelajaran ke Kolom Lampiran SKL</div>
+    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:14px;">
+      Isikan <strong>nama mapel persis</strong> seperti yang ada di database (sheet MAPEL). Kosongkan jika mapel tersebut tidak ada di sekolah ini.
+      Nilai yang ditampilkan di lampiran adalah <strong>nilai ijazah yang sudah dibulatkan</strong>.
+    </p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Pendidikan Agama Islam dan Budi Pekerti <span class="hint">[pai]</span></label>
+        <input type="text" id="map_pai" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Pendidikan Pancasila <span class="hint">[pp]</span></label>
+        <input type="text" id="map_pp" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Bahasa Indonesia <span class="hint">[bind]</span></label>
+        <input type="text" id="map_bind" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Matematika <span class="hint">[mtk]</span></label>
+        <input type="text" id="map_mtk" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Ilmu Pengetahuan Alam dan Sosial <span class="hint">[ipas]</span></label>
+        <input type="text" id="map_ipas" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Seni Budaya <span class="hint">[sb]</span></label>
+        <input type="text" id="map_sb" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Pend. Jasmani, Olahraga, &amp; Kesehatan <span class="hint">[pjok]</span></label>
+        <input type="text" id="map_pjok" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Bahasa Inggris <span class="hint">[bing]</span></label>
+        <input type="text" id="map_bing" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Bahasa dan Sastra Sunda (Mulok) <span class="hint">[bsund]</span></label>
+        <input type="text" id="map_bsund" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Informatika / TIK <span class="hint">[tik]</span></label>
+        <input type="text" id="map_tik" placeholder="Nama mapel di database">
+      </div>
+      <div class="form-group">
+        <label>Koding dan Kecerdasan Artifisial (KKA) <span class="hint">[kka]</span></label>
+        <input type="text" id="map_kka" placeholder="Nama mapel di database">
+      </div>
+    </div>
+  </div>
+
+  <!-- Proporsi Nilai Ijazah -->
+  <div class="card">
+    <div class="section-title">⚖️ Proporsi Nilai Ijazah</div>
+    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:14px;">
+      Nilai Ijazah = (Rata-rata Rapor × bobot_rapor%) + (Nilai Ujian Sekolah × bobot_us%). Total harus 100%.
+    </p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Bobot Rata-rata Rapor (%)</label>
+        <input type="number" id="skl_bobot_rapor" value="60" min="0" max="100">
+      </div>
+      <div class="form-group">
+        <label>Bobot Nilai Ujian Sekolah (%)</label>
+        <input type="number" id="skl_bobot_us" value="40" min="0" max="100">
+      </div>
+      <div class="form-group">
+        <label>Bobot Tertulis dalam Nilai US (%)</label>
+        <input type="number" id="skl_bobot_us_tertulis" value="60" min="0" max="100">
+      </div>
+      <div class="form-group">
+        <label>Bobot Praktik dalam Nilai US (%)</label>
+        <input type="number" id="skl_bobot_us_praktik" value="40" min="0" max="100">
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
+    <button class="btn btn-primary" onclick="simpanConfig()">💾 Simpan Konfigurasi</button>
+  </div>
+</main>
+
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+const SKL_KEYS = [
+  'skl_no_urut_awal','skl_no_surat_suffix','skl_tahun_ajaran','skl_tahun_ajaran_slash',
+  'skl_tgl_rapat','skl_tgl_penetapan','skl_kepsek_nama','skl_kepsek_nbm',
+  'skl_no_sk','skl_kota',
+  'map_pai','map_pp','map_bind','map_mtk','map_ipas','map_sb','map_pjok',
+  'map_bing','map_bsund','map_tik','map_kka',
+  'skl_bobot_rapor','skl_bobot_us','skl_bobot_us_tertulis','skl_bobot_us_praktik'
+];
+
+window.addEventListener('load', async () => {
+  AUTH.init();
+  const user = AUTH.requireLogin(['admin']);
+  if (!user) return;
+  document.getElementById('userName').textContent   = user.nama;
+  document.getElementById('userAvatar').textContent = user.nama?.charAt(0)?.toUpperCase() || 'A';
+
+  // Load existing config
+  showLoading('Memuat konfigurasi…');
+  try {
+    const existing = await SHEETS.getConfig();
+    SKL_KEYS.forEach(k => {
+      const el = document.getElementById(k);
+      if (el && existing[k] !== undefined) el.value = existing[k];
+    });
+    updatePreview();
+    hideLoading();
+  } catch(e) { showAlert('error','⛔ Gagal memuat',e.message); hideLoading(); }
+});
+
+document.getElementById('skl_no_urut_awal').addEventListener('input', updatePreview);
+document.getElementById('skl_no_surat_suffix').addEventListener('input', updatePreview);
+
+function updatePreview() {
+  const no  = String(document.getElementById('skl_no_urut_awal').value || '101').padStart(3, '0');
+  const sfx = document.getElementById('skl_no_surat_suffix').value || '';
+  document.getElementById('previewNoSurat').textContent = no + sfx;
+}
+
+async function simpanConfig() {
+  const bobot_r  = parseInt(document.getElementById('skl_bobot_rapor').value)||0;
+  const bobot_u  = parseInt(document.getElementById('skl_bobot_us').value)||0;
+  const bobot_ut = parseInt(document.getElementById('skl_bobot_us_tertulis').value)||0;
+  const bobot_up = parseInt(document.getElementById('skl_bobot_us_praktik').value)||0;
+  if (Math.abs(bobot_r+bobot_u-100)>0.01) {
+    showAlert('error','⚠️ Bobot tidak valid','Bobot rapor + US harus berjumlah 100%.'); return;
+  }
+  if (Math.abs(bobot_ut+bobot_up-100)>0.01) {
+    showAlert('error','⚠️ Bobot tidak valid','Bobot tertulis + praktik dalam US harus berjumlah 100%.'); return;
+  }
+
+  showLoading('Menyimpan konfigurasi…');
+  try {
+    for (const k of SKL_KEYS) {
+      const el = document.getElementById(k);
+      if (el) await SHEETS.setConfig(k, el.value.trim());
+    }
+    showAlert('success','✅ Tersimpan','Konfigurasi SKL berhasil disimpan.');
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+}
+
+function showAlert(type, title, text) {
+  document.getElementById('alertArea').innerHTML = `
+    <div class="alert ${type}">
+      <div style="font-size:18px">${type==='success'?'✅':'⛔'}</div>
+      <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
+    </div>`;
+  setTimeout(()=>{ const a=document.getElementById('alertArea'); if(a) a.innerHTML=''; }, 6000);
+}
+function showLoading(m){document.getElementById('loadingText').textContent=m;document.getElementById('loadingOverlay').classList.remove('hidden')}
+function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden')}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open')}
+</script>
+</body>
+</html>

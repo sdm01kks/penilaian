@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generate Dokumen SKL — SDM01KKS</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- PizZip + Docxtemplater via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PizZip/3.1.6/pizzip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.50.0/docxtemplater.js"></script>
+<!-- JSZip for bundling multiple DOCX into ZIP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- FileSaver for download -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green-deep:#0f3226;--green-dark:#1e4d3b;--green-mid:#2d7055;--green-light:#4aa07a;
+  --green-pale:#e5f2ec;--green-ghost:#f0f7f3;--gold:#c9882a;--white:#ffffff;
+  --ink:#1c1b18;--ink-mid:#4a4840;--ink-muted:#7d7a72;
+  --red:#c0392b;--red-light:#fdecea;--yellow-light:#fef9e7;--blue:#2980b9;--blue-light:#ebf5fb;
+  --sidebar-w:260px;--topbar-h:64px;--radius:12px;
+  --shadow-card:0 4px 24px rgba(15,50,38,.08);--border:rgba(30,77,59,.10);
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh}
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.brand-name{font-family:'Amiri',serif;font-size:14px;font-weight:700;color:#fff;line-height:1.1}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.55)}
+.topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.18)}
+.topbar-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);flex:1}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-mid);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.25)}
+.user-name{font-size:12px;font-weight:600;color:#fff}
+.btn-logout{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.75);font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.12);color:#fff}
+.sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--topbar-h));background:var(--white);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:20px 0 40px}
+.sidebar-section-label{font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-muted);padding:14px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--ink-mid);text-decoration:none;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--green-ghost);color:var(--green-dark);border-left-color:var(--green-light)}
+.nav-item.active{background:var(--green-pale);color:var(--green-dark);font-weight:600;border-left-color:var(--green-dark)}
+.nav-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.sidebar-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99}
+.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:28px 28px 60px}
+.page-header{margin-bottom:20px}
+.page-header h1{font-family:'Amiri',serif;font-size:24px;color:var(--green-deep);font-weight:700}
+.page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-card);border:1px solid var(--border);padding:20px 22px;margin-bottom:16px}
+.sel{padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s;min-width:160px}
+.sel:focus{border-color:var(--green-light)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;border:none;white-space:nowrap}
+.btn-primary{background:var(--green-dark);color:#fff}
+.btn-primary:hover{background:var(--green-mid)}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover{background:#b07420}
+.btn-secondary{background:var(--white);color:var(--green-dark);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--green-ghost)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.alert{border-radius:var(--radius);padding:14px 16px;display:flex;gap:12px;margin-bottom:14px}
+.alert.success{background:var(--green-pale);border:1px solid rgba(30,77,59,.15)}
+.alert.error{background:var(--red-light);border:1px solid rgba(192,57,43,.2)}
+.alert.warning{background:var(--yellow-light);border:1px solid rgba(243,156,18,.25)}
+.alert.info{background:var(--blue-light);border:1px solid rgba(41,128,185,.2)}
+.alert-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.alert-text{font-size:12px;color:var(--ink-mid);line-height:1.6}
+/* Siswa checklist */
+.siswa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;max-height:320px;overflow-y:auto;padding:4px}
+.siswa-card{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;background:var(--white)}
+.siswa-card:hover{border-color:var(--green-light);background:var(--green-ghost)}
+.siswa-card.selected{border-color:var(--green-dark);background:var(--green-pale)}
+.siswa-card input[type=checkbox]{width:15px;height:15px;accent-color:var(--green-dark);cursor:pointer;flex-shrink:0}
+.siswa-nama{font-size:12.5px;font-weight:600;color:var(--ink)}
+.siswa-meta{font-size:10.5px;color:var(--ink-muted)}
+.siswa-warn{font-size:10px;color:var(--red);font-weight:600}
+/* Progress table */
+.tbl-prog{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl-prog th{background:var(--green-pale);color:var(--green-dark);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl-prog td{padding:7px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl-prog tr:last-child td{border-bottom:none}
+.status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700}
+.status-badge.done{background:var(--green-pale);color:var(--green-dark)}
+.status-badge.error{background:var(--red-light);color:var(--red)}
+.status-badge.pending{background:var(--blue-light);color:var(--blue)}
+.status-badge.warn{background:var(--yellow-light);color:#b07a00}
+.loading-overlay{position:fixed;inset:0;background:rgba(15,50,38,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.loading-overlay.hidden{display:none}
+.spinner-lg{width:44px;height:44px;border:4px solid rgba(255,255,255,.2);border-top-color:var(--green-light);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){.sidebar-toggle{display:block}.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.sidebar-overlay.open{display:block}.main{margin-left:0;padding:20px 14px 60px}.brand-sub,.user-info{display:none}}
+</style>
+</head>
+<body>
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="spinner-lg"></div>
+  <p id="loadingText">Memuat…</p>
+</div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<header class="topbar">
+  <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <a href="../index.html" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
+    <div><div class="brand-name">SD Muhammadiyah 01 Kukusan</div><div class="brand-sub">Sistem Penilaian Kurikulum Merdeka</div></div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Generate Dokumen SKL</div>
+  <div class="topbar-right">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-avatar" id="userAvatar">A</div>
+      <div style="display:flex;flex-direction:column;"><div class="user-name" id="userName">Memuat…</div></div>
+    </div>
+    <button class="btn-logout" onclick="AUTH.logout()">⎋ Keluar</button>
+  </div>
+</header>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section-label">Ujian Sekolah / SAJ</div>
+  <a class="nav-item" href="input-rata-rapor.html"><span class="nav-icon">📊</span> Nilai Rata-Rata Rapor</a>
+  <a class="nav-item" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
+  <a class="nav-item" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview &amp; Cetak SKL</a>
+  <a class="nav-item active" href="generate-skl.html"><span class="nav-icon">📄</span> Generate Dokumen SKL</a>
+  <a class="nav-item" href="config-skl.html"><span class="nav-icon">⚙️</span> Konfigurasi SKL</a>
+  <div class="sidebar-section-label">Kembali</div>
+  <a class="nav-item" id="navBack" href="../dashboard/admin.html"><span class="nav-icon">🏠</span> Dashboard</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Generate Dokumen SKL</h1>
+    <p>Buat file <strong>.docx</strong> Surat Keterangan Lulus dan Lampiran per siswa, lalu unduh sebagai arsip ZIP.</p>
+  </div>
+  <div id="alertArea"></div>
+
+  <!-- Selector & dokumen pilihan -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <label style="font-size:11.5px;font-weight:700;color:var(--ink-mid);">Kelas</label>
+      <select class="sel" id="selKelas" onchange="loadSiswa()"><option value="">-- Pilih Kelas --</option></select>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="toggleAll(true)">✅ Pilih Semua</button>
+        <button class="btn btn-secondary" onclick="toggleAll(false)">☐ Hapus Pilihan</button>
+      </div>
+    </div>
+    <div id="siswaGrid" class="siswa-grid">
+      <div style="color:var(--ink-muted);font-size:13px;padding:20px;">Pilih kelas terlebih dahulu.</div>
+    </div>
+  </div>
+
+  <!-- Dokumen yang dihasilkan -->
+  <div class="card">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-muted);margin-bottom:10px;">Dokumen yang Digenerate</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;">
+        <input type="checkbox" id="cbSKL" checked> Surat Keterangan Lulus (SKL)
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;">
+        <input type="checkbox" id="cbLampiran" checked> Lampiran Nilai Ijazah
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-gold" id="btnGenerate" onclick="generateDocs()" disabled>
+        📄 Generate &amp; Unduh ZIP
+      </button>
+      <span style="font-size:11.5px;color:var(--ink-muted);" id="selectedCount">0 siswa dipilih</span>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div id="progressArea" style="display:none;animation:fadeUp .4s ease both;">
+    <div class="card" style="padding:16px 20px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-muted);margin-bottom:10px;">
+        Progress Generate
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl-prog">
+          <thead>
+            <tr>
+              <th>Siswa</th>
+              <th>SKL</th>
+              <th>Lampiran</th>
+              <th>Keterangan</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyProgress"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;">
+        <button class="btn btn-primary" id="btnDownload" onclick="downloadZip()" disabled>
+          ⬇️ Unduh ZIP
+        </button>
+        <span id="progressSummary" style="font-size:12px;color:var(--ink-muted);align-self:center;"></span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════
+   State
+═══════════════════════════════════════════════════ */
+let currentUser  = null;
+let allSiswa     = [];
+let allMapel     = [];
+let cfg          = {};
+let selectedIds  = new Set();
+let generatedZip = null;   // JSZip instance after generation
+
+/* ═══════════════════════════════════════════════════
+   Init
+═══════════════════════════════════════════════════ */
+window.addEventListener('load', async () => {
+  AUTH.init();
+  currentUser = AUTH.requireLogin(['admin','guru_kelas']);
+  if (!currentUser) return;
+  document.getElementById('userName').textContent   = currentUser.nama;
+  document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'A';
+
+  const backLink = document.getElementById('navBack');
+  if (currentUser.role !== 'admin') backLink.href = '../dashboard/guru-kelas.html';
+
+  showLoading('Memuat konfigurasi…');
+  try {
+    [cfg, allMapel] = await Promise.all([SHEETS.getConfig(), SHEETS.getMapel()]);
+
+    const allKelas = await SHEETS.getKelas();
+    const kelas6   = allKelas.filter(k => String(k.tingkat)==='6' || String(k.nama).match(/^6/));
+    const sel      = document.getElementById('selKelas');
+    kelas6.forEach(k => {
+      const o = document.createElement('option');
+      o.value = k.nama; o.textContent = k.nama; sel.appendChild(o);
+    });
+
+    // Warn if config missing
+    if (!cfg['skl_no_surat_suffix'] || !cfg['skl_kepsek_nama']) {
+      showAlert('warning','⚠️ Konfigurasi SKL belum lengkap',
+        'Beberapa data statis SKL belum diisi. Silakan lengkapi di halaman <a href="config-skl.html">Konfigurasi SKL</a> terlebih dahulu.');
+    }
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+});
+
+/* ═══════════════════════════════════════════════════
+   Helpers — nilai ijazah
+═══════════════════════════════════════════════════ */
+function rataFilter(vals) {
+  const v = vals.filter(x => x !== null && x !== undefined);
+  return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null;
+}
+
+function hitungRataRapor(raporRows, id_mapel) {
+  const vals = ['9','10','11','12'].map(s => {
+    const r = raporRows.find(x => x.id_mapel===id_mapel && String(x.semester)===s);
+    return r && r.nilai !== null ? r.nilai : null;
+  });
+  return rataFilter(vals);
+}
+
+function hitungNilaiUS(nt, np, bt, bp) {
+  const hasT = nt !== null && nt !== undefined;
+  const hasP = np !== null && np !== undefined;
+  if (!hasT && !hasP) return null;
+  if (!hasT) return np;
+  if (!hasP) return nt;
+  return (nt * bt/100) + (np * bp/100);
+}
+
+function hitungNilaiIjazah(rata, us, br, bu) {
+  const hasR = rata !== null && rata !== undefined;
+  const hasU = us   !== null && us   !== undefined;
+  if (!hasR && !hasU) return null;
+  if (!hasR) return us;
+  if (!hasU) return rata;
+  return (rata * br/100) + (us * bu/100);
+}
+
+/* ═══════════════════════════════════════════════════
+   Siswa list
+═══════════════════════════════════════════════════ */
+async function loadSiswa() {
+  const kelas = document.getElementById('selKelas').value;
+  if (!kelas) return;
+  selectedIds.clear();
+  updateSelectedCount();
+  showLoading('Memuat siswa…');
+  try {
+    allSiswa = await SHEETS.getSiswa(kelas);
+    allSiswa.sort((a,b)=>a.nama.localeCompare(b.nama));
+    renderSiswaGrid();
+    document.getElementById('btnGenerate').disabled = false;
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+}
+
+function renderSiswaGrid() {
+  const grid = document.getElementById('siswaGrid');
+  grid.innerHTML = '';
+  allSiswa.forEach(s => {
+    const missingTTL  = !s.tempat_lahir || !s.tgl_lahir;
+    const missingWali = !s.nama_wali && !s.nama_ayah;
+    const warn = (missingTTL ? '⚠️ TTL kosong ' : '') + (missingWali ? '⚠️ nama wali kosong' : '');
+    const div = document.createElement('div');
+    div.className = 'siswa-card' + (selectedIds.has(s.id) ? ' selected' : '');
+    div.innerHTML = `
+      <input type="checkbox" ${selectedIds.has(s.id)?'checked':''} id="cb_${s.id}" onchange="toggleSiswa('${s.id}',this.checked)">
+      <label for="cb_${s.id}" style="cursor:pointer;flex:1;">
+        <div class="siswa-nama">${s.nama}</div>
+        <div class="siswa-meta">NIS: ${s.nis||'—'} · NISN: ${s.nisn||'—'}</div>
+        ${warn ? `<div class="siswa-warn">${warn}</div>` : ''}
+      </label>`;
+    div.onclick = (e) => { if (e.target.tagName !== 'INPUT') { const cb=document.getElementById(`cb_${s.id}`); cb.checked=!cb.checked; toggleSiswa(s.id,cb.checked); } };
+    grid.appendChild(div);
+  });
+}
+
+function toggleSiswa(id, checked) {
+  if (checked) selectedIds.add(id);
+  else         selectedIds.delete(id);
+  document.querySelectorAll('.siswa-card').forEach(c => {
+    const cb = c.querySelector('input[type=checkbox]');
+    c.classList.toggle('selected', cb && cb.checked);
+  });
+  updateSelectedCount();
+}
+
+function toggleAll(val) {
+  allSiswa.forEach(s => { if(val) selectedIds.add(s.id); else selectedIds.delete(s.id); });
+  document.querySelectorAll('.siswa-card input[type=checkbox]').forEach(cb => cb.checked=val);
+  document.querySelectorAll('.siswa-card').forEach(c => c.classList.toggle('selected', val));
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  document.getElementById('selectedCount').textContent = `${selectedIds.size} siswa dipilih`;
+}
+
+/* ═══════════════════════════════════════════════════
+   Docxtemplater fill
+═══════════════════════════════════════════════════ */
+async function fetchTemplate(name) {
+  const resp = await fetch(`templates/${name}`);
+  if (!resp.ok) throw new Error(`Template ${name} tidak ditemukan (${resp.status})`);
+  return await resp.arrayBuffer();
+}
+
+function fillDocx(templateBuf, data) {
+  const zip  = new PizZip(templateBuf);
+  const doc  = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks:    true,
+    nullGetter: () => '',   // missing fields → empty string
+  });
+  doc.render(data);
+  return doc.getZip().generate({ type: 'arraybuffer', compression: 'DEFLATE' });
+}
+
+/* Format tanggal lahir: "2013-06-18" → "18 Juni 2013" */
+const BULAN_ID = ['','Januari','Februari','Maret','April','Mei','Juni',
+                  'Juli','Agustus','September','Oktober','November','Desember'];
+function formatTglLahir(raw) {
+  if (!raw) return '';
+  // Supports "YYYY-MM-DD" or already formatted
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${parseInt(m[3])} ${BULAN_ID[parseInt(m[2])]} ${m[1]}`;
+  return raw;
+}
+
+/* ═══════════════════════════════════════════════════
+   Main generate
+═══════════════════════════════════════════════════ */
+async function generateDocs() {
+  if (selectedIds.size === 0) { showAlert('warning','⚠️','Pilih minimal satu siswa.'); return; }
+  const genSKL     = document.getElementById('cbSKL').checked;
+  const genLamp    = document.getElementById('cbLampiran').checked;
+  if (!genSKL && !genLamp) { showAlert('warning','⚠️','Pilih minimal satu jenis dokumen.'); return; }
+
+  // Load config values
+  const noUrutAwal  = parseInt(cfg['skl_no_urut_awal']||'101');
+  const suffix      = cfg['skl_no_surat_suffix']    || '/KET/III.4.AU/A/2025';
+  const tahunAjaran = cfg['skl_tahun_ajaran']        || '2024-2025';
+  const tahunSlash  = cfg['skl_tahun_ajaran_slash']  || '2024/2025';
+  const tglRapat    = cfg['skl_tgl_rapat']            || '';
+  const tglPenetapan= cfg['skl_tgl_penetapan']        || '';
+  const kepsekNama  = cfg['skl_kepsek_nama']          || '';
+  const kepsekNBM   = cfg['skl_kepsek_nbm']           || '';
+  const noSK        = cfg['skl_no_sk']                || '';
+  const kota        = cfg['skl_kota']                 || 'Depok';
+  const bRapor      = parseFloat(cfg['skl_bobot_rapor']||'60');
+  const bUS         = parseFloat(cfg['skl_bobot_us']||'40');
+  const bUT         = parseFloat(cfg['skl_bobot_us_tertulis']||'60');
+  const bUP         = parseFloat(cfg['skl_bobot_us_praktik']||'40');
+
+  // Mapel → field mapping
+  const mapelFields = {
+    pai: cfg['map_pai']||'', pp: cfg['map_pp']||'', bind: cfg['map_bind']||'',
+    mtk: cfg['map_mtk']||'', ipas: cfg['map_ipas']||'', sb: cfg['map_sb']||'',
+    pjok: cfg['map_pjok']||'', bing: cfg['map_bing']||'',
+    bsund: cfg['map_bsund']||'', tik: cfg['map_tik']||'', kka: cfg['map_kka']||''
+  };
+
+  // Show progress area
+  const siswaTampil = allSiswa.filter(s => selectedIds.has(s.id));
+  document.getElementById('progressArea').style.display = 'block';
+  const tbody = document.getElementById('tbodyProgress');
+  tbody.innerHTML = '';
+  siswaTampil.forEach(s => {
+    const tr = document.createElement('tr');
+    tr.id = `row_${s.id}`;
+    tr.innerHTML = `
+      <td style="font-weight:600;">${s.nama}</td>
+      <td><span class="status-badge pending" id="skl_${s.id}">—</span></td>
+      <td><span class="status-badge pending" id="lamp_${s.id}">—</span></td>
+      <td style="font-size:11.5px;color:var(--ink-muted);" id="note_${s.id}"></td>`;
+    tbody.appendChild(tr);
+  });
+
+  showLoading('Mengambil nilai siswa…');
+  let tplSKL, tplLamp;
+  try {
+    [tplSKL, tplLamp] = await Promise.all([
+      genSKL  ? fetchTemplate('tpl_skl.docx')     : Promise.resolve(null),
+      genLamp ? fetchTemplate('tpl_lampiran.docx') : Promise.resolve(null),
+    ]);
+  } catch(e) { showAlert('error','⛔ Template tidak ditemukan',e.message); hideLoading(); return; }
+
+  // Fetch all nilai in bulk
+  const kelas = document.getElementById('selKelas').value;
+  let allRapor = [], allUS = [];
+  try {
+    [allRapor, allUS] = await Promise.all([
+      SHEETS.getNilaiRaporRerata({ kelas }),
+      SHEETS.getNilaiUS({ kelas }),
+    ]);
+  } catch(e) { showAlert('error','⛔ Gagal mengambil nilai',e.message); hideLoading(); return; }
+
+  hideLoading();
+
+  generatedZip = new JSZip();
+  let okCount = 0, errCount = 0;
+
+  for (let i = 0; i < siswaTampil.length; i++) {
+    const s = siswaTampil[i];
+    const noUrut  = String(noUrutAwal + i).padStart(3, '0');
+    const noSurat = noUrut + suffix;
+
+    const siswaRapor = allRapor.filter(r => r.id_siswa === s.id);
+    const siswaUS    = allUS.filter(r => r.id_siswa === s.id);
+
+    // Nilai per field
+    const getMapelNilai = (fieldName, round=false) => {
+      const mapelNama = mapelFields[fieldName];
+      if (!mapelNama) return '';
+      const m = allMapel.find(mp => mp.nama.toLowerCase()===mapelNama.toLowerCase());
+      if (!m) return '';
+      const rata = hitungRataRapor(siswaRapor, m.id);
+      const us   = siswaUS.find(u => u.id_mapel===m.id);
+      const ntUS = us ? hitungNilaiUS(us.nilai_tertulis, us.nilai_praktik, bUT, bUP) : null;
+      const akhir = hitungNilaiIjazah(rata, ntUS, bRapor, bUS);
+      if (akhir === null) return '';
+      return round ? String(Math.round(akhir)) : akhir.toFixed(2).replace('.',',');
+    };
+
+    // Hitung rata-rata semua mapel untuk rerata SKL (2 desimal, koma)
+    const semuaMapelFields = Object.keys(mapelFields);
+    const semuaNilai = semuaMapelFields.map(fk => {
+      const mapelNama = mapelFields[fk];
+      if (!mapelNama) return null;
+      const m = allMapel.find(mp => mp.nama.toLowerCase()===mapelNama.toLowerCase());
+      if (!m) return null;
+      const rata = hitungRataRapor(siswaRapor, m.id);
+      const us   = siswaUS.find(u => u.id_mapel===m.id);
+      const ntUS = us ? hitungNilaiUS(us.nilai_tertulis, us.nilai_praktik, bUT, bUP) : null;
+      return hitungNilaiIjazah(rata, ntUS, bRapor, bUS);
+    }).filter(v => v !== null);
+    const rerata = semuaNilai.length
+      ? (semuaNilai.reduce((a,b)=>a+b,0)/semuaNilai.length).toFixed(2).replace('.',',')
+      : '';
+
+    // Common data (shared by both docs)
+    const dataDasar = {
+      no_surat:       noSurat,
+      nama_siswa:     s.nama.toUpperCase(),
+      tempat_lahir:   s.tempat_lahir || '',
+      tgl_lahir:      formatTglLahir(s.tgl_lahir),
+      nama_orang_tua: s.nama_wali || s.nama_ayah || '',
+      nis:            s.nis  || '',
+      nisn:           s.nisn || '',
+    };
+
+    const notes = [];
+    if (!s.tempat_lahir || !s.tgl_lahir) notes.push('TTL kosong');
+    if (!s.nama_wali && !s.nama_ayah)    notes.push('nama wali kosong');
+
+    // --- Generate SKL ---
+    if (genSKL && tplSKL) {
+      try {
+        const sklData = { ...dataDasar, rerata };
+        const buf = fillDocx(tplSKL, sklData);
+        generatedZip.file(`SKL_${noUrut}_${s.nama.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_')}.docx`, buf);
+        document.getElementById(`skl_${s.id}`).textContent  = '✅ OK';
+        document.getElementById(`skl_${s.id}`).className    = 'status-badge done';
+      } catch(e) {
+        document.getElementById(`skl_${s.id}`).textContent  = '⛔ Error';
+        document.getElementById(`skl_${s.id}`).className    = 'status-badge error';
+        notes.push(`SKL: ${e.message.substring(0,60)}`);
+        errCount++;
+      }
+    } else {
+      document.getElementById(`skl_${s.id}`).textContent = '—';
+      document.getElementById(`skl_${s.id}`).className   = 'status-badge';
+    }
+
+    // --- Generate Lampiran ---
+    if (genLamp && tplLamp) {
+      try {
+        const lampData = {
+          ...dataDasar,
+          pai:   getMapelNilai('pai',  true),
+          pp:    getMapelNilai('pp',   true),
+          bind:  getMapelNilai('bind', true),
+          mtk:   getMapelNilai('mtk',  true),
+          ipas:  getMapelNilai('ipas', true),
+          sb:    getMapelNilai('sb',   true),
+          pjok:  getMapelNilai('pjok', true),
+          bing:  getMapelNilai('bing', true),
+          bsund: getMapelNilai('bsund',true),
+          tik:   getMapelNilai('tik',  true),
+          kka:   getMapelNilai('kka',  true),
+        };
+        const buf = fillDocx(tplLamp, lampData);
+        generatedZip.file(`Lampiran_${noUrut}_${s.nama.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_')}.docx`, buf);
+        document.getElementById(`lamp_${s.id}`).textContent = '✅ OK';
+        document.getElementById(`lamp_${s.id}`).className   = 'status-badge done';
+      } catch(e) {
+        document.getElementById(`lamp_${s.id}`).textContent = '⛔ Error';
+        document.getElementById(`lamp_${s.id}`).className   = 'status-badge error';
+        notes.push(`Lampiran: ${e.message.substring(0,60)}`);
+        errCount++;
+      }
+    } else {
+      document.getElementById(`lamp_${s.id}`).textContent = '—';
+      document.getElementById(`lamp_${s.id}`).className   = 'status-badge';
+    }
+
+    // Notes
+    if (notes.length) {
+      const noteEl = document.getElementById(`note_${s.id}`);
+      noteEl.textContent = notes.join('; ');
+      noteEl.style.color = 'var(--red)';
+    }
+
+    if (!document.getElementById(`skl_${s.id}`).classList.contains('error') &&
+        !document.getElementById(`lamp_${s.id}`).classList.contains('error')) {
+      okCount++;
+    }
+  }
+
+  const total = siswaTampil.length;
+  document.getElementById('progressSummary').textContent =
+    `${okCount}/${total} berhasil${errCount?`, ${errCount} error`:''}`;
+  document.getElementById('btnDownload').disabled = false;
+}
+
+async function downloadZip() {
+  if (!generatedZip) return;
+  const kelas = document.getElementById('selKelas').value;
+  const blob  = await generatedZip.generateAsync({ type:'blob', compression:'DEFLATE' });
+  saveAs(blob, `SKL_${kelas}_${new Date().toISOString().slice(0,10)}.zip`);
+}
+
+function showAlert(type, title, text) {
+  document.getElementById('alertArea').innerHTML = `
+    <div class="alert ${type}">
+      <div style="font-size:18px">${type==='success'?'✅':type==='warning'?'⚠️':'⛔'}</div>
+      <div><div class="alert-title">${title}</div><div class="alert-text">${text}</div></div>
+    </div>`;
+  setTimeout(()=>{ const a=document.getElementById('alertArea'); if(a) a.innerHTML=''; }, 8000);
+}
+function showLoading(m){document.getElementById('loadingText').textContent=m;document.getElementById('loadingOverlay').classList.remove('hidden')}
+function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden')}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open')}
+</script>
+</body>
+</html>
