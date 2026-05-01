@@ -246,6 +246,14 @@ textarea { resize:vertical; min-height:60px; }
         <div class="form-group">
           <label>Nomor HP (Ayah/Ibu)</label>
           <input type="text" id="f_no_hp" placeholder="08xxxxxxxxxx" inputmode="tel" maxlength="15">
+
+          <label style="margin-top:10px;display:block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-muted);border-top:1px solid var(--border);padding-top:10px;">Data Kelahiran &amp; Wali</label>
+          <label>Tempat Lahir</label>
+          <input type="text" id="f_tempat_lahir" placeholder="Contoh: Depok">
+          <label>Tanggal Lahir</label>
+          <input type="date" id="f_tgl_lahir">
+          <label>Nama Wali / Orang Tua <span style="font-size:10px;color:var(--ink-muted);">(untuk dokumen SKL/ijazah)</span></label>
+          <input type="text" id="f_nama_wali" placeholder="Nama lengkap sesuai KTP">
         </div>
       </div>
 
@@ -581,6 +589,9 @@ function bukaEdit(id) {
   document.getElementById('f_nisn').value          = s.nisn || '';
   document.getElementById('f_kelas').value         = s.kelas || '';
   document.getElementById('f_agama').value         = s.agama || 'Islam';
+  document.getElementById('f_tempat_lahir').value  = s.tempat_lahir || '';
+  document.getElementById('f_tgl_lahir').value     = s.tgl_lahir || '';
+  document.getElementById('f_nama_wali').value     = s.nama_wali || '';
   document.getElementById('f_nama_ayah').value     = s.nama_ayah || '';
   document.getElementById('f_nama_ibu').value      = s.nama_ibu  || '';
   document.getElementById('f_pekerjaan_ayah').value= s.pekerjaan_ayah || '';
@@ -604,7 +615,8 @@ function tutupModal() {
 
 function resetForm() {
   ['f_nama','f_nis','f_nisn','f_kelas','f_nama_ayah','f_nama_ibu',
-   'f_pekerjaan_ayah','f_pekerjaan_ibu','f_no_hp','f_alamat']
+   'f_pekerjaan_ayah','f_pekerjaan_ibu','f_no_hp','f_alamat',
+   'f_tempat_lahir','f_nama_wali']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = el.tagName === 'SELECT' ? '' : '';
@@ -633,6 +645,9 @@ async function simpanSiswa() {
       kelas,
       agama:          document.getElementById('f_agama').value,
       alamat:         document.getElementById('f_alamat').value.trim(),
+      tempat_lahir:   document.getElementById('f_tempat_lahir').value.trim(),
+      tgl_lahir:      document.getElementById('f_tgl_lahir').value.trim(),
+      nama_wali:      document.getElementById('f_nama_wali').value.trim(),
       nama_ayah:      document.getElementById('f_nama_ayah').value.trim(),
       nama_ibu:       document.getElementById('f_nama_ibu').value.trim(),
       pekerjaan_ayah: document.getElementById('f_pekerjaan_ayah').value.trim(),
@@ -667,7 +682,7 @@ async function simpanSiswa() {
 
 /* ── Update siswa (cari baris berdasarkan ID) ─────────── */
 async function updateSiswa(id, data) {
-  const rows = await SHEETS.read('SISWA!A:L');
+  const rows = await SHEETS.read('SISWA!A:O');
   const idx  = rows.findIndex(r => r[0] === id);
   if (idx < 0) throw new Error('Data siswa tidak ditemukan di database.');
 
@@ -676,8 +691,9 @@ async function updateSiswa(id, data) {
     id, data.nama, fmtNum(data.nis), fmtNum(data.nisn), data.kelas,
     data.agama, data.alamat, data.nama_ayah, data.nama_ibu,
     data.pekerjaan_ayah, data.pekerjaan_ibu, fmtNum(data.no_hp),
+    data.tempat_lahir || '', data.tgl_lahir || '', data.nama_wali || '',
   ];
-  await SHEETS.write(`SISWA!A${idx+1}:L${idx+1}`, [row]);
+  await SHEETS.write(`SISWA!A${idx+1}:O${idx+1}`, [row]);
 }
 
 /* ── Hapus Siswa ──────────────────────────────────────── */
@@ -691,7 +707,7 @@ async function hapusSiswa(id, nama) {
     if (idx < 0) throw new Error('Siswa tidak ditemukan.');
 
     // Kosongkan baris (tidak benar-benar hapus agar tidak menggeser index)
-    await SHEETS.write(`SISWA!A${idx+1}:L${idx+1}`, [['','','','','','','','','','','','']]);
+    await SHEETS.write(`SISWA!A${idx+1}:O${idx+1}`, [['','','','','','','','','','','','','','','']]);
     showAlert('success','✅ Berhasil', `Data ${nama} telah dihapus.`);
     await muatData();
     pilihKelas(kelasFilter);
