@@ -105,6 +105,35 @@ const SHEETS = (() => {
   }
 
   /**
+   * Tulis banyak range sekaligus dalam satu request (values:batchUpdate).
+   * @param {Array} pairs — array of [range, values] atau {range, values}
+   */
+  async function valuesBatchWrite(pairs) {
+    if (!pairs || !pairs.length) return;
+    const id    = AUTH.getSpreadsheetId();
+    const token = AUTH.getToken();
+    if (!token) throw new Error('Tidak ada token. Silakan login ulang.');
+
+    const url = `${BASE_URL}/${id}/values:batchUpdate`;
+    const data = pairs.map(p => Array.isArray(p)
+      ? { range: p[0], values: p[1] }
+      : { range: p.range, values: p.values }
+    );
+
+    const res = await fetch(url, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) { AUTH.logout(false); }
+      throw new Error(`Sheets valuesBatchWrite error ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /**
    * Tambah baris baru di akhir range (append).
    * @param {string} range  - Sheet name, misal: 'SISWA'
    * @param {Array}  values - Array of arrays
@@ -940,13 +969,54 @@ const SHEETS = (() => {
   }
 
   /**
-   * Simpan banyak nilai rata-rata rapor sekaligus (batch upsert).
-   * @param {Array} items — array of { id_siswa, id_mapel, kelas, semester, tahun_pelajaran, nilai }
+   * Simpan banyak nilai rata-rata rapor sekaligus — SATU baca, batch write.
+   * @param {Array} items
+   * @param {Function} onProgress callback(done, total)
    */
-  async function saveNilaiRaporReataBatch(items) {
-    for (const item of items) {
-      await saveNilaiRaporRerata(item);
+  async function saveNilaiRaporReataBatch(items, onProgress) {
+    if (!items.length) return;
+    const rows = await read('NILAI_RAPOR_RERATA!A:G');
+
+    const lookup = {};
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      if (r[0] && String(r[0]).startsWith('NR')) {
+        lookup[`${r[1]}|${r[2]}|${r[4]}`] = { rowIndex: i + 1, id: r[0] };
+      }
     }
+
+    const toUpdate = [];
+    const toAppend = [];
+    let nextRow = rows.length + 1;
+
+    for (const item of items) {
+      const k = `${item.id_siswa}|${item.id_mapel}|${item.semester}`;
+      const buildRow = (id) => [
+        id, item.id_siswa||'', item.id_mapel||'', item.kelas||'',
+        String(item.semester||''), item.tahun_pelajaran||'',
+        item.nilai !== null && item.nilai !== undefined ? item.nilai : '',
+      ];
+      if (lookup[k]) {
+        const { rowIndex, id } = lookup[k];
+        toUpdate.push([`NILAI_RAPOR_RERATA!A${rowIndex}:G${rowIndex}`, [buildRow(id)]]);
+      } else {
+        const id = 'NR' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        toAppend.push(buildRow(id));
+        lookup[k] = { rowIndex: nextRow++, id };
+      }
+    }
+
+    const CHUNK = 100;
+    let done = 0;
+    for (let i = 0; i < toUpdate.length; i += CHUNK) {
+      await valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+      done = Math.min(i + CHUNK, toUpdate.length);
+      if (onProgress) onProgress(done, items.length);
+    }
+    if (toAppend.length) {
+      await append('NILAI_RAPOR_RERATA', toAppend);
+    }
+    if (onProgress) onProgress(items.length, items.length);
   }
 
   /**
@@ -1018,6 +1088,56 @@ const SHEETS = (() => {
     }
   }
 
+  /**
+   * Simpan banyak nilai US sekaligus — SATU baca, batch write.
+   */
+  async function saveNilaiUSBatch(items, onProgress) {
+    if (!items.length) return;
+    const rows = await read('NILAI_US!A:G');
+
+    const lookup = {};
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      if (r[0] && String(r[0]).startsWith('NU')) {
+        lookup[`${r[1]}|${r[2]}|${r[3]}`] = { rowIndex: i + 1, id: r[0] };
+      }
+    }
+
+    const toUpdate = [];
+    const toAppend = [];
+    let nextRow = rows.length + 1;
+
+    for (const item of items) {
+      const k = `${item.id_siswa}|${item.id_mapel}|${item.kelas}`;
+      const buildRow = (id) => [
+        id, item.id_siswa||'', item.id_mapel||'', item.kelas||'',
+        item.tahun_pelajaran||'',
+        item.nilai_tertulis !== null && item.nilai_tertulis !== undefined ? item.nilai_tertulis : '',
+        item.nilai_praktik  !== null && item.nilai_praktik  !== undefined ? item.nilai_praktik  : '',
+      ];
+      if (lookup[k]) {
+        const { rowIndex, id } = lookup[k];
+        toUpdate.push([`NILAI_US!A${rowIndex}:G${rowIndex}`, [buildRow(id)]]);
+      } else {
+        const id = 'NU' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        toAppend.push(buildRow(id));
+        lookup[k] = { rowIndex: nextRow++, id };
+      }
+    }
+
+    const CHUNK = 100;
+    let done = 0;
+    for (let i = 0; i < toUpdate.length; i += CHUNK) {
+      await valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+      done = Math.min(i + CHUNK, toUpdate.length);
+      if (onProgress) onProgress(done, items.length);
+    }
+    if (toAppend.length) {
+      await append('NILAI_US', toAppend);
+    }
+    if (onProgress) onProgress(items.length, items.length);
+  }
+
   // ── Expose publik API ───────────────────────────────── 
   return {
     // CRUD dasar
@@ -1053,6 +1173,7 @@ const SHEETS = (() => {
     updateMutasiStatus,
 
     // Ujian Sekolah / Sumatif Akhir Jenjang
+    valuesBatchWrite,
     getNilaiRaporRerata,
     saveNilaiRaporRerata,
     saveNilaiRaporReataBatch,
