@@ -247,6 +247,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" href="../penilaian/input-nilai.html">
     <span class="nav-icon">📝</span> Input Nilai SLM & SAS
   </a>
+  <a class="nav-item" id="navEkskul" href="../penilaian/input-ekskul.html" style="display:none;">
+    <span class="nav-icon">🏆</span> Input Ekskul
+  </a>
   <a class="nav-item" id="navSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none;">
     <span class="nav-icon">📖</span> Setoran Tahsin-Tahfizh
   </a>
@@ -254,6 +257,13 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
     <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
   </a>
 
+  <div class="sidebar-section-label" id="navSAJLabel" style="display:none;">Ujian Sekolah / SAJ</div>
+  <a class="nav-item" id="navRataRapor" href="../ujian-sekolah/input-rata-rapor.html" style="display:none;">
+    <span class="nav-icon">📊</span> Nilai Rata-Rata Rapor
+  </a>
+  <a class="nav-item" id="navNilaiUS" href="../ujian-sekolah/input-nilai-us.html" style="display:none;">
+    <span class="nav-icon">✏️</span> Nilai Ujian Sekolah
+  </a>
   <div class="sidebar-section-label">Kurikulum</div>
   <a class="nav-item" href="../setup/mapel-tp.html">
     <span class="nav-icon">📚</span> Setup TP & KKTP
@@ -317,6 +327,16 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
       <div class="action-icon blue">📊</div>
       <div class="action-label">Lihat Semua Kelas</div>
       <div class="action-desc">Pantau status pengisian nilai untuk semua kelas yang Anda ampu.</div>
+    </a>
+    <a class="action-card" id="cardSAJ" href="../ujian-sekolah/input-nilai-us.html" style="display:none;">
+      <div class="action-icon" style="background:var(--green-pale);color:var(--green-dark);">🎓</div>
+      <div class="action-label">Ujian Sekolah / SAJ</div>
+      <div class="action-desc">Input nilai rata-rata rapor &amp; nilai ujian sekolah untuk mapel Anda di kelas 6.</div>
+    </a>
+    <a class="action-card" id="cardEkskul" href="../penilaian/input-ekskul.html" style="display:none;">
+      <div class="action-icon" style="background:#fff8e1;color:#f57f17;">🏆</div>
+      <div class="action-label">Input Ekskul</div>
+      <div class="action-desc">Input nilai dan capaian ekskul untuk kegiatan yang Anda bina.</div>
     </a>
     <a class="action-card" id="btnSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none;">
       <div class="action-icon" style="background:var(--gold-light);color:var(--gold);">📖</div>
@@ -422,6 +442,23 @@ window.addEventListener('load', async () => {
     });
   }
 
+  // Tampilkan nav Ekskul jika guru ini adalah pembina minimal satu ekskul
+  // (cek dilakukan setelah allEkskul dimuat di loadAll())
+  _checkEkskulPembina();
+
+  // Tampilkan menu Ujian Sekolah/SAJ jika guru mengajar kelas 6 & bukan guru TT
+  if (!isTTGuru) {
+    const myKelas = currentUser.kelasList ||
+      (currentUser.kelas ? currentUser.kelas.split(',').map(s => s.trim()) : []);
+    const hasKelas6 = myKelas.some(k => String(k).startsWith('6'));
+    if (hasKelas6) {
+      ['navSAJLabel','navRataRapor','navNilaiUS','cardSAJ'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+      });
+    }
+  }
+
   showLoading('Memuat data mapel dan kelas…');
   try {
     await loadAll();
@@ -432,6 +469,20 @@ window.addEventListener('load', async () => {
     hideLoading();
   }
 });
+
+async function _checkEkskulPembina() {
+  try {
+    const ekskuls = await SHEETS.getEkskul();
+    const uid     = currentUser.id_user;
+    const isBina  = ekskuls.some(e => e.id_pembina && e.id_pembina === uid);
+    if (isBina) {
+      ['navEkskul','cardEkskul'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+      });
+    }
+  } catch(_) {}   // silent — jangan ganggu load utama
+}
 
 async function loadAll() {
   // Parse kelas yang diampu (bisa lebih dari 1, dipisah koma)
