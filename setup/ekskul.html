@@ -165,6 +165,12 @@ input:focus, select:focus { border-color:var(--green-light); box-shadow:0 0 0 3p
         <input type="text" id="f_ket" placeholder="Contoh: Baru tahun ini, Wajib kelas 4-6">
         <span class="input-note">Opsional — informasi tambahan tentang kegiatan ini</span>
       </div>
+      <div class="form-group">
+        <label>Pembina <span style="font-size:10.5px;font-weight:400;color:var(--ink-muted);">(opsional — guru yang bertanggung jawab menginput nilai ekskul ini)</span></label>
+        <select id="f_pembina">
+          <option value="">— Pilih Pembina —</option>
+        </select>
+      </div>
 
       <div class="form-section-title" style="margin-top:16px;">KKTP — Kriteria Ketercapaian Tujuan Pembelajaran</div>
       <span class="input-note" style="display:block;margin-bottom:10px;">4 level: Tidak Ikut · Layak · Cakap · Mahir. Isi deskripsi capaian untuk setiap level.</span>
@@ -277,7 +283,8 @@ input:focus, select:focus { border-color:var(--green-light); box-shadow:0 0 0 3p
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>#</th><th>Nama Kegiatan</th><th>Jenis</th><th>Keterangan</th><th>Aksi</th>
+          <th>#</th><th>Nama Kegiatan</th><th>Jenis</th><th>Keterangan</th>
+          <th>Pembina</th><th>Aksi</th>
         </tr></thead>
         <tbody id="tbodyKok">
           <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--ink-muted);">⏳ Memuat…</td></tr>
@@ -311,6 +318,7 @@ input:focus, select:focus { border-color:var(--green-light); box-shadow:0 0 0 3p
 <script src="../assets/js/sheets.js"></script>
 <script>
 let allEkskul = [];
+let allUsers  = [];
 let editId    = null;
 let jenisVal  = '';
 
@@ -332,7 +340,23 @@ window.addEventListener('load', async () => {
 });
 
 async function muatData() {
-  allEkskul = await SHEETS.getEkskul();
+  [allEkskul, allUsers] = await Promise.all([
+    SHEETS.getEkskul(),
+    SHEETS.getUsers(),
+  ]);
+  // Isi dropdown pembina
+  const selPem = document.getElementById('f_pembina');
+  if (selPem) {
+    while (selPem.options.length > 1) selPem.remove(1);
+    allUsers
+      .filter(u => u.status === 'aktif')
+      .sort((a,b) => a.nama.localeCompare(b.nama))
+      .forEach(u => {
+        const o = document.createElement('option');
+        o.value = u.id; o.textContent = u.nama + ' (' + u.role + ')';
+        selPem.appendChild(o);
+      });
+  }
   renderTabel();
 }
 
@@ -365,6 +389,7 @@ function renderGrup(tbodyId, data) {
       <td><strong>${e.nama}</strong></td>
       <td><span class="badge ${e.jenis==='kokurikuler'?'kok':'eks'}">${e.jenis==='kokurikuler'?'🏫 Kokurikuler':'🏆 Ekstrakurikuler'}</span></td>
       <td style="font-size:12px;color:var(--ink-muted);">${e.keterangan||'—'}</td>
+      <td style="font-size:12px;color:var(--ink-muted);">${(()=>{ const pb=(allUsers||[]).find(u=>u.id===e.id_pembina); return pb?pb.nama:'—'; })()}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-secondary btn-sm" onclick="bukaEdit('${e.id}')">✏️ Edit</button>
         <button class="btn btn-danger btn-sm" onclick="hapus('${e.id}','${e.nama}')">🗑️ Hapus</button>
@@ -376,8 +401,9 @@ function renderGrup(tbodyId, data) {
 function bukaTambah(jenis) {
   editId = null;
   document.getElementById('modalTitle').textContent = 'Tambah Kegiatan';
-  document.getElementById('f_nama').value = '';
-  document.getElementById('f_ket').value  = '';
+  document.getElementById('f_nama').value    = '';
+  document.getElementById('f_ket').value     = '';
+  document.getElementById('f_pembina').value = '';
   pilihJenis(jenis);
   bukaModal();
 }
@@ -387,8 +413,9 @@ function bukaEdit(id) {
   if (!e) return;
   editId = id;
   document.getElementById('modalTitle').textContent = 'Edit Kegiatan';
-  document.getElementById('f_nama').value = e.nama || '';
-  document.getElementById('f_ket').value  = e.keterangan || '';
+  document.getElementById('f_nama').value    = e.nama       || '';
+  document.getElementById('f_ket').value     = e.keterangan || '';
+  document.getElementById('f_pembina').value = e.id_pembina  || '';
   // KKTP
   if (e.level && e.level.length >= 3) {
     [1,2,3].forEach(li => {
@@ -443,6 +470,7 @@ async function simpan() {
       const rows = await SHEETS.read('EKSKUL!A:D');
       const idx  = rows.findIndex(r => r[0] === editId);
       if (idx < 0) throw new Error('Data tidak ditemukan.');
+      const pembinaVal   = document.getElementById('form-pembina').value.trim();
       const kktpEditRow = [editId, nama, jenisVal, ket,
         parseInt(document.getElementById('kktp-min-1').value)||61,
         parseInt(document.getElementById('kktp-maks-1').value)||75,
@@ -454,8 +482,9 @@ async function simpan() {
         parseInt(document.getElementById('kktp-maks-3').value)||100,
         document.getElementById('kktp-desc-3').value.trim(),
         document.getElementById('kktp-desc-0').value.trim(),  // col N = Tidak Ikut desc
+        pembinaVal,                                               // col O = id_pembina
       ];
-      await SHEETS.write(`EKSKUL!A${idx+1}:N${idx+1}`, [kktpEditRow]);
+      await SHEETS.write(`EKSKUL!A${idx+1}:O${idx+1}`, [kktpEditRow]);
       showAlert('success','✅ Berhasil', `${nama} berhasil diperbarui.`);
     } else {
       const id = await SHEETS._generateId('EKSKUL','EK');
@@ -470,8 +499,9 @@ async function simpan() {
         parseInt(document.getElementById('kktp-maks-3').value)||100,
         document.getElementById('kktp-desc-3').value.trim(),
         document.getElementById('kktp-desc-0').value.trim(),  // col N = Tidak Ikut desc
+        document.getElementById('form-pembina').value.trim(), // col O = id_pembina
       ];
-      await SHEETS.append('EKSKUL!A:N', [kktpRow]);
+      await SHEETS.append('EKSKUL!A:O', [kktpRow]);
       showAlert('success','✅ Berhasil', `${nama} berhasil ditambahkan.`);
     }
     tutupModal();
