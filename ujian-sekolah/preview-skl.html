@@ -418,10 +418,25 @@ function buildCard(siswa, raporRows, usRows, br, bu, noUrut){
   const nisn = siswa.nisn || '\u2014';
 
   /* helper: get nilai ijazah per lampiran key */
+  function findMapelFuzzy(namaCfg){
+    if(!namaCfg) return null;
+    const q = namaCfg.toLowerCase().trim();
+    let m = allMapel.find(mp=>mp.nama.toLowerCase().trim()===q);
+    if(m) return m;
+    m = allMapel.find(mp=>q.includes(mp.nama.toLowerCase().trim()));
+    if(m) return m;
+    m = allMapel.find(mp=>mp.nama.toLowerCase().includes(q));
+    if(m) return m;
+    const stop=['dan','atau','budi','pekerti','jasmani','olahraga'];
+    const words=q.split(' ').filter(w=>w.length>3&&!stop.includes(w));
+    if(words.length){ m=allMapel.find(mp=>words.every(w=>mp.nama.toLowerCase().includes(w))); if(m) return m; }
+    return null;
+  }
+
   function nilaiByKey(fk){
     const mn = cfg['map_'+fk]||'';
     if(!mn) return null;
-    const m = allMapel.find(mp=>mp.nama.toLowerCase()===mn.toLowerCase());
+    const m = findMapelFuzzy(mn);
     if(!m) return null;
     const rata = hitungRataRapor(raporRows, m.id);
     const us   = usRows.find(u=>u.id_mapel===m.id);

@@ -7,13 +7,11 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<!-- PizZip + Docxtemplater via CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PizZip/3.1.6/pizzip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.50.0/docxtemplater.js"></script>
-<!-- JSZip for bundling multiple DOCX into ZIP -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- FileSaver for download -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- Libraries lokal (tidak bergantung CDN) -->
+<script src="libs/pizzip.min.js"></script>
+<script src="libs/docxtemplater.min.js"></script>
+<script src="libs/jszip.min.js"></script>
+<script src="libs/FileSaver.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -348,12 +346,12 @@ async function fetchTemplate(name) {
 }
 
 function fillDocx(templateBuf, data) {
-  const zip  = new PizZip(templateBuf);
-  const doc  = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks:    true,
-    nullGetter: () => '',   // missing fields → empty string
-  });
+  // docxtemplater bundle exposes window.docxtemplater (lowercase)
+  const Docx = window.docxtemplater || window.Docxtemplater;
+  if (!Docx)       throw new Error('Library docxtemplater gagal dimuat. Pastikan file libs/docxtemplater.min.js ada.');
+  if (!window.PizZip) throw new Error('Library PizZip gagal dimuat. Pastikan file libs/pizzip.min.js ada.');
+  const zip = new window.PizZip(templateBuf);
+  const doc = new Docx(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' });
   doc.render(data);
   return doc.getZip().generate({ type: 'arraybuffer', compression: 'DEFLATE' });
 }
@@ -372,6 +370,29 @@ function formatTglLahir(raw) {
 /* ═══════════════════════════════════════════════════
    Main generate
 ═══════════════════════════════════════════════════ */
+
+  // ── Fuzzy lookup mata pelajaran ──────────────────────────────
+  function findMapelFuzzy(namaCfg) {
+    if (!namaCfg) return null;
+    const q = namaCfg.toLowerCase().trim();
+    // 1. Exact
+    let m = allMapel.find(mp => mp.nama.toLowerCase().trim() === q);
+    if (m) return m;
+    // 2. Config contains mapel name
+    m = allMapel.find(mp => q.includes(mp.nama.toLowerCase().trim()));
+    if (m) return m;
+    // 3. Mapel name contains config
+    m = allMapel.find(mp => mp.nama.toLowerCase().includes(q));
+    if (m) return m;
+    // 4. Keyword: setiap kata panjang dari config harus ada di nama mapel
+    const stop = ['dan','atau','dan','budi','pekerti','jasmani','olahraga'];
+    const words = q.split(' ').filter(w => w.length > 3 && !stop.includes(w));
+    if (words.length) {
+      m = allMapel.find(mp => words.every(w => mp.nama.toLowerCase().includes(w)));
+      if (m) return m;
+    }
+    return null;
+  }
 async function generateDocs() {
   if (selectedIds.size === 0) { showAlert('warning','⚠️','Pilih minimal satu siswa.'); return; }
   const genSKL     = document.getElementById('cbSKL').checked;
@@ -439,7 +460,7 @@ async function generateDocs() {
 
   hideLoading();
 
-  generatedZip = new JSZip();
+  generatedZip = new window.JSZip();
   let okCount = 0, errCount = 0;
 
   for (let i = 0; i < siswaTampil.length; i++) {
@@ -454,7 +475,7 @@ async function generateDocs() {
     const getMapelNilai = (fieldName, round=false) => {
       const mapelNama = mapelFields[fieldName];
       if (!mapelNama) return '';
-      const m = allMapel.find(mp => mp.nama.toLowerCase()===mapelNama.toLowerCase());
+      const m = findMapelFuzzy(mapelNama);
       if (!m) return '';
       const rata = hitungRataRapor(siswaRapor, m.id);
       const us   = siswaUS.find(u => u.id_mapel===m.id);
@@ -469,7 +490,7 @@ async function generateDocs() {
     const semuaNilai = semuaMapelFields.map(fk => {
       const mapelNama = mapelFields[fk];
       if (!mapelNama) return null;
-      const m = allMapel.find(mp => mp.nama.toLowerCase()===mapelNama.toLowerCase());
+      const m = findMapelFuzzy(mapelNama);
       if (!m) return null;
       const rata = hitungRataRapor(siswaRapor, m.id);
       const us   = siswaUS.find(u => u.id_mapel===m.id);
@@ -569,7 +590,7 @@ async function downloadZip() {
   if (!generatedZip) return;
   const kelas = document.getElementById('selKelas').value;
   const blob  = await generatedZip.generateAsync({ type:'blob', compression:'DEFLATE' });
-  saveAs(blob, `SKL_${kelas}_${new Date().toISOString().slice(0,10)}.zip`);
+  window.saveAs(blob, `SKL_${kelas}_${new Date().toISOString().slice(0,10)}.zip`);
 }
 
 function showAlert(type, title, text) {
