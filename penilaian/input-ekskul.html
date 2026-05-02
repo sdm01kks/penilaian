@@ -256,6 +256,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   <div class="sidebar-section-label">Dashboard</div>
   <a class="nav-item" id="navGK" href="../dashboard/guru-kelas.html" style="display:none"><span class="nav-icon">🏠</span> Dashboard Guru Kelas</a>
   <a class="nav-item" id="navAdmin" href="../dashboard/admin.html" style="display:none"><span class="nav-icon">🏠</span> Dashboard Admin</a>
+  <a class="nav-item" id="navGM" href="../dashboard/guru-mapel.html" style="display:none"><span class="nav-icon">🏠</span> Dashboard Guru Mapel</a>
   <div class="sidebar-section-label">Input Penilaian</div>
   <a class="nav-item" href="input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS</a>
   <a class="nav-item" href="input-dpl.html"><span class="nav-icon">🌱</span> Input Kokurikuler</a>
@@ -363,19 +364,31 @@ window.addEventListener('load', async () => {
     currentUser.role === 'admin'      ? 'Administrator' :
     currentUser.role === 'guru_kelas' ? 'Wali Kelas ' + (currentUser.kelas||'') : 'Guru Bidang Studi';
 
-  if (currentUser.role === 'guru_mapel') {
-    document.getElementById('accessBlocked').style.display = 'flex';
-    document.getElementById('mainContent').style.display   = 'none';
-    hideLoading(); return;
-  }
-  if (currentUser.role === 'admin') document.getElementById('navAdmin').style.display = 'flex';
-  else document.getElementById('navGK').style.display = 'flex';
+  if (currentUser.role === 'admin')        document.getElementById('navAdmin').style.display = 'flex';
+  else if (currentUser.role === 'guru_kelas') document.getElementById('navGK').style.display   = 'flex';
+  // guru_mapel: nav akan disesuaikan setelah ekskul dimuat
 
   showLoading('Memuat data…');
   try {
     [config, allKelas, allEkskul] = await Promise.all([
       SHEETS.getConfig(), SHEETS.getKelas(), SHEETS.getEkskul(),
     ]);
+
+    // Untuk guru_mapel: filter hanya ekskul yang dia bina
+    if (currentUser.role === 'guru_mapel') {
+      const ekskulBinaan = allEkskul.filter(e => e.id_pembina === currentUser.id_user);
+      if (ekskulBinaan.length === 0) {
+        // Tidak ada ekskul yang dibina — tampilkan pesan
+        document.getElementById('accessBlocked').style.display = 'flex';
+        document.getElementById('mainContent').style.display   = 'none';
+        document.getElementById('accessBlocked').querySelector('p') &&
+          (document.getElementById('accessBlocked').querySelector('p').textContent =
+            'Anda belum ditetapkan sebagai pembina ekskul manapun. Hubungi admin untuk menetapkan pembina di halaman Setup Ekskul.');
+        hideLoading(); return;
+      }
+      allEkskul = ekskulBinaan;   // Hanya tampilkan ekskul yang dibina
+      document.getElementById('navGM').style.display = 'flex';
+    }
     document.getElementById('semPill').textContent =
       'Semester ' + (config['semester_aktif']||'?') + ' · ' + (config['tahun_pelajaran']||'?');
     isiDropdownKelas();
@@ -394,6 +407,7 @@ function isiDropdownKelas() {
     const arr = (currentUser.kelasList || currentUser.kelas?.split(',') || []).map(s=>s.trim());
     kelas = allKelas.filter(k => arr.includes(k.nama));
   }
+  // guru_mapel sebagai pembina: tampilkan semua kelas (ekskul bisa lintas kelas)
   sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
     kelas.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
 }
