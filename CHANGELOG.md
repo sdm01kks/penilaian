@@ -1,101 +1,104 @@
-## [2026-05-02] — v8 · Sesi 12 · Perbaikan Generate Dokumen SKL & Fuzzy Matching Mapel
+## [2026-05-02] — v10 · Sesi 14 · Perbaikan Kritis Generate SKL, Input US, Tahsin Filter, Fuzzy Mapel, Ekskul
 
 ### 🐛 Perbaikan Bug
 
 ---
 
-### v8-01 · `ujian-sekolah/generate-skl.html` · Error "PizZip is not defined" & ZIP kosong
+### v10-01 · `ujian-sekolah/templates/tpl_skl.docx` & `tpl_lampiran.docx` · Template dibangun ulang
 
-**Root cause 1 — CDN diblokir:**
-Script CDN (`cdnjs.cloudflare.com`) tidak dapat dimuat di lingkungan hosting yang memblokir domain eksternal. Akibatnya semua library (`PizZip`, `docxtemplater`, `JSZip`, `FileSaver`) tidak terdefinisi → setiap generate langsung error.
+**Masalah:** Generate SKL hanya menghasilkan data biodata + penutup, tanpa isi surat (paragraf pembuka, dasar hukum, "-------- LULUS --------", dll).
 
-**Solusi:** Semua library dipindahkan ke folder `ujian-sekolah/libs/` dan dimuat secara lokal.
+**Root cause:** Script konversi template sebelumnya menggunakan regex DOTALL yang terlalu greedy. Setelah mengganti MERGEFIELD pertama, regex "melompat" ke end tag berikutnya yang jauh, memakan seluruh isi surat di antaranya. Semua 78 paragraf body text hilang.
 
-| File | Sumber | Ukuran |
-|------|--------|--------|
-| `libs/pizzip.min.js` | PizZip 3.1.6 | 79 KB |
-| `libs/docxtemplater.min.js` | Docxtemplater 3.50.0 | 101 KB |
-| `libs/jszip.min.js` | JSZip 3.10.1 | 96 KB |
-| `libs/FileSaver.min.js` | FileSaver.js 2.0.5 | 3 KB |
+**Solusi:** Template dikonversi ulang dengan algoritma state-machine yang mencari posisi setiap field secara tepat:
+1. Temukan `fldChar begin` → catat posisi awal run yang membungkusnya
+2. Temukan `instrText(MERGEFIELD fieldname)` setelah begin
+3. Temukan `fldChar separate` → lewati display runs
+4. Temukan `fldChar end` → catat posisi akhir
+5. Ganti seluruh blok dengan `<w:r><w:t>{fieldname}</w:t></w:r>` Times New Roman 12pt
+6. Proses dari belakang ke depan agar posisi tidak bergeser
 
-**Root cause 2 — Salah nama global `Docxtemplater`:**
-Bundle `docxtemplater.min.js` mengekspos `window.docxtemplater` (huruf kecil semua), bukan `window.Docxtemplater`. Kode lama memakai `new Docxtemplater(...)` → `ReferenceError: Docxtemplater is not defined`.
+**Hasil verifikasi template baru:**
+- `tpl_skl.docx`: 8 field, 78 teks body (termasuk "SURAT KETERANGAN KELULUSAN", "Yang bertanda tangan...", "Berdasarkan Hasil Rapat...", "-------- LULUS --------", dll.)
+- `tpl_lampiran.docx`: 18 field (termasuk `{kka}`), semua paragraf body terjaga
 
-**Solusi:** `fillDocx()` diperbarui:
+---
+
+### v10-02 · `ujian-sekolah/input-nilai-us.html` · `showProgress is not defined`
+
+**Masalah:** Error `ReferenceError: showProgress is not defined` saat klik Simpan.
+
+**Root cause:** Fungsi `showProgress()` dan `hideProgress()` ada di `input-rata-rapor.html` tapi tidak pernah berhasil ditambahkan ke `input-nilai-us.html` pada patch sebelumnya karena string target tidak cocok.
+
+**Solusi:** Fungsi ditambahkan langsung sebelum `toggleSidebar` di bagian akhir script.
+
+---
+
+### v10-03 · `ujian-sekolah/input-rata-rapor.html` & `input-nilai-us.html` · Filter Tahsin-Tahfizh
+
+**Masalah:** Mata pelajaran Tahsin-Tahfizh masih muncul di tabel input nilai rata-rata rapor dan nilai ujian sekolah.
+
+**Root cause:** Filter `TAHSIN_KW` hanya ada di `preview-skl.html` dan `generate-skl.html`, belum diterapkan di halaman input.
+
+**Solusi:** Filter ditambahkan di keduanya segera setelah `allMapel` dimuat:
 ```javascript
-const Docx = window.docxtemplater || window.Docxtemplater;
-const zip  = new window.PizZip(templateBuf);
-const doc  = new Docx(zip, { ... });
+const TAHSIN_KW = ['tahsin','tahfizh','tahfidz'];
+allMapel = allMapel.filter(m => {
+  const n = (m.nama||'').toLowerCase();
+  return !TAHSIN_KW.some(k => n.includes(k));
+});
 ```
-Juga ditambahkan pesan error yang jelas jika library tetap tidak termuat.
-
-**Root cause 3 — `JSZip` dan `saveAs` juga butuh `window.` prefix:**
-`new JSZip()` dan `saveAs(blob, ...)` diganti menjadi `new window.JSZip()` dan `window.saveAs(blob, ...)` agar konsisten dan tidak tergantung pada scope variabel global.
 
 ---
 
-### v8-02 · `ujian-sekolah/generate-skl.html` & `preview-skl.html` · Fuzzy matching nama mata pelajaran
+### v10-04 · `ujian-sekolah/preview-skl.html` & `generate-skl.html` · Fuzzy matching Bahasa Sunda & Informatika/TIK
 
-**Masalah:**
-Beberapa mata pelajaran (PJOK, Bahasa Sunda, TIK/Informatika) tidak muncul nilainya karena pencocokan nama menggunakan **exact match case-insensitive** — nama di konfigurasi SKL harus persis sama dengan nama di sheet MAPEL.
+**Masalah:** Nilai Bahasa Sunda dan Informatika/TIK tidak muncul di preview/generate SKL meskipun sudah diisi di konfigurasi.
 
-Contoh kegagalan:
-- Konfigurasi: `"Pendidikan Jasmani, Olahraga, dan Kesehatan"`
-- Sheet MAPEL: `"Penjasorkes"` atau `"PJOK"`
-- Hasil: tidak cocok → nilai kosong
+**Root cause:** Fuzzy matching tidak menangani kasus:
+- Config: `"Bahasa dan Sastra Sunda"` → DB: `"Bahasa Sunda"` (DB lebih pendek, config contains DB) ✓ ditangani
+- Config: `"Informatika"` → DB: `"Teknologi Informasi dan Komunikasi"` (keduanya tidak saling contains) ✗ gagal
 
-**Solusi — fungsi `findMapelFuzzy(namaCfg)`:**
-
-Empat tahap pencocokan secara berurutan (berhenti di tahap pertama yang berhasil):
-
-1. **Exact match** — nama config = nama mapel (case-insensitive)
-2. **Config contains mapel** — nama config mengandung nama mapel (untuk config yang lebih panjang dari nama mapel di database)
-3. **Mapel contains config** — nama mapel mengandung nama config (kebalikannya)
-4. **Keyword match** — setiap kata panjang (>3 huruf, bukan stopword) dari config harus ada di nama mapel. Stopword: `dan, atau, budi, pekerti, jasmani, olahraga`
-
-**Contoh hasil:**
-
-| Konfigurasi | Nama di MAPEL | Tahap cocok |
-|------------|---------------|-------------|
-| `Pendidikan Jasmani, Olahraga, dan Kesehatan` | `PJOK` | — |
-| `PJOK` | `Pendidikan Jasmani Olahraga Kesehatan` | Tahap 3 |
-| `Penjasorkes` | `PJOK` | — (perlu manual) |
-| `Bahasa dan Sastra Sunda` | `B. Sunda` | Tahap 4: `bahasa`, `sastra`, `sunda` |
-| `Informatika/TIK` | `Informatika` | Tahap 3 |
-| `Koding dan Kecerdasan Artifisial` | `KKA` | — (perlu manual) |
-
-**Rekomendasi:** Untuk mapel dengan singkatan tidak standar (PJOK, KKA, B.Sunda), isi kolom **Pemetaan Mata Pelajaran** di Konfigurasi SKL dengan **nama persis** seperti di sheet MAPEL.
-
-Fungsi diterapkan di:
-- `generate-skl.html` — fungsi `getMapelNilai()` dan blok hitung `semuaNilai`
-- `preview-skl.html` — fungsi `nilaiByKey()`
+**Solusi:** `findMapelFuzzy()` diperluas dengan dua level tambahan:
+- **Tahap 5 — Partial keyword:** jika setidaknya setengah kata kunci cocok (menangani kasus config pendek vs nama mapel panjang)
+- **Tahap 6 — TIK special case:** deteksi khusus kata kunci `tik`, `informatika`, `teknologi informasi` dari kedua sisi
 
 ---
 
-### 📋 Ringkasan File yang Diubah (v8)
+### v10-05 · `setup/ekskul.html` · Pembina tidak tersimpan + modal terlalu kecil
+
+**Masalah A — Pembina tidak tersimpan:**
+
+Root cause: ID form field adalah `f_pembina` tapi kode simpan membaca dari `form-pembina` (ID lama yang tidak ada di DOM). Akibatnya `getElementById('form-pembina')` selalu `null`, pembina tidak pernah tersimpan.
+
+Solusi: Semua referensi `form-pembina` diganti menjadi `f_pembina`.
+
+**Masalah B — Modal terlalu kecil:**
+
+Sebelum: `max-width: 480px` — terlalu sempit untuk menampilkan 4 kolom KKTP beserta deskripsi panjang.
+
+Sesudah:
+- `max-width: 780px`
+- Grid KKTP diubah dari `1fr 1fr 1fr 1fr` → `1fr 1fr` (2 kolom, 2 baris) — setiap level mendapat lebih banyak ruang untuk teks deskripsi
+
+---
+
+### 📋 Ringkasan File yang Diubah (v10)
 
 | File | Status | Keterangan |
 |------|--------|------------|
-| `ujian-sekolah/generate-skl.html` | **Diubah** | CDN → lokal, fix Docxtemplater lowercase, fuzzy matching |
-| `ujian-sekolah/preview-skl.html` | **Diubah** | Fuzzy matching nama mapel |
-| `ujian-sekolah/libs/pizzip.min.js` | **Baru** | PizZip 3.1.6 lokal |
-| `ujian-sekolah/libs/docxtemplater.min.js` | **Baru** | Docxtemplater 3.50.0 lokal |
-| `ujian-sekolah/libs/jszip.min.js` | **Baru** | JSZip 3.10.1 lokal |
-| `ujian-sekolah/libs/FileSaver.min.js` | **Baru** | FileSaver.js 2.0.5 lokal |
+| `ujian-sekolah/templates/tpl_skl.docx` | **Dibangun ulang** | Semua 78 teks body terjaga, 8 field tepat |
+| `ujian-sekolah/templates/tpl_lampiran.docx` | **Dibangun ulang** | Semua teks body terjaga, 18 field tepat |
+| `ujian-sekolah/input-nilai-us.html` | **Diubah** | +`showProgress`/`hideProgress`, +filter Tahsin |
+| `ujian-sekolah/input-rata-rapor.html` | **Diubah** | +filter Tahsin-Tahfizh |
+| `ujian-sekolah/preview-skl.html` | **Diubah** | Fuzzy matching TIK + partial keyword |
+| `ujian-sekolah/generate-skl.html` | **Diubah** | Fuzzy matching TIK + partial keyword |
+| `setup/ekskul.html` | **Diubah** | Fix ID `form-pembina`→`f_pembina`, modal 780px, KKTP 2 kolom |
 
-### ⚠️ Deployment
+### ⚠️ Template DOCX harus diperbarui
 
-Folder `ujian-sekolah/libs/` harus ikut di-deploy bersama file HTML. Keempat file `.js` di dalamnya wajib ada agar generate DOCX berfungsi.
-
-### 🔍 Penanda Kode Baru — Anti-Regresi
-
-| File | Penanda |
-|------|---------|
-| `ujian-sekolah/generate-skl.html` | `libs/pizzip.min.js` |
-| `ujian-sekolah/generate-skl.html` | `window.docxtemplater` |
-| `ujian-sekolah/generate-skl.html` | `findMapelFuzzy` |
-| `ujian-sekolah/preview-skl.html` | `findMapelFuzzy` |
+Kedua file `ujian-sekolah/templates/tpl_skl.docx` dan `tpl_lampiran.docx` **wajib diganti** dengan versi baru dari patch ini. File lama menghasilkan dokumen tanpa isi surat.
 
 ---
 
-*Dibuat: 2 Mei 2026 (v8) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+*Dibuat: 2 Mei 2026 (v10) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
