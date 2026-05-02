@@ -372,27 +372,43 @@ function formatTglLahir(raw) {
 ═══════════════════════════════════════════════════ */
 
   // ── Fuzzy lookup mata pelajaran ──────────────────────────────
-  function findMapelFuzzy(namaCfg) {
-    if (!namaCfg) return null;
+  function findMapelFuzzy(namaCfg){
+    if(!namaCfg) return null;
     const q = namaCfg.toLowerCase().trim();
     // 1. Exact
-    let m = allMapel.find(mp => mp.nama.toLowerCase().trim() === q);
-    if (m) return m;
-    // 2. Config contains mapel name
-    m = allMapel.find(mp => q.includes(mp.nama.toLowerCase().trim()));
-    if (m) return m;
-    // 3. Mapel name contains config
-    m = allMapel.find(mp => mp.nama.toLowerCase().includes(q));
-    if (m) return m;
-    // 4. Keyword: setiap kata panjang dari config harus ada di nama mapel
-    const stop = ['dan','atau','dan','budi','pekerti','jasmani','olahraga'];
-    const words = q.split(' ').filter(w => w.length > 3 && !stop.includes(w));
-    if (words.length) {
-      m = allMapel.find(mp => words.every(w => mp.nama.toLowerCase().includes(w)));
-      if (m) return m;
+    let m = allMapel.find(mp=>mp.nama.toLowerCase().trim()===q);
+    if(m) return m;
+    // 2. Config contains mapel name (e.g. config="Bahasa dan Sastra Sunda", db="Bahasa Sunda")
+    m = allMapel.find(mp=>q.includes(mp.nama.toLowerCase().trim()) && mp.nama.trim().length>3);
+    if(m) return m;
+    // 3. Mapel contains config
+    m = allMapel.find(mp=>mp.nama.toLowerCase().includes(q));
+    if(m) return m;
+    // 4. Keyword: significant words (>3 chars) from config must all appear in mapel name
+    const stop=['dan','atau','budi','pekerti','ilmu','seni','jenis','dan'];
+    const words=q.split(/\s+/).filter(w=>w.length>3&&!stop.includes(w));
+    if(words.length){
+      m=allMapel.find(mp=>words.every(w=>mp.nama.toLowerCase().includes(w)));
+      if(m) return m;
+      // 5. Partial: at least half the keywords match
+      if(words.length>=2){
+        m=allMapel.find(mp=>{
+          const matches=words.filter(w=>mp.nama.toLowerCase().includes(w));
+          return matches.length>=Math.ceil(words.length/2);
+        });
+        if(m) return m;
+      }
+    }
+    // 6. TIK/Informatika special cases
+    const tik=['tik','informatika','teknologi informasi','information technology'];
+    const isTikCfg=tik.some(k=>q.includes(k));
+    if(isTikCfg){
+      m=allMapel.find(mp=>{const mn=mp.nama.toLowerCase();return tik.some(k=>mn.includes(k));});
+      if(m) return m;
     }
     return null;
   }
+
 async function generateDocs() {
   if (selectedIds.size === 0) { showAlert('warning','⚠️','Pilih minimal satu siswa.'); return; }
   const genSKL     = document.getElementById('cbSKL').checked;

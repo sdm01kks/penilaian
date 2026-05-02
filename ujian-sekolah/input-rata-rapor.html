@@ -298,9 +298,22 @@ window.addEventListener('load', async () => {
   else if (currentUser.role === 'guru_mapel') backLink.href = '../dashboard/guru-mapel.html';
   else backLink.href = '../dashboard/guru-kelas.html';
 
+  // Guru mapel hanya input mapelnya sendiri — sembunyikan tools bulk
+  if (currentUser.role === 'guru_mapel') {
+    const adminBtns = document.getElementById('adminBtnGroup');
+    if (adminBtns) adminBtns.style.display = 'none';
+  }
+
   showLoading('Memuat data…');
   try {
     [config, allMapel] = await Promise.all([SHEETS.getConfig(), SHEETS.getMapel()]);
+
+    // Keluarkan Tahsin-Tahfizh dari nilai ijazah
+    const TAHSIN_KW = ['tahsin','tahfizh','tahfidz'];
+    allMapel = allMapel.filter(m => {
+      const n = (m.nama||'').toLowerCase();
+      return !TAHSIN_KW.some(k => n.includes(k));
+    });
 
     // Populate kelas dropdown — only kelas 6 (unless admin shows all)
     const allKelas = await SHEETS.getKelas();
@@ -313,6 +326,11 @@ window.addEventListener('load', async () => {
     } else {
       const myKelas = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
       kelasList = kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
+    }
+
+    // Untuk guru_mapel: filter allMapel hanya ke mapel yang diajar (kecuali tahsin-tahfizh)
+    if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
+      allMapel = allMapel.filter(m => m.id === currentUser.mapel);
     }
 
     kelasList.forEach(k => {

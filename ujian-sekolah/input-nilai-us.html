@@ -283,6 +283,13 @@ window.addEventListener('load', async () => {
   try {
     [config, allMapel] = await Promise.all([SHEETS.getConfig(), SHEETS.getMapel()]);
 
+    // Keluarkan Tahsin-Tahfizh dari nilai ujian sekolah
+    const TAHSIN_KW = ['tahsin','tahfizh','tahfidz'];
+    allMapel = allMapel.filter(m => {
+      const n = (m.nama||'').toLowerCase();
+      return !TAHSIN_KW.some(k => n.includes(k));
+    });
+
     // Terapkan bobot dari konfigurasi SKL jika tersedia
     if (config['skl_bobot_us_tertulis']) document.getElementById('bobotTertulis').value = config['skl_bobot_us_tertulis'];
     if (config['skl_bobot_us_praktik'])  document.getElementById('bobotPraktik').value  = config['skl_bobot_us_praktik'];
@@ -297,6 +304,11 @@ window.addEventListener('load', async () => {
     } else {
       const myKelas = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
       kelasList = kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
+    }
+
+    // Untuk guru_mapel: filter allMapel hanya ke mapel yang diajar
+    if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
+      allMapel = allMapel.filter(m => m.id === currentUser.mapel);
     }
 
     kelasList.forEach(k => {
@@ -476,6 +488,16 @@ function showAlert(type, title, text) {
 }
 function showLoading(msg){document.getElementById('loadingText').textContent=msg||'Memuat…';document.getElementById('loadingOverlay').classList.remove('hidden')}
 function hideLoading(){document.getElementById('loadingOverlay').classList.add('hidden')}
+function showProgress(done,total,msg){
+  const pct=total>0?Math.round(done/total*100):0;
+  document.getElementById('loadingText').textContent=msg||'Menyimpan…';
+  if(document.getElementById('progressWrap')){document.getElementById('progressWrap').style.display='block';}
+  if(document.getElementById('spinnerEl')){document.getElementById('spinnerEl').style.display=done>=total?'none':'block';}
+  if(document.getElementById('progressBar')){document.getElementById('progressBar').style.width=pct+'%';}
+  if(document.getElementById('progressLabel')){document.getElementById('progressLabel').textContent=pct+'%';}
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideProgress(){document.getElementById('loadingOverlay').classList.add('hidden')}
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('open')}
 </script>
 </body>
