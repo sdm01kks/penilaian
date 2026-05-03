@@ -117,20 +117,20 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
     margin-bottom:0;
   }
   .kop-logo{
-    width:54px;height:54px;
+    width:76px;height:76px;
     flex-shrink:0;
     display:flex!important;align-items:center;
   }
-  .kop-logo img{width:54px;height:54px;object-fit:contain;display:block}
+  .kop-logo img{width:76px;height:76px;object-fit:contain;display:block}
   .kop-text{flex:1;text-align:center;font-family:'Times New Roman',serif}
   .kop-org1{font-size:9pt;font-weight:bold;color:var(--skl-blue);letter-spacing:.3px}
   .kop-org2{font-size:9pt;font-weight:bold;color:var(--skl-blue);letter-spacing:.3px}
   .kop-org3{font-size:9.5pt;font-weight:bold;color:var(--skl-blue)}
-  .kop-school{font-size:13pt;font-weight:bold;color:var(--skl-blue);letter-spacing:.5px}
+  .kop-school{font-size:15pt;font-weight:bold;color:var(--skl-blue);letter-spacing:.5px}
   .kop-status{font-size:8.5pt;color:#000;margin-top:1px}
   .kop-addr{font-size:8pt;color:#000;margin-top:1px}
   .kop-contact{font-size:8pt;color:#000}
-  .kop-ids{font-size:8pt;color:#000;margin-top:1px;display:flex;justify-content:space-between}
+  .kop-ids{font-size:8pt;color:#000;margin-top:2px;display:flex;justify-content:space-between;width:100%;padding:0}
   .kop-sep{border-top:4px solid #000;margin-top:3px;width:100%}
 
   /* Title */
@@ -138,31 +138,31 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   .doc-nomor{text-align:center;font-size:11pt;margin-bottom:5px}
 
   /* Body */
-  .body-text{font-size:11pt;line-height:1.6;text-align:justify;margin-bottom:3px}
-  .body-indent{margin-left:10mm;margin-bottom:1px;font-size:11pt;line-height:1.5}
+  .body-text{font-size:11pt;line-height:1.5;text-align:justify;margin-bottom:2px}
+  .body-indent{margin-left:10mm;margin-bottom:1px;font-size:11pt;line-height:1.4}
 
   /* Biodata */
   .biodata-tbl{width:100%;border-collapse:collapse;font-size:11pt;margin:3px 0}
-  .biodata-tbl td{padding:.6mm 1mm;vertical-align:top;line-height:1.5}
+  .biodata-tbl td{padding:.5mm 1mm;vertical-align:top;line-height:1.4}
   .biodata-tbl .col-label{width:54mm}
   .biodata-tbl .col-sep{width:5mm;text-align:center}
 
   /* LULUS */
-  .lulus-text{text-align:center;font-size:12pt;font-weight:bold;letter-spacing:3px;margin:5px 0 2px}
-  .nilai-rerata{text-align:center;font-size:11pt;margin-bottom:4px}
+  .lulus-text{text-align:center;font-size:12pt;font-weight:bold;letter-spacing:3px;margin:6px 0 4px}
+  .nilai-rerata{text-align:center;font-size:11pt;margin-bottom:8px}
 
   /* Signature */
-  .sign-area{margin-top:auto;padding-top:4mm;display:flex;justify-content:flex-end}
+  .sign-area{margin-top:auto;padding-top:8mm;display:flex;justify-content:flex-end}
   .sign-box{text-align:center;width:63mm;font-size:11pt}
-  .sign-gap{height:13mm}
+  .sign-gap{height:11mm}
   .sign-name{font-weight:bold;text-decoration:underline}
 
   /* Lampiran table */
-  .lamp-tbl{width:100%;border-collapse:collapse;font-size:10.5pt;margin:3px 0}
-  .lamp-tbl th{border:1px solid #000;padding:1mm 2mm;text-align:center;font-weight:bold;font-size:10.5pt}
-  .lamp-tbl td{border:1px solid #000;padding:1mm 2mm;vertical-align:middle;font-size:10.5pt}
+  .lamp-tbl{width:100%;border-collapse:collapse;font-size:10pt;margin:2px 0}
+  .lamp-tbl th{border:1px solid #000;padding:.8mm 2mm;text-align:center;font-weight:bold;font-size:10pt}
+  .lamp-tbl td{border:1px solid #000;padding:.7mm 2mm;vertical-align:middle;font-size:10pt}
   .lamp-tbl td.ctr{text-align:center}
-  .lamp-tbl .grp-lbl td{font-size:9pt;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;background:#fff}
+  .lamp-tbl .grp-lbl td{font-size:8.5pt;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;background:#fff}
 
   /* Hide screen-only */
   .screen-only{display:none!important}
@@ -424,9 +424,9 @@ function buildKop(tahunajar){
       <div class="kop-status">Status : Terakreditasi A</div>
       <div class="kop-addr">JL. KH. Ahmad Dahlan No. 11 RT 06 RW 05 Kelurahan Kukusan Kecamatan Beji Kota Depok 16425</div>
       <div class="kop-contact">Email: sd.muhammadiyah01kukusan@gmail.com &nbsp;&nbsp; Telepon: (021) 786 2947</div>
-      <div class="kop-ids"><span>NSS : 101020528026</span><span>NPSN : 20228835</span></div>
     </div>
   </div>
+  <div class="kop-ids"><span>NSS : 101020528026</span><span>NPSN : 20228835</span></div>
   <div class="kop-sep"></div>`;
 }
 
