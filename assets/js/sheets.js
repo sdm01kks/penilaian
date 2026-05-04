@@ -800,7 +800,7 @@ const SHEETS = (() => {
     // Tahun sengaja tidak difilter - format bisa beda (2025/2026 vs 2025-2026)
     if (normSiswa)    data = data.filter(r => (r[1]||'').trim() === normSiswa);
     console.log('[getSetoranTT] filter kelas:', normKelas, '| sem:', normSemester, '| result:', data.length,
-      '| sample r[2],r[3]:', data.slice(0,2).map(r=>[r[2],r[3]]));
+      '| sample r[2],r[3]:', data.slice(0,2).map(r=>[(r[2]||''), (r[3]||'')]));
 
     return data.map(r => ({
       id:              r[0]  || '',
@@ -842,7 +842,7 @@ const SHEETS = (() => {
       setoran.catatan         || '',
       setoran.nilai_aspek     ? JSON.stringify(setoran.nilai_aspek) : '',
     ];
-    await append('SETORAN_TT', [row]);
+    await append('SETORAN_TT!A1', [row]);  // A1 anchor agar tidak nyasar ke kolom jauh
     return id;
   }
 
@@ -854,7 +854,7 @@ const SHEETS = (() => {
   async function updateSetoranTT(id, setoran) {
     const rows = await read('SETORAN_TT!A:M');
     // Robust: don't use i>=2, find by ID value directly
-    const idx  = rows.findIndex(r => r[0] === id);
+    const idx  = rows.findIndex(r => String(r[0]||'').trim() === String(id).trim());
     if (idx === -1) throw new Error(`Setoran tidak ditemukan: ${id} (total rows: ${rows.length})`);
     console.log('[updateSetoranTT] found at row index', idx, '→ sheet row', idx+1);
 
