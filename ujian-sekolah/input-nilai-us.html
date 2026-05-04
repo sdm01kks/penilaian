@@ -308,7 +308,12 @@ window.addEventListener('load', async () => {
 
     // Untuk guru_mapel: filter allMapel hanya ke mapel yang diajar
     if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
-      allMapel = allMapel.filter(m => m.id === currentUser.mapel);
+      // currentUser.mapel berisi NAMA mapel (bukan ID)
+      const mapelNama = (currentUser.mapel||'').toLowerCase().trim();
+      allMapel = allMapel.filter(m => {
+        const mn = (m.nama||'').toLowerCase().trim();
+        return mn === mapelNama || mn.includes(mapelNama) || mapelNama.includes(mn);
+      });
     }
 
     kelasList.forEach(k => {
