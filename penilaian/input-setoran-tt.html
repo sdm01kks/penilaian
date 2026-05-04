@@ -736,7 +736,16 @@ function renderSiswaList() {
     const isActive = activeSiswa?.id === s.id;
     // Progress dari setoranDB (semua semester ini)
     const allSt   = setoranDB.filter(st => st.id_siswa === s.id);
-    const lulusSet= new Set(allSt.filter(x=>x.status_hafalan==='lulus').map(x=>x.materi));
+    // Bangun lulusSet: expand materi JSON array agar multi-select juga terhitung
+    const lulusSet = new Set();
+    allSt.filter(x => x.status_hafalan === 'lulus').forEach(x => {
+      const m = x.materi || '';
+      if (m.startsWith('[')) {
+        try { JSON.parse(m).forEach(k => lulusSet.add(k)); } catch(e) { lulusSet.add(m); }
+      } else if (m) {
+        lulusSet.add(m);
+      }
+    });
     const total   = targetKeys.length;
     const lulus   = total ? targetKeys.filter(k => lulusSet.has(k)).length : lulusSet.size;
     const pct     = total ? Math.round(lulus/total*100) : 0;
