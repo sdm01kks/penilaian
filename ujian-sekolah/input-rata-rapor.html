@@ -330,12 +330,11 @@ window.addEventListener('load', async () => {
 
     // Untuk guru_mapel: filter allMapel hanya ke mapel yang diajar (kecuali tahsin-tahfizh)
     if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
-      // currentUser.mapel berisi NAMA mapel (bukan ID)
-      const mapelNama = (currentUser.mapel||'').toLowerCase().trim();
-      allMapel = allMapel.filter(m => {
-        const mn = (m.nama||'').toLowerCase().trim();
-        return mn === mapelNama || mn.includes(mapelNama) || mapelNama.includes(mn);
-      });
+      // currentUser.mapel berisi ID mapel dipisahkan koma (misal "MP001,MP003")
+      const mapelIds = (currentUser.mapel||'').split(',').map(s=>s.trim()).filter(Boolean);
+      if (mapelIds.length > 0) {
+        allMapel = allMapel.filter(m => mapelIds.includes(m.id));
+      }
     }
 
     kelasList.forEach(k => {
