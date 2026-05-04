@@ -792,10 +792,15 @@ const SHEETS = (() => {
     let data   = rows.filter(r => r[0] && String(r[0]).startsWith('ST'));
     console.log('[SETORAN_TT] total rows from sheet:', rows.length, '| data rows:', data.length);
 
-    if (kelas)    data = data.filter(r => r[2] === kelas);
-    if (semester) data = data.filter(r => r[3] === semester);
-    if (tahun)    data = data.filter(r => r[4] === tahun);
-    if (id_siswa) data = data.filter(r => r[1] === id_siswa);
+    const normKelas    = (kelas    || '').trim();
+    const normSemester = (semester || '').trim();
+    const normSiswa    = (id_siswa || '').trim();
+    if (normKelas)    data = data.filter(r => (r[2]||'').trim() === normKelas);
+    if (normSemester) data = data.filter(r => (r[3]||'').trim() === normSemester);
+    // Tahun sengaja tidak difilter - format bisa beda (2025/2026 vs 2025-2026)
+    if (normSiswa)    data = data.filter(r => (r[1]||'').trim() === normSiswa);
+    console.log('[getSetoranTT] filter kelas:', normKelas, '| sem:', normSemester, '| result:', data.length,
+      '| sample r[2],r[3]:', data.slice(0,2).map(r=>[r[2],r[3]]));
 
     return data.map(r => ({
       id:              r[0]  || '',
