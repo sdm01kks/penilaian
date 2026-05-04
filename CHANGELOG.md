@@ -127,4 +127,99 @@ Perubahan ini menangani satu mapel maupun guru yang mengampu beberapa mapel seka
 
 ---
 
-*Dibuat: 3 Mei 2026 (v13–v19) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
+---
+
+## [2026-05-04] — v20 · Sesi 24 · Fix Setoran TT Tidak Tersimpan/Hilang Setelah Refresh
+
+### 🐛 Perbaikan Bug Kritis
+
+**File:** `assets/js/sheets.js`
+
+**Masalah:** Setoran Tahsin-Tahfizh berhasil disimpan (ada konfirmasi `saved with id: STxxx`) tetapi hilang setelah refresh. Selain itu `updateSetoranTT` selalu gagal dengan error "Setoran tidak ditemukan".
+
+**Investigasi:**
+
+| # | Gejala | Root Cause |
+|---|--------|------------|
+| 1 | Data hilang setelah refresh | `append('SETORAN_TT', [row])` tanpa anchor → API mencari batas tabel di seluruh sheet → menemukan sisa data di kolom ZU → data ditulis di sana, tidak pernah terbaca karena hanya baca `A:M` |
+| 2 | `getSetoranTT` selalu return 0 item | Filter `r[4] === tahun` aktif; format `tahun_pelajaran` tidak konsisten (`2025/2026` vs `2025-2026`) sehingga tidak pernah cocok |
+| 3 | `updateSetoranTT` gagal temukan ID | `findIndex` tidak pakai `.trim()` → spasi tersembunyi menyebabkan mismatch |
+
+**Fix:**
+
+```javascript
+// FIX 1: anchor A1 agar append selalu ke kolom A
+await append('SETORAN_TT!A1', [row]);
+
+// FIX 2: hapus filter tahun, tambah trim
+const normKelas    = (kelas    || '').trim();
+const normSemester = (semester || '').trim();
+if (normKelas)    data = data.filter(r => (r[2]||'').trim() === normKelas);
+if (normSemester) data = data.filter(r => (r[3]||'').trim() === normSemester);
+// Tahun sengaja tidak difilter - format bisa beda (2025/2026 vs 2025-2026)
+
+// FIX 3: trim pada findIndex
+rows.findIndex(r => String(r[0]||'').trim() === String(id).trim());
+```
+
+### 📋 File yang Diubah (v20)
+
+| File | Status | Keterangan |
+|------|--------|------------|
+| `assets/js/sheets.js` | **Diubah** | 3 fix di `saveSetoranTT`, `getSetoranTT`, `updateSetoranTT` |
+
+### 🔍 Penanda Kode — Anti-Regresi
+
+| File | Penanda |
+|------|---------|
+| `sheets.js` | `append('SETORAN_TT!A1', [row])` |
+| `sheets.js` | `// Tahun sengaja tidak difilter` |
+| `sheets.js` | `String(r[0]||'').trim() === String(id).trim()` |
+
+---
+
+## [2026-05-04] — v21 · Sesi 24 · Fix Progress Bar Hafalan Tidak Sinkron (Multi-Materi)
+
+### 🐛 Perbaikan Bug
+
+**File:** `penilaian/input-setoran-tt.html`
+
+**Masalah:** Bar progress hafalan di daftar siswa muncul namun tidak sinkron — bagian hijau tidak mencerminkan capaian yang sebenarnya. Setoran dengan beberapa materi sekaligus (multi-select) tidak terhitung dalam progress.
+
+**Root cause:** `lulusSet` dibangun dari `x.materi` secara langsung. Untuk multi-select, materi disimpan sebagai JSON array string (`'["79-1-15","79-16-30"]'`). Saat dicek dengan `lulusSet.has("79-1-15")`, tidak cocok karena yang ada di set adalah string array lengkap.
+
+**Fix:**
+
+```javascript
+// Sebelum (salah untuk multi-select):
+const lulusSet = new Set(allSt.filter(...).map(x => x.materi));
+
+// Sesudah (expand JSON array):
+const lulusSet = new Set();
+allSt.filter(x => x.status_hafalan === 'lulus').forEach(x => {
+  const m = x.materi || '';
+  if (m.startsWith('[')) {
+    try { JSON.parse(m).forEach(k => lulusSet.add(k)); } catch(e) { lulusSet.add(m); }
+  } else if (m) {
+    lulusSet.add(m);
+  }
+});
+```
+
+Dengan fix ini, satu setoran multi-materi yang lulus akan menambahkan **setiap key materi secara individual** ke `lulusSet`, sehingga progress bar terhitung dengan benar.
+
+### 📋 File yang Diubah (v21)
+
+| File | Status | Keterangan |
+|------|--------|------------|
+| `penilaian/input-setoran-tt.html` | **Diubah** | Fix `lulusSet` expand JSON array materi |
+
+### 🔍 Penanda Kode — Anti-Regresi
+
+| File | Penanda |
+|------|---------|
+| `input-setoran-tt.html` | `m.startsWith('[')` di dalam forEach lulusSet |
+
+---
+
+*Dibuat: 3 Mei 2026 (v13–v19) | Diperbarui: 4 Mei 2026 (v20–v21) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*
