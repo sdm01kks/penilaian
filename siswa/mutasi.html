@@ -426,15 +426,26 @@ window.addEventListener('load', async () => {
 async function muatData() {
   showLoading('Memuat data kelas…');
   try {
-    const [siswa, kelas] = await Promise.all([
-      SHEETS.getSiswa(currentUser.kelas),
+    // Bangun daftar kelas yang diampu guru: gabungkan kelas utama + kelas_mapel
+    const kelasUtamaArr  = (currentUser.kelas || '').split(',').map(s => s.trim()).filter(Boolean);
+    const kelasMapelArr  = (currentUser.kelas_mapel || '').split(',').map(s => s.trim()).filter(Boolean);
+    const kelasDiampuArr = [...new Set([...kelasUtamaArr, ...kelasMapelArr])];
+
+    // Muat semua kelas sekolah + siswa dari SEMUA kelas yang diampu secara paralel
+    const [semuaKelas, ...siswaBatch] = await Promise.all([
       SHEETS.getKelas(),
+      ...kelasDiampuArr.map(k => SHEETS.getSiswa(k)),
     ]);
-    allSiswaKelas = siswa.filter(s => s.nama);
-    allKelas      = kelas;
+
+    allKelas = semuaKelas;
+
+    // Gabungkan siswa dari semua kelas yang diampu, hindari duplikasi ID
+    const seenIds = new Map();
+    siswaBatch.flat().filter(s => s.nama).forEach(s => seenIds.set(s.id, s));
+    allSiswaKelas = [...seenIds.values()];
 
     populasiDropdownKeluar();
-    populasiDropdownKelas();
+    populasiDropdownKelas(kelasDiampuArr);
     await muatRiwayat();
   } catch(e) {
     showAlert('error', '⛔ Gagal memuat data', e.message);
@@ -458,16 +469,25 @@ function populasiDropdownKeluar() {
   });
 }
 
-function populasiDropdownKelas() {
+function populasiDropdownKelas(kelasDiampuArr) {
   const sel = document.getElementById('selKelasMasuk');
   sel.innerHTML = '<option value="">— Pilih kelas —</option>';
-  allKelas.forEach(k => {
+
+  // Filter: guru kelas hanya boleh memilih kelas yang mereka ampu
+  // (kelas utama + kelas_mapel), bukan semua kelas di sekolah
+  const kelasTersedia = kelasDiampuArr && kelasDiampuArr.length
+    ? allKelas.filter(k => kelasDiampuArr.includes(k.nama))
+    : allKelas;
+
+  kelasTersedia.forEach(k => {
     const opt = document.createElement('option');
     opt.value = k.nama;
     opt.textContent = k.nama;
-    if (k.nama === currentUser.kelas) opt.selected = true;
     sel.appendChild(opt);
   });
+
+  // Otomatis pilih jika hanya ada satu kelas yang diampu
+  if (kelasTersedia.length === 1) sel.value = kelasTersedia[0].nama;
 }
 
 /* ───────────────────────────────────────────── */
