@@ -286,6 +286,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" id="navSKL" href="../ujian-sekolah/preview-skl.html" style="display:none;">
     <span class="nav-icon">🎓</span> Preview &amp; Cetak SKL
   </a>
+  <a class="nav-item" id="navISMUBA" href="../ujian-sekolah/preview-ismuba.html" style="display:none;">
+    <span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA
+  </a>
   <a class="nav-item" id="navGenerateSKL" href="../ujian-sekolah/generate-skl.html" style="display:none;">
     <span class="nav-icon">📄</span> Generate Dokumen SKL
   </a>
@@ -455,7 +458,7 @@ window.addEventListener('load', async () => {
   const kelasList = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
   const hasKelas6 = kelasList.some(k => String(k).startsWith('6'));
   if (hasKelas6) {
-    ['navSAJLabel','navRataRapor','navNilaiUS','navSKL','navGenerateSKL','cardSAJ'].forEach(id => {
+    ['navSAJLabel','navRataRapor','navNilaiUS','navSKL','navISMUBA','navGenerateSKL','cardSAJ'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
