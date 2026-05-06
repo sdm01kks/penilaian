@@ -254,6 +254,8 @@ textarea { resize:vertical; min-height:60px; }
           <input type="date" id="f_tgl_lahir">
           <label>Nama Wali / Orang Tua <span style="font-size:10px;color:var(--ink-muted);">(untuk dokumen SKL/ijazah)</span></label>
           <input type="text" id="f_nama_wali" placeholder="Nama lengkap sesuai KTP">
+          <label>Nomor Peserta TKA ISMUBA <span style="font-size:10px;color:var(--ink-muted);">(opsional)</span></label>
+          <input type="text" id="f_no_peserta_ismuba" placeholder="Contoh: 32-01-001">
         </div>
       </div>
 
@@ -591,7 +593,8 @@ function bukaEdit(id) {
   document.getElementById('f_agama').value         = s.agama || 'Islam';
   document.getElementById('f_tempat_lahir').value  = s.tempat_lahir || '';
   document.getElementById('f_tgl_lahir').value     = s.tgl_lahir || '';
-  document.getElementById('f_nama_wali').value     = s.nama_wali || '';
+  document.getElementById('f_nama_wali').value           = s.nama_wali || '';
+  document.getElementById('f_no_peserta_ismuba').value = s.no_peserta_ismuba || '';
   document.getElementById('f_nama_ayah').value     = s.nama_ayah || '';
   document.getElementById('f_nama_ibu').value      = s.nama_ibu  || '';
   document.getElementById('f_pekerjaan_ayah').value= s.pekerjaan_ayah || '';
@@ -616,7 +619,7 @@ function tutupModal() {
 function resetForm() {
   ['f_nama','f_nis','f_nisn','f_kelas','f_nama_ayah','f_nama_ibu',
    'f_pekerjaan_ayah','f_pekerjaan_ibu','f_no_hp','f_alamat',
-   'f_tempat_lahir','f_nama_wali']
+   'f_tempat_lahir','f_nama_wali','f_no_peserta_ismuba']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = el.tagName === 'SELECT' ? '' : '';
@@ -647,7 +650,8 @@ async function simpanSiswa() {
       alamat:         document.getElementById('f_alamat').value.trim(),
       tempat_lahir:   document.getElementById('f_tempat_lahir').value.trim(),
       tgl_lahir:      document.getElementById('f_tgl_lahir').value.trim(),
-      nama_wali:      document.getElementById('f_nama_wali').value.trim(),
+      nama_wali:         document.getElementById('f_nama_wali').value.trim(),
+      no_peserta_ismuba: document.getElementById('f_no_peserta_ismuba').value.trim(),
       nama_ayah:      document.getElementById('f_nama_ayah').value.trim(),
       nama_ibu:       document.getElementById('f_nama_ibu').value.trim(),
       pekerjaan_ayah: document.getElementById('f_pekerjaan_ayah').value.trim(),
@@ -692,8 +696,9 @@ async function updateSiswa(id, data) {
     data.agama, data.alamat, data.nama_ayah, data.nama_ibu,
     data.pekerjaan_ayah, data.pekerjaan_ibu, fmtNum(data.no_hp),
     data.tempat_lahir || '', data.tgl_lahir || '', data.nama_wali || '',
+    data.no_peserta_ismuba || '',
   ];
-  await SHEETS.write(`SISWA!A${idx+1}:O${idx+1}`, [row]);
+  await SHEETS.write(`SISWA!A${idx+1}:P${idx+1}`, [row]);
 }
 
 /* ── Hapus Siswa ──────────────────────────────────────── */
@@ -707,7 +712,7 @@ async function hapusSiswa(id, nama) {
     if (idx < 0) throw new Error('Siswa tidak ditemukan.');
 
     // Kosongkan baris (tidak benar-benar hapus agar tidak menggeser index)
-    await SHEETS.write(`SISWA!A${idx+1}:O${idx+1}`, [['','','','','','','','','','','','','','','']]);
+    await SHEETS.write(`SISWA!A${idx+1}:P${idx+1}`, [['','','','','','','','','','','','','','','','']]);
     showAlert('success','✅ Berhasil', `Data ${nama} telah dihapus.`);
     await muatData();
     pilihKelas(kelasFilter);
