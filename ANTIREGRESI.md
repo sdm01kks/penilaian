@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v18 | `penilaian/input-nilai.html` | `eksekusiImport` — gagal 429 | Per-row API call (`append` dipanggil satu kali per siswa per TP di dalam loop) → rate limit Google Sheets API |
 | v10 | `assets/js/sheets.js` | `saveNilaiUSBatch` | Blok `return { … }` diedit tapi satu fungsi terlewat tidak diekspor |
 | v8 | `ujian-sekolah/input-nilai-us.html` | Filter mapel guru_mapel | Asumsi salah tentang format data (`currentUser.mapel` berisi ID, bukan nama) — langsung digantikan v9 |
 
@@ -276,6 +277,67 @@ function kelasPokok(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN
 
 ---
 
+### 9. Pola Import Batch — Jangan Kembali ke Per-Row API Call di `penilaian/input-nilai.html`
+
+**Mengapa berisiko:** Fitur import nilai (`eksekusiImport`) perlu menyimpan banyak baris sekaligus. Jebakan paling umum adalah menyalin kode dari `saveNilai` (yang menyimpan satu baris) dan menaruhnya di dalam loop — menghasilkan satu API call per baris. Untuk kelas dengan 30 siswa × 5 TP = 150 call, Google Sheets API mengembalikan HTTP **429 Too Many Requests** dan seluruh import gagal tanpa ada satu baris pun yang tersimpan.
+
+**Akar masalah versi lama (v17 ke bawah):**
+```javascript
+// ❌ SALAH — per-row call di dalam loop → 429
+for (const item of toImport) {
+  for (const n of item.nilai) {
+    await SHEETS.write('NILAI!A' + idx + ':K' + idx, [row]);  // N call
+    await SHEETS.append('NILAI!A:K', [row]);                   // M call
+  }
+}
+```
+
+**Pola wajib sejak v18 (mengikuti `saveNilaiUSBatch`):**
+```javascript
+// ✅ BENAR — kumpulkan dulu, eksekusi batch setelah loop
+const toUpdate = [];  // baris yang sudah ada
+const toAppend = [];  // baris baru
+
+for (const item of toImport) {
+  for (const n of item.nilai) {
+    if (existIdx > 1) {
+      toUpdate.push(['NILAI!A' + (existIdx + 1) + ':K' + (existIdx + 1), [row]]);
+    } else {
+      toAppend.push(row);
+      rows.push(row); // ← wajib: jaga local rows agar findIndex tidak duplikat
+    }
+  }
+}
+
+// Eksekusi satu kali setelah loop — maksimal 3 API call total
+const CHUNK = 100;
+for (let i = 0; i < toUpdate.length; i += CHUNK) {
+  await SHEETS.valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+}
+if (toAppend.length) {
+  await SHEETS.append('NILAI!A1', toAppend); // A1 anchor wajib
+}
+```
+
+**Tiga invariant yang tidak boleh diubah:**
+
+| Invariant | Mengapa |
+|-----------|---------|
+| `rows.push(row)` di cabang `toAppend` | Tanpa ini, iterasi berikutnya bisa salah menganggap baris yang baru di-push ke `toAppend` sebagai "tidak ada" jika ada duplikat di file import — menyebabkan duplikasi data di sheet |
+| `SHEETS.valuesBatchWrite` untuk update, bukan loop `SHEETS.write` | Satu `batchUpdate` request menggantikan N request; Google Sheets API sudah mendukung ini via endpoint `values:batchUpdate` |
+| `SHEETS.append('NILAI!A1', toAppend)` — bukan `'NILAI!A:K'` | Range `NILAI!A:K` menyebabkan API mencari batas tabel hanya di kolom A–K; jika ada data di luar K, append bisa nyasar. `!A1` memastikan pencarian mulai dari A1 |
+
+**Kapan risiko meningkat:** Setiap kali `eksekusiImport` di `input-nilai.html` diedit untuk menambah kolom baru, mengubah logika kalkulasi, atau menyesuaikan filter baris.
+
+**Checklist wajib setelah mengubah `eksekusiImport`:**
+- [ ] Pastikan tidak ada `await SHEETS.write(...)` atau `await SHEETS.append(...)` di dalam loop `for (const item of toImport)`
+- [ ] Pastikan `toUpdate` dan `toAppend` masih ada sebagai array akumulator
+- [ ] Pastikan `rows.push(row)` ada di cabang `toAppend` (bukan di cabang `toUpdate`)
+- [ ] Pastikan eksekusi batch ada **setelah** kedua loop, bukan di dalamnya
+- [ ] Uji dengan kelas yang memiliki banyak siswa (20+) dan banyak TP (5+) — import harus selesai tanpa error 429
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -289,6 +351,7 @@ function kelasPokok(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN
 - [ ] Cek: apakah filter `currentUser.mapel` atau `currentUser.kelas` menggunakan split+includes, bukan `===`?
 - [ ] Cek: apakah penanda kode anti-regresi (lihat tabel di atas) masih ada?
 - [ ] Uji dengan akun `guru_mapel` yang mengampu lebih dari satu mapel/kelas
+- [ ] Jika menyentuh `eksekusiImport` di `input-nilai.html`: pastikan tidak ada API call (`SHEETS.write`/`SHEETS.append`) di dalam loop — harus pakai pola batch `toUpdate`/`toAppend`. Lihat §9.
 
 ### Umum:
 - [ ] Perubahan apapun di `sheets.js` → update `CHANGELOG.md` dengan penanda kode di bagian 🔍
@@ -302,6 +365,9 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 | File | Penanda Kode | Ditambahkan | Keterangan |
 |------|-------------|-------------|------------|
+| `penilaian/input-nilai.html` | `toUpdate` dan `toAppend` sebagai akumulator (bukan per-row API call) di `eksekusiImport` | v18 | Wajib. Per-row call menyebabkan 429. Lihat §9. |
+| `penilaian/input-nilai.html` | `rows.push(row)` di cabang `toAppend` (sebelum eksekusi batch) | v18 | Wajib. Tanpanya duplikat bisa lolos ke sheet jika file import memiliki baris yang sama. |
+| `penilaian/input-nilai.html` | `SHEETS.append('NILAI!A1', toAppend)` — anchor `A1`, bukan `'NILAI!A:K'` | v18 | Wajib. Range `!A:K` membatasi pencarian batas tabel ke kolom A–K dan bisa menyebabkan data nyasar. Lihat §3 dan §9. |
 | `rapor/preview.html` | `vertical-align: top` pada `@bottom-left` dan `@bottom-right` di `@page` | v17 | Wajib ada. Tanpanya, teks footer di-align ke tengah margin box — `padding-top` tidak efektif mengontrol gap garis–teks. Lihat §8. |
 | `rapor/preview.html` | `function nextFase(kelas)` — parameter harus `kelas`, bukan `f`/`fase` | v16 | **BERULANG 2×** — Fase dihitung dari kelas tujuan, bukan dari fase saat ini. Jangan kembalikan ke versi lama `nextFase(f)`. |
 | `rapor/preview.html` | `function kelasPokok(k)` — helper wajib ada | v16 | **BERULANG 2×** — Dipakai di "Tinggal di kelas". Tanpa ini, huruf rombel ikut tampil. |
@@ -326,5 +392,5 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 08 Mei 2026 (v18). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

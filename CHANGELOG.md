@@ -1,3 +1,24 @@
+## [2026-05-08] — v18 · Perbaikan Import Nilai: 429 Too Many Requests
+
+### 🐛 Perbaikan
+
+Semua perubahan hanya pada `penilaian/input-nilai.html`.
+
+| # | Masalah | Solusi |
+|---|---------|--------|
+| 1 | Import nilai gagal dengan error `⛔ Import Gagal — Sheets append error 429: NILAI!A:K`. Terjadi karena `eksekusiImport` memanggil `SHEETS.append('NILAI!A:K', [row])` **satu kali per baris nilai** di dalam loop bertingkat (siswa × TP). Untuk kelas dengan banyak siswa dan TP (misal KKA kelas 6A), ini menghasilkan puluhan hingga ratusan API call terpisah dalam hitungan detik → Google Sheets API mengembalikan HTTP 429 Too Many Requests. | Refactor `eksekusiImport` mengikuti pola `saveNilaiUSBatch` yang sudah terbukti: kumpulkan semua perubahan ke `toUpdate[]` dan `toAppend[]` di dalam loop **tanpa memanggil API**, lalu eksekusi satu kali `SHEETS.valuesBatchWrite(toUpdate)` dan satu kali `SHEETS.append('NILAI!A1', toAppend)` setelah loop selesai. Jumlah API call turun dari ratusan menjadi maksimal 3 (read + batchWrite + append), tidak ada 429. |
+| 2 | Range append `'NILAI!A:K'` salah — seharusnya menggunakan anchor `!A1` sesuai ANTIREGRESI §3. Penggunaan `NILAI!A:K` menyebabkan `sheets.js` meneruskan range kolom terbatas ke API, yang dapat menyebabkan data ditulis di posisi yang tidak terduga jika ada data di luar kolom K. | Ganti ke `SHEETS.append('NILAI!A1', toAppend)` — anchor A1 memastikan Google Sheets API selalu mencari batas tabel mulai dari kolom A, konsisten dengan pola `SETORAN_TT!A1`. |
+
+> **Catatan:** Pola loop-per-row yang menyebabkan 429 adalah jebakan umum — mudah terulang saat menambah fitur import baru atau menyalin kode dari `saveNilai` (yang hanya menyimpan satu baris). Lihat ANTIREGRESI.md §9.
+
+### 📋 File yang Diubah (v18)
+
+| File | Status |
+|------|--------|
+| `penilaian/input-nilai.html` | **Diubah** — fungsi `eksekusiImport`: ganti per-row `write`/`append` dengan pola batch (`toUpdate[]` + `toAppend[]` + `valuesBatchWrite` + `append` satu kali) |
+
+---
+
 ## [2026-05-07] — v17 · Perbaikan Jarak Footer Rapor
 
 ### 🐛 Perbaikan
