@@ -1,3 +1,91 @@
+## [2026-05-07] — v14 · Fitur · Mode Input Per-Mapel untuk Guru Bidang Studi (Nilai Ujian Sekolah)
+
+### ✨ Fitur Baru
+
+**File:** `ujian-sekolah/input-nilai-us.html`
+
+**Latar belakang:** Guru bidang studi (`guru_mapel`) yang mengajar di kelas 6 mengalami kesulitan menginput nilai ujian sekolah karena harus membuka setiap siswa satu per satu, padahal mereka hanya perlu mengisi 1 kolom mapel saja. Guru kelas tetap efektif menggunakan pendekatan per-siswa karena mereka mengisi seluruh kolom mapel untuk satu siswa.
+
+### Desain Dua Mode
+
+| Mode | Berlaku untuk | Sumbu Baris | Sumbu Kolom |
+|------|--------------|-------------|-------------|
+| `per_siswa` | `guru_kelas`, `admin` | Mata Pelajaran | Tertulis / Praktik / Nilai US |
+| `per_mapel` | `guru_mapel` | Siswa | Tertulis / Praktik / Nilai US |
+
+Mode ditentukan otomatis dari `currentUser.role` saat halaman dimuat — tidak ada pilihan manual.
+
+### Perubahan Kode
+
+**Variabel baru:**
+```javascript
+let activeMapel = null;
+let viewMode    = 'per_siswa'; // 'per_siswa' | 'per_mapel'
+```
+
+**Logika pada `window.addEventListener('load')`:**
+```javascript
+viewMode = (currentUser.role === 'guru_mapel') ? 'per_mapel' : 'per_siswa';
+// Jika per_mapel: sembunyikan selector Siswa, tampilkan selector Mata Pelajaran
+// Ubah header kolom pertama tabel dari "Mata Pelajaran" → "Siswa"
+```
+
+**`gantiKelas()`** — setelah kelas dipilih:
+- `per_siswa`: populasi dropdown Siswa (seperti sebelumnya)
+- `per_mapel`: populasi dropdown Mata Pelajaran (dari `allMapel` yang sudah difilter ke mapel guru)
+- Jika guru hanya mengajar 1 mapel: mapel dipilih dan tabel langsung ditampilkan tanpa langkah ekstra
+
+**`pilihMapel()`** — fungsi baru (analog `pilihSiswa()` untuk mode per_mapel):
+```javascript
+// Memanggil SHEETS.getNilaiUS({ id_mapel: mid, kelas: activeKelas })
+// Membangun nilaiUS: id_siswa → { nilai_tertulis, nilai_praktik }
+```
+
+**`renderTable()`** — dispatcher ke dua renderer:
+- `renderTablePerSiswa()` — kode existing, tidak diubah secara logika
+- `renderTablePerMapel()` — baru: baris per siswa, input `data-siswa="..."` + `data-field="..."`
+
+**`onNilaiChange()`** — key terpadu:
+```javascript
+const key = viewMode === 'per_siswa' ? el.dataset.mapel : el.dataset.siswa;
+```
+
+**`updateBobot()`** — selector digeneralisasi:
+```diff
+- document.querySelectorAll('tr[data-mapel]').forEach(...)
++ document.querySelectorAll('#tbodyUS tr').forEach(...)
+```
+
+**`simpanSemua()`** — dua jalur item:
+```javascript
+// per_siswa: { id_siswa: activeSiswa.id, id_mapel, ... }
+// per_mapel: { id_siswa, id_mapel: activeMapel.id, ... }
+// Keduanya tetap memanggil SHEETS.saveNilaiUSBatch(items, ...) — tidak ada perubahan di sheets.js
+```
+
+### Anti-Regresi
+
+- `mapelIds.includes(m.id)` di init **tetap ada** — filter mapel guru_mapel tidak berubah
+- `SHEETS.saveNilaiUSBatch` dipanggil di **satu tempat** yang sama, format `items[]` kompatibel di kedua mode
+- Mode `per_siswa` menggunakan kode path yang sama persis seperti sebelum perubahan ini
+
+### 📋 File yang Diubah (v14)
+
+| File | Status | Keterangan |
+|------|--------|------------|
+| `ujian-sekolah/input-nilai-us.html` | **Diubah** | Mode dual: per_siswa (guru_kelas/admin) dan per_mapel (guru_mapel) |
+
+### 🔍 Penanda Kode — Anti-Regresi
+
+| File | Penanda |
+|------|---------|
+| `input-nilai-us.html` | `viewMode = (currentUser.role === 'guru_mapel') ? 'per_mapel' : 'per_siswa'` |
+| `input-nilai-us.html` | `renderTablePerSiswa` dan `renderTablePerMapel` (dua fungsi terpisah) |
+| `input-nilai-us.html` | `mapelIds.includes(m.id)` — tetap ada (v9, jangan hapus) |
+| `input-nilai-us.html` | `SHEETS.saveNilaiUSBatch` — satu call, kompatibel kedua mode |
+
+---
+
 ## [2026-05-07] — v13 · Hotfix · `saveNilaiUSBatch` Tidak Dapat Dipanggil dari Halaman Input Nilai US
 
 ### 🐛 Perbaikan Bug Kritis

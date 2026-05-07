@@ -131,7 +131,28 @@ async function kirimFinal() {
 
 ---
 
-## ✅ Checklist Universal Sebelum Commit / Deploy
+### 5. Mode Dual `per_siswa` / `per_mapel` di `input-nilai-us.html` (v14)
+
+**Mengapa berisiko:** `input-nilai-us.html` kini memiliki dua mode render yang berbagi banyak variabel global (`nilaiUS`, `dirty`, `viewMode`). Kesalahan di salah satu mode bisa diam-diam merusak mode lain.
+
+**Kontrak yang harus dijaga:**
+
+| Elemen | `per_siswa` | `per_mapel` |
+|--------|-------------|-------------|
+| Variabel aktif | `activeSiswa` | `activeMapel` |
+| Key di `nilaiUS` | `id_mapel` | `id_siswa` |
+| Key di `dirty` | `id_mapel` | `id_siswa` |
+| Atribut input | `data-mapel` + `data-field` | `data-siswa` + `data-field` |
+| Query selector bobot | `#tbodyUS tr` (jangan ubah ke `tr[data-mapel]`) | sama |
+| Fungsi save | `SHEETS.saveNilaiUSBatch` — format item sama, jangan pisahkan | sama |
+
+**Penanda kode yang harus selalu ada:**
+- `viewMode = (currentUser.role === 'guru_mapel') ? 'per_mapel' : 'per_siswa'` — di init, jangan pindahkan
+- `renderTablePerSiswa` dan `renderTablePerMapel` — dua fungsi terpisah, jangan digabung
+- `const key = viewMode === 'per_siswa' ? el.dataset.mapel : el.dataset.siswa` — di `onNilaiChange`
+- `mapelIds.includes(m.id)` — filter mapel dari v9, tetap harus ada
+
+**Jika menambahkan mode baru di masa depan:** tambahkan entri ke tabel kontrak di atas, update `renderTable()` dispatcher, dan update `simpanSemua()` dengan branch baru.
 
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
@@ -164,6 +185,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `assets/js/sheets.js` | `// Tahun sengaja tidak difilter` | v10 | Format tahun tidak konsisten — filter tahun sengaja dihilangkan |
 | `assets/js/sheets.js` | `String(r[0]\|\|'').trim() === String(id).trim()` | v10 | Trim wajib agar findIndex tidak mismatch karena spasi |
 | `ujian-sekolah/input-nilai-us.html` | `mapelIds.includes(m.id)` | v9 | Filter mapel berdasarkan ID (bukan nama) |
+| `ujian-sekolah/input-nilai-us.html` | `viewMode = (currentUser.role === 'guru_mapel') ? 'per_mapel' : 'per_siswa'` | v14 | Deteksi mode otomatis — jangan pindah ke tempat lain |
+| `ujian-sekolah/input-nilai-us.html` | `renderTablePerSiswa` dan `renderTablePerMapel` | v14 | Dua renderer terpisah — jangan digabung |
+| `ujian-sekolah/input-nilai-us.html` | `viewMode === 'per_siswa' ? el.dataset.mapel : el.dataset.siswa` | v14 | Key terpadu di `onNilaiChange` |
+| `ujian-sekolah/input-nilai-us.html` | `document.querySelectorAll('#tbodyUS tr')` di `updateBobot` | v14 | Generalized — jangan kembalikan ke `tr[data-mapel]` |
 | `ujian-sekolah/input-rata-rapor.html` | `mapelIds.includes(m.id)` | v9 | Idem |
 | `siswa/mutasi.html` | `const payload = pendingPayload` | v1 | Simpan referensi lokal sebelum tutupModal() |
 | `siswa/mutasi.html` | `kelasDiampuArr` | v12 | Gabungan kelas utama+mapel untuk load siswa multi-kelas |
