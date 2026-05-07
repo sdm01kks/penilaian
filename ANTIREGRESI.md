@@ -323,6 +323,7 @@ if (toAppend.length) {
 
 | Invariant | Mengapa |
 |-----------|---------|
+| `let _importSeq = 0` sebelum loop + `(_importSeq++).toString(36).padStart(3, '0')` di ID baru | Loop sinkron (tanpa await) membuat semua `Date.now()` bernilai sama dalam satu milidetik. Tanpa counter, hanya ada 36³ = 46.656 kombinasi random → birthday paradox memberi probabilitas tabrakan ~62% untuk kelas 30 siswa × 10 TP. ID duplikat menyebabkan data corruption silent. |
 | `rows.push(row)` di cabang `toAppend` | Tanpa ini, iterasi berikutnya bisa salah menganggap baris yang baru di-push ke `toAppend` sebagai "tidak ada" jika ada duplikat di file import — menyebabkan duplikasi data di sheet |
 | `SHEETS.valuesBatchWrite` untuk update, bukan loop `SHEETS.write` | Satu `batchUpdate` request menggantikan N request; Google Sheets API sudah mendukung ini via endpoint `values:batchUpdate` |
 | `SHEETS.append('NILAI!A1', toAppend)` — bukan `'NILAI!A:K'` | Range `NILAI!A:K` menyebabkan API mencari batas tabel hanya di kolom A–K; jika ada data di luar K, append bisa nyasar. `!A1` memastikan pencarian mulai dari A1 |
@@ -330,6 +331,8 @@ if (toAppend.length) {
 **Kapan risiko meningkat:** Setiap kali `eksekusiImport` di `input-nilai.html` diedit untuk menambah kolom baru, mengubah logika kalkulasi, atau menyesuaikan filter baris.
 
 **Checklist wajib setelah mengubah `eksekusiImport`:**
+- [ ] Pastikan `let _importSeq = 0` ada **sebelum** loop (bukan di dalam loop)
+- [ ] Pastikan ID baru menggunakan `(_importSeq++)` bukan `Math.random()` saja
 - [ ] Pastikan tidak ada `await SHEETS.write(...)` atau `await SHEETS.append(...)` di dalam loop `for (const item of toImport)`
 - [ ] Pastikan `toUpdate` dan `toAppend` masih ada sebagai array akumulator
 - [ ] Pastikan `rows.push(row)` ada di cabang `toAppend` (bukan di cabang `toUpdate`)
@@ -365,6 +368,7 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 | File | Penanda Kode | Ditambahkan | Keterangan |
 |------|-------------|-------------|------------|
+| `penilaian/input-nilai.html` | `let _importSeq = 0` sebelum loop + `(_importSeq++).toString(36).padStart(3,'0')` di ID baru | v18 | Wajib. Tanpa counter, tabrakan ID ~62% untuk kelas besar (birthday paradox, loop sinkron). Lihat §9. |
 | `penilaian/input-nilai.html` | `toUpdate` dan `toAppend` sebagai akumulator (bukan per-row API call) di `eksekusiImport` | v18 | Wajib. Per-row call menyebabkan 429. Lihat §9. |
 | `penilaian/input-nilai.html` | `rows.push(row)` di cabang `toAppend` (sebelum eksekusi batch) | v18 | Wajib. Tanpanya duplikat bisa lolos ke sheet jika file import memiliki baris yang sama. |
 | `penilaian/input-nilai.html` | `SHEETS.append('NILAI!A1', toAppend)` — anchor `A1`, bukan `'NILAI!A:K'` | v18 | Wajib. Range `!A:K` membatasi pencarian batas tabel ke kolom A–K dan bisa menyebabkan data nyasar. Lihat §3 dan §9. |
