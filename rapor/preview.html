@@ -521,8 +521,14 @@ function angkaTerbilang(n) {
   return sat[Math.floor(n/100)] + ' ratus' + (n%100 ? ' ' + angkaTerbilang(n%100) : '');
 }
 
-function nextFase(f) { return f==='A'?'B':f==='B'?'C':'D'; }
+// nextFase: fase ditentukan dari kelas TUJUAN (kelas+1), bukan dari fase saat ini.
+// Kelas 1–2 → Fase A | Kelas 3–4 → Fase B | Kelas 5–6 → Fase C | Kelas 7+ → Fase D
+// ⚠️ PENANDA ANTIREGRESI §7 — jangan ubah logika ini, lihat ANTIREGRESI.md
+function nextFase(kelas) { const n=parseInt(kelas.replace(/[^0-9]/g,'')); const nx=isNaN(n)?0:n+1; return nx<=2?'A':nx<=4?'B':nx<=6?'C':'D'; }
 function nextKelas(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN(n)?k:(n+1); }
+// kelasPokok: ambil hanya angka tingkatan, buang huruf rombel (mis. "2B" → 2, "3A" → 3)
+// ⚠️ PENANDA ANTIREGRESI §7 — dipakai di baris "Tinggal di kelas", jangan hapus
+function kelasPokok(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN(n)?k:n; }
 
 /* ════════════════════════════════════════════════════════
    RENDER PREVIEW (screen)
@@ -651,8 +657,8 @@ function buildRaporHTML(d) {
     html += `<div style="margin-top:12px">
     <div class="rpr-keputusan" style="display:inline-block;min-width:0;width:auto;max-width:280px;">
       <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
-      <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.fase)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
-      <p><${!naik?'strong':'s'}>Tinggal di kelas ${d.kelas}</${!naik?'strong':'s'}></p>
+      <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.kelas)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
+      <p><${!naik?'strong':'s'}>Tinggal di kelas ${kelasPokok(d.kelas)}</${!naik?'strong':'s'}></p>
       <p><em>*) coret yang tidak perlu</em></p>
     </div></div>`;
   }
@@ -936,8 +942,8 @@ function buildBodyPrint(d) {
     html += `<div style="margin-top:10pt">
 <div class="rpr-keputusan" style="min-width:0;width:auto;max-width:230pt;">
   <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
-  <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.fase)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
-  <p><${!naik?'strong':'s'}>Tinggal di kelas ${d.kelas}</${!naik?'strong':'s'}></p>
+  <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.kelas)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
+  <p><${!naik?'strong':'s'}>Tinggal di kelas ${kelasPokok(d.kelas)}</${!naik?'strong':'s'}></p>
   <p><em>*) coret yang tidak perlu</em></p>
 </div></div>`;
   }
