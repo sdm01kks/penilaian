@@ -141,7 +141,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   <a class="nav-item" href="input-rata-rapor.html"><span class="nav-icon">📊</span> Nilai Rata-Rata Rapor</a>
   <a class="nav-item active" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
   <a class="nav-item" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview & Cetak SKL</a>
-  <a class="nav-item" href="preview-ismuba.html"><span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA</a>
   <a class="nav-item" href="generate-skl.html"><span class="nav-icon">📄</span> Generate Dokumen SKL</a>
   <a class="nav-item" href="config-skl.html"><span class="nav-icon">⚙️</span> Konfigurasi SKL</a>
   <div class="sidebar-section-label">Kembali</div>
@@ -163,9 +162,15 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
       <select class="sel" id="selKelas" onchange="gantiKelas()">
         <option value="">-- Pilih Kelas --</option>
       </select>
-      <label>Siswa</label>
+      <!-- label + dropdown Siswa: mode per_siswa (guru_kelas / admin) -->
+      <label id="labelSiswa">Siswa</label>
       <select class="sel" id="selSiswa" onchange="pilihSiswa()" disabled>
         <option value="">-- Pilih Siswa --</option>
+      </select>
+      <!-- label + dropdown Mapel: mode per_mapel (guru_mapel) — tersembunyi secara default -->
+      <label id="labelMapel" style="display:none;">Mata Pelajaran</label>
+      <select class="sel" id="selMapel" onchange="pilihMapel()" disabled style="display:none;">
+        <option value="">-- Pilih Mata Pelajaran --</option>
       </select>
     </div>
 
@@ -195,7 +200,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
       <table class="tbl" id="tblUS">
         <thead>
           <tr>
-            <th style="min-width:200px;">Mata Pelajaran</th>
+            <th style="min-width:200px;" id="thFirstCol">Mata Pelajaran</th>
             <th class="center">Tertulis<br><span id="headTertulis" style="font-size:10px;font-weight:400;">(60%)</span></th>
             <th class="center">Praktik<br><span id="headPraktik" style="font-size:10px;font-weight:400;">(40%)</span></th>
             <th class="center" style="background:var(--green-pale);">Nilai US<br><span style="font-size:10px;font-weight:400;">(final)</span></th>
@@ -209,8 +214,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 
   <div id="emptyState" style="text-align:center;padding:48px;color:var(--ink-muted);">
     <div style="font-size:44px;margin-bottom:12px;">✏️</div>
-    <div style="font-size:14px;font-weight:600;">Pilih kelas dan siswa</div>
-    <div style="font-size:12px;margin-top:6px;">untuk menampilkan tabel input nilai ujian sekolah</div>
+    <div style="font-size:14px;font-weight:600;" id="emptyStateTitle">Pilih kelas dan siswa</div>
+    <div style="font-size:12px;margin-top:6px;" id="emptyStateSub">untuk menampilkan tabel input nilai ujian sekolah</div>
   </div>
 </main>
 
@@ -221,10 +226,14 @@ let currentUser = null;
 let allSiswa    = [];
 let allMapel    = [];
 let config      = {};
-let nilaiUS     = {};   // key: id_mapel → { nilai_tertulis, nilai_praktik }
-let dirty       = {};   // id_mapel → true
+let nilaiUS     = {};   // per_siswa: id_mapel→{tertulis,praktik} | per_mapel: id_siswa→{tertulis,praktik}
+let dirty       = {};   // per_siswa: id_mapel→true | per_mapel: id_siswa→true
 let activeSiswa = null;
+let activeMapel = null;
 let activeKelas = null;
+// 'per_siswa' = tampilkan semua mapel untuk 1 siswa (guru_kelas / admin)
+// 'per_mapel' = tampilkan semua siswa untuk 1 mapel (guru_mapel)
+let viewMode    = 'per_siswa';
 
 function isISMUBA(mapel) {
   const nm = (mapel.nama || '').toLowerCase();
@@ -243,9 +252,8 @@ function updateBobot() {
   document.getElementById('bobotTotal').style.display = ok ? 'none' : 'inline';
   document.getElementById('headTertulis').textContent = `(${bt}%)`;
   document.getElementById('headPraktik').textContent  = `(${bp}%)`;
-  // Recalculate all US values in table
-  document.querySelectorAll('tr[data-mapel]').forEach(tr => {
-    const id_mapel = tr.dataset.mapel;
+  // Hitung ulang semua kolom Nilai US di tabel yang aktif (berlaku di kedua mode)
+  document.querySelectorAll('#tbodyUS tr').forEach(tr => {
     const tInput = tr.querySelector('.inp-tertulis');
     const pInput = tr.querySelector('.inp-praktik');
     const usCell = tr.querySelector('.nilai-us-cell');
@@ -280,6 +288,9 @@ window.addEventListener('load', async () => {
   else if (currentUser.role === 'guru_mapel') backLink.href = '../dashboard/guru-mapel.html';
   else backLink.href = '../dashboard/guru-kelas.html';
 
+  // Tentukan mode tampilan: guru_mapel → per_mapel, selainnya → per_siswa
+  viewMode = (currentUser.role === 'guru_mapel') ? 'per_mapel' : 'per_siswa';
+
   showLoading('Memuat data…');
   try {
     [config, allMapel] = await Promise.all([SHEETS.getConfig(), SHEETS.getMapel()]);
@@ -308,8 +319,8 @@ window.addEventListener('load', async () => {
     }
 
     // Untuk guru_mapel: filter allMapel hanya ke mapel yang diajar
+    // currentUser.mapel berisi ID mapel dipisahkan koma — mapelIds.includes(m.id)
     if (currentUser.role === 'guru_mapel' && currentUser.mapel) {
-      // currentUser.mapel berisi ID mapel dipisahkan koma (misal "MP001,MP003")
       const mapelIds = (currentUser.mapel||'').split(',').map(s=>s.trim()).filter(Boolean);
       if (mapelIds.length > 0) {
         allMapel = allMapel.filter(m => mapelIds.includes(m.id));
@@ -323,6 +334,19 @@ window.addEventListener('load', async () => {
       selKelas.appendChild(opt);
     });
 
+    // Konfigurasi tampilan sesuai mode
+    if (viewMode === 'per_mapel') {
+      // Sembunyikan selector Siswa, tampilkan selector Mata Pelajaran
+      document.getElementById('labelSiswa').style.display = 'none';
+      document.getElementById('selSiswa').style.display   = 'none';
+      document.getElementById('labelMapel').style.display = '';
+      document.getElementById('selMapel').style.display   = '';
+      // Perbarui teks kolom pertama tabel dan empty state
+      document.getElementById('thFirstCol').textContent       = 'Siswa';
+      document.getElementById('emptyStateTitle').textContent  = 'Pilih kelas dan mata pelajaran';
+      document.getElementById('emptyStateSub').textContent    = 'untuk menampilkan tabel input nilai ujian sekolah';
+    }
+
     if (kelasList.length === 1) { selKelas.value = kelasList[0].nama; await gantiKelas(); }
     hideLoading();
   } catch(e) {
@@ -333,23 +357,48 @@ window.addEventListener('load', async () => {
 
 async function gantiKelas() {
   activeKelas = document.getElementById('selKelas').value;
-  if (!activeKelas) return;
-  document.getElementById('selSiswa').disabled = true;
-  document.getElementById('selSiswa').innerHTML = '<option value="">-- Memuat siswa… --</option>';
+  activeSiswa = null;
+  activeMapel = null;
+  nilaiUS = {}; dirty = {};
   document.getElementById('tableArea').style.display  = 'none';
   document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('btnSave').disabled = true;
+  document.getElementById('statusSave').textContent = 'Belum ada perubahan.';
+  if (!activeKelas) return;
 
   showLoading('Memuat siswa…');
   try {
-    allSiswa = await SHEETS.getSiswa(activeKelas);
-    const selSiswa = document.getElementById('selSiswa');
-    selSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
-    allSiswa.sort((a,b)=>a.nama.localeCompare(b.nama)).forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.id; opt.textContent = s.nama;
-      selSiswa.appendChild(opt);
-    });
-    selSiswa.disabled = false;
+    // Selalu muat daftar siswa — dipakai di kedua mode
+    allSiswa = (await SHEETS.getSiswa(activeKelas)).sort((a, b) => a.nama.localeCompare(b.nama));
+
+    if (viewMode === 'per_siswa') {
+      // ── Mode per-siswa: isi dropdown Siswa ──────────────────
+      const selSiswa = document.getElementById('selSiswa');
+      selSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+      allSiswa.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = s.nama;
+        selSiswa.appendChild(opt);
+      });
+      selSiswa.disabled = false;
+    } else {
+      // ── Mode per-mapel: isi dropdown Mata Pelajaran ──────────
+      const selMapel = document.getElementById('selMapel');
+      selMapel.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
+      allMapel.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id; opt.textContent = m.nama;
+        selMapel.appendChild(opt);
+      });
+      selMapel.disabled = false;
+      // Jika guru hanya mengajar 1 mapel, pilih otomatis
+      if (allMapel.length === 1) {
+        selMapel.value = allMapel[0].id;
+        hideLoading();
+        await pilihMapel();
+        return;
+      }
+    }
     hideLoading();
   } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
 }
@@ -378,7 +427,40 @@ async function pilihSiswa() {
   } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
 }
 
+// ── Mode per-mapel: dipanggil saat guru_mapel memilih mata pelajaran ─────────
+async function pilihMapel() {
+  const mid = document.getElementById('selMapel').value;
+  if (!mid) {
+    document.getElementById('tableArea').style.display  = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    return;
+  }
+  activeMapel = allMapel.find(m => m.id === mid);
+  document.getElementById('emptyState').style.display = 'none';
+
+  showLoading('Memuat nilai US…');
+  try {
+    // Ambil semua nilai US untuk mapel ini di kelas yang dipilih
+    const rows = await SHEETS.getNilaiUS({ id_mapel: mid, kelas: activeKelas });
+    nilaiUS = {};
+    rows.forEach(r => { nilaiUS[r.id_siswa] = { nilai_tertulis: r.nilai_tertulis, nilai_praktik: r.nilai_praktik }; });
+    dirty = {};
+    renderTable();
+    document.getElementById('tableArea').style.display  = 'block';
+    document.getElementById('statusSave').textContent = 'Data tersimpan.';
+    document.getElementById('btnSave').disabled = true;
+    hideLoading();
+  } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
+}
+
+// ── Dispatch ke renderer yang sesuai mode ────────────────────────────────────
 function renderTable() {
+  if (viewMode === 'per_mapel') { renderTablePerMapel(); return; }
+  renderTablePerSiswa();
+}
+
+// Mode per-siswa: baris = mata pelajaran, kolom = Tertulis / Praktik / Nilai US
+function renderTablePerSiswa() {
   const tbody = document.getElementById('tbodyUS');
   tbody.innerHTML = '';
 
@@ -396,7 +478,7 @@ function renderTable() {
         <div>${ismuba?'<span class="mapel-tag ismuba">ISMUBA</span>':`<span class="mapel-tag">${m.kelompok||''}</span>`}</div>
       </td>
       <td class="${ismuba?'ismuba':''}">
-        <input type="number" class="nval inp-tertulis ${t===null||t===undefined?'':''}" 
+        <input type="number" class="nval inp-tertulis"
                min="0" max="100" step="0.01"
                value="${t!==null&&t!==undefined?t:''}"
                placeholder="0"
@@ -417,29 +499,68 @@ function renderTable() {
   });
 }
 
+// Mode per-mapel: baris = siswa, kolom = Tertulis / Praktik / Nilai US
+function renderTablePerMapel() {
+  const tbody = document.getElementById('tbodyUS');
+  tbody.innerHTML = '';
+
+  allSiswa.forEach(s => {
+    const saved = nilaiUS[s.id] || {};
+    const t = saved.nilai_tertulis;
+    const p = saved.nilai_praktik;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <div style="font-weight:600;color:var(--ink);font-size:13px;">${s.nama}</div>
+        <div style="font-size:11px;color:var(--ink-muted);">${s.nis||s.nisn||''}</div>
+      </td>
+      <td>
+        <input type="number" class="nval inp-tertulis"
+               min="0" max="100" step="0.01"
+               value="${t!==null&&t!==undefined?t:''}"
+               placeholder="0"
+               data-siswa="${s.id}" data-field="tertulis"
+               oninput="onNilaiChange(this)">
+      </td>
+      <td>
+        <input type="number" class="nval inp-praktik"
+               min="0" max="100" step="0.01"
+               value="${p!==null&&p!==undefined?p:''}"
+               placeholder="0"
+               data-siswa="${s.id}" data-field="praktik"
+               oninput="onNilaiChange(this)">
+      </td>
+      <td class="nilai-us-cell">${computeUS(t,p)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 function onNilaiChange(el) {
-  const id_mapel = el.dataset.mapel;
-  const field    = el.dataset.field;
-  const raw      = el.value.trim();
-  const val      = raw === '' ? null : parseFloat(raw);
+  // key = id_mapel (per_siswa) atau id_siswa (per_mapel)
+  const key   = viewMode === 'per_siswa' ? el.dataset.mapel : el.dataset.siswa;
+  const field = el.dataset.field;
+  const raw   = el.value.trim();
+  const val   = raw === '' ? null : parseFloat(raw);
 
   if (raw !== '' && (isNaN(val) || val < 0 || val > 100)) { el.style.borderColor='var(--red)'; return; }
   el.style.borderColor = '';
   el.classList.add('changed');
 
-  if (!nilaiUS[id_mapel]) nilaiUS[id_mapel] = { nilai_tertulis: null, nilai_praktik: null };
-  if (field === 'tertulis') nilaiUS[id_mapel].nilai_tertulis = val;
-  else                      nilaiUS[id_mapel].nilai_praktik  = val;
-  dirty[id_mapel] = true;
+  if (!nilaiUS[key]) nilaiUS[key] = { nilai_tertulis: null, nilai_praktik: null };
+  if (field === 'tertulis') nilaiUS[key].nilai_tertulis = val;
+  else                      nilaiUS[key].nilai_praktik  = val;
+  dirty[key] = true;
 
-  // Recalculate US value in same row
+  // Hitung ulang Nilai US di baris yang sama
   const tr = el.closest('tr');
   const tVal = parseFloat(tr.querySelector('.inp-tertulis').value);
   const pVal = parseFloat(tr.querySelector('.inp-praktik').value);
   tr.querySelector('.nilai-us-cell').textContent = computeUS(tVal, pVal);
 
   document.getElementById('btnSave').disabled = false;
-  document.getElementById('statusSave').textContent = `${Object.keys(dirty).length} mapel belum disimpan.`;
+  document.getElementById('statusSave').textContent = `${Object.keys(dirty).length} baris belum disimpan.`;
 }
 
 function resetChanges() {
@@ -451,7 +572,10 @@ function resetChanges() {
 }
 
 async function simpanSemua() {
-  if (!activeSiswa || Object.keys(dirty).length === 0) return;
+  if (Object.keys(dirty).length === 0) return;
+  if (viewMode === 'per_siswa' && !activeSiswa) return;
+  if (viewMode === 'per_mapel' && !activeMapel) return;
+
   const { bt, bp } = getBobot();
   if (Math.abs(bt + bp - 100) > 0.01) {
     showAlert('warning','⚠️ Bobot tidak valid','Total bobot tertulis + praktik harus 100%.');
@@ -460,12 +584,25 @@ async function simpanSemua() {
   const btn = document.getElementById('btnSave');
   btn.disabled = true;
 
-  const tp    = config['tahun_pelajaran'] || '';
-  const items = Object.keys(dirty).map(id_mapel => {
-    const d = nilaiUS[id_mapel] || {};
-    return { id_siswa: activeSiswa.id, id_mapel, kelas: activeKelas, tahun_pelajaran: tp,
-             nilai_tertulis: d.nilai_tertulis, nilai_praktik: d.nilai_praktik };
-  });
+  const tp = config['tahun_pelajaran'] || '';
+
+  // Susun items sesuai mode aktif
+  let items;
+  if (viewMode === 'per_siswa') {
+    // Satu siswa, banyak mapel
+    items = Object.keys(dirty).map(id_mapel => {
+      const d = nilaiUS[id_mapel] || {};
+      return { id_siswa: activeSiswa.id, id_mapel, kelas: activeKelas, tahun_pelajaran: tp,
+               nilai_tertulis: d.nilai_tertulis, nilai_praktik: d.nilai_praktik };
+    });
+  } else {
+    // Satu mapel, banyak siswa
+    items = Object.keys(dirty).map(id_siswa => {
+      const d = nilaiUS[id_siswa] || {};
+      return { id_siswa, id_mapel: activeMapel.id, kelas: activeKelas, tahun_pelajaran: tp,
+               nilai_tertulis: d.nilai_tertulis, nilai_praktik: d.nilai_praktik };
+    });
+  }
 
   showProgress(0, items.length, 'Menyiapkan data…');
   try {
