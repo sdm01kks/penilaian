@@ -1804,6 +1804,12 @@ async function eksekusiImport() {
     const toUpdate = []; // [[range, [row]], ...]  — baris yang sudah ada
     const toAppend = []; // [row, ...]             — baris baru
 
+    // Counter untuk menjamin keunikan ID di dalam satu batch.
+    // Tanpa ini, Date.now() menghasilkan nilai sama untuk semua iterasi sinkron
+    // → tabrakan ID dengan probabilitas tinggi pada kelas besar.
+    // Penanda kode: _importSeq wajib ada di eksekusiImport (lihat ANTIREGRESI §9).
+    let _importSeq = 0;
+
     for (const item of toImport) {
       for (const n of item.nilai) {
         if (n.slm === null) continue; // skip jika SLM kosong
@@ -1822,9 +1828,11 @@ async function eksekusiImport() {
           r[6] === tahun
         );
 
+        // ID baru: timestamp (base36) + seq counter (base36, 3 digit) — unik per batch.
+        // _importSeq menggantikan Math.random() agar tidak ada tabrakan saat loop sinkron.
         const newId = existIdx > 1
           ? rows[existIdx][0]
-          : 'NL' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+          : 'NL' + Date.now().toString(36) + (_importSeq++).toString(36).padStart(3, '0');
 
         const row = [
           newId, item.siswa.id, n.id_tp, activeMapel.id,
