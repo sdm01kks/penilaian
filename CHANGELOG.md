@@ -1,3 +1,23 @@
+## [2026-05-07] — v15 · Perbaikan Kokurikuler Terpotong di Cetak Rapor
+
+### 🐛 Perbaikan
+
+Semua perubahan hanya pada `rapor/preview.html`.
+
+| # | Masalah | Solusi |
+|---|---------|--------|
+| 1 | Teks kokurikuler terpotong di batas halaman saat cetak — border box berhenti di tepi halaman, sisa teks muncul di halaman berikutnya tanpa border | Tambahkan `break-inside:avoid;page-break-inside:avoid` pada `.kok-box` di print CSS template |
+
+> **Catatan:** Ini adalah perbaikan ke-4 untuk masalah yang sama. Lihat ANTIREGRESI.md §6 untuk checklist wajib dan penanda kode yang harus selalu ada agar masalah ini tidak terulang.
+
+### 📋 File yang Diubah (v15)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — baris 793, print CSS template |
+
+---
+
 ## [2026-05-07] — v14 · Perbaikan Layout Sertifikat ISMUBA
 
 ### 🐛 Perbaikan

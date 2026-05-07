@@ -154,6 +154,40 @@ async function kirimFinal() {
 
 **Jika menambahkan mode baru di masa depan:** tambahkan entri ke tabel kontrak di atas, update `renderTable()` dispatcher, dan update `simpanSemua()` dengan branch baru.
 
+### 6. Konten Terpotong di Batas Halaman — `rapor/preview.html` ⚠️ BERULANG 4×
+
+**Mengapa berisiko:** `rapor/preview.html` menghasilkan HTML cetak via template string JavaScript. Setiap kali template CSS di-edit (untuk perbaikan tampilan, penyesuaian font, dll.), properti `break-inside` rawan terhapus atau terlupakan karena tidak terlihat efeknya di preview layar — hanya tampak saat dicetak atau di-PDF-kan.
+
+**Riwayat pengulangan:**
+
+| Kejadian | Pola penyebab |
+|----------|---------------|
+| Ke-1 s/d Ke-4 | Properti `break-inside: avoid` pada `.kok-box` hilang atau tidak ada saat print CSS diedit |
+
+**Akar masalah:** CSS print template ada dalam template string JavaScript (baris ~737–821 di `rapor/preview.html`). Properti `break-inside` tidak terlihat efeknya di mode layar, sehingga mudah diabaikan saat refactor.
+
+**Aturan wajib:** Tiga properti berikut pada `.kok-box` **tidak boleh dihapus** dalam kondisi apapun:
+
+```css
+/* WAJIB ADA — jangan hapus, lihat ANTIREGRESI §6 */
+.kok-box {
+  break-inside: avoid;         /* CSS modern — wajib */
+  page-break-inside: avoid;    /* CSS lama — wajib untuk kompatibilitas */
+}
+```
+
+**Mengapa dua properti?** `page-break-inside` adalah property lama yang masih dipakai browser berbasis Chromium versi tertentu. `break-inside` adalah standard W3C modern. Keduanya harus hadir bersamaan.
+
+**Kapan risiko meningkat:** Setiap kali blok `/* ── Kokurikuler box ── */` di dalam template string `printHTML` diedit — baik untuk mengubah border, padding, font-size, maupun min-height.
+
+**Checklist wajib setelah mengubah print CSS di `rapor/preview.html`:**
+- [ ] Cari `.kok-box{` di dalam template string `printHTML` — pastikan ada `break-inside:avoid`
+- [ ] Pastikan ada `page-break-inside:avoid` pada `.kok-box` yang sama
+- [ ] Cek `.kok-header` masih memiliki `page-break-after:avoid` (agar header tidak terpisah dari box)
+- [ ] Uji dengan data kokurikuler panjang (3+ kalimat): cetak ke PDF, periksa apakah teks terpotong di batas halaman
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -180,6 +214,7 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 | File | Penanda Kode | Ditambahkan | Keterangan |
 |------|-------------|-------------|------------|
+| `rapor/preview.html` | `break-inside:avoid;page-break-inside:avoid` pada `.kok-box` (dalam template string `printHTML`) | v15 | **BERULANG 4×** — Wajib ada agar konten kokurikuler tidak terpotong di batas halaman cetak. Jangan hapus saat edit print CSS. |
 | `assets/js/sheets.js` | `saveNilaiUSBatch,` (di blok return) | v13 | Hotfix — pernah hilang dan menyebabkan error save nilai US |
 | `assets/js/sheets.js` | `append('SETORAN_TT!A1', [row])` | v10 | Anchor A1 wajib agar data tidak ditulis ke kolom acak |
 | `assets/js/sheets.js` | `// Tahun sengaja tidak difilter` | v10 | Format tahun tidak konsisten — filter tahun sengaja dihilangkan |
