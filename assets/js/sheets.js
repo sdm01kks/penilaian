@@ -258,7 +258,7 @@ const SHEETS = (() => {
    * @returns {Array}
    */
   async function getSiswa(kelas = null) {
-    const rows = await read('SISWA!A:P');
+    const rows = await read('SISWA!A:O');
     let siswa  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_siswa');
 
     if (kelas) {
@@ -288,8 +288,7 @@ const SHEETS = (() => {
       no_hp:           r[11] || '',
       tempat_lahir:    r[12] || '',
       tgl_lahir:       r[13] || '',
-      nama_wali:          r[14] || '',
-      no_peserta_ismuba:  r[15] || '',
+      nama_wali:       r[14] || '',
     }));
   }
 
@@ -320,8 +319,7 @@ const SHEETS = (() => {
       fmtNum(siswa.no_hp),
       siswa.tempat_lahir || '',
       siswa.tgl_lahir    || '',
-      siswa.nama_wali          || '',
-      siswa.no_peserta_ismuba || '',
+      siswa.nama_wali    || '',
     ];
     await append('SISWA', [row]);
     return id;
@@ -1188,6 +1186,7 @@ const SHEETS = (() => {
     saveNilaiRaporReataBatch,
     getNilaiUS,
     saveNilaiUS,
+    saveNilaiUSBatch,
 
     // Kalkulasi
     hitungNilaiAkhir,
