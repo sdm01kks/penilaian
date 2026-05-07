@@ -1799,6 +1799,11 @@ async function eksekusiImport() {
     const rows = await SHEETS.read('NILAI!A:K');
     let saved  = 0;
 
+    // Kumpulkan semua perubahan dulu (jangan panggil API di dalam loop)
+    // untuk menghindari 429 Too Many Requests dari Google Sheets API.
+    const toUpdate = []; // [[range, [row]], ...]  — baris yang sudah ada
+    const toAppend = []; // [row, ...]             — baris baru
+
     for (const item of toImport) {
       for (const n of item.nilai) {
         if (n.slm === null) continue; // skip jika SLM kosong
@@ -1831,10 +1836,10 @@ async function eksekusiImport() {
         ];
 
         if (existIdx > 1) {
-          await SHEETS.write('NILAI!A' + (existIdx + 1) + ':K' + (existIdx + 1), [row]);
+          toUpdate.push(['NILAI!A' + (existIdx + 1) + ':K' + (existIdx + 1), [row]]);
         } else {
-          await SHEETS.append('NILAI!A:K', [row]);
-          rows.push(row);
+          toAppend.push(row);
+          rows.push(row); // jaga agar findIndex tidak mencocokkan duplikat
         }
 
         // Update nilaiDB lokal
@@ -1842,6 +1847,17 @@ async function eksekusiImport() {
         nilaiDB[key] = { slm: n.slm, sas: n.sas };
         saved++;
       }
+    }
+
+    // Eksekusi batch: semua update sekaligus (valuesBatchWrite),
+    // lalu semua baris baru dalam satu append — pola sama dengan saveNilaiUSBatch.
+    // Maksimum 2–3 API call berapapun jumlah siswa/TP, tidak ada 429 lagi.
+    const CHUNK = 100;
+    for (let i = 0; i < toUpdate.length; i += CHUNK) {
+      await SHEETS.valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+    }
+    if (toAppend.length) {
+      await SHEETS.append('NILAI!A1', toAppend); // A1 anchor agar tidak nyasar ke kolom jauh
     }
 
     // Reset import state & reload tampilan
