@@ -1,3 +1,56 @@
+## [2026-05-07] — v13 · Hotfix · `saveNilaiUSBatch` Tidak Dapat Dipanggil dari Halaman Input Nilai US
+
+### 🐛 Perbaikan Bug Kritis
+
+---
+
+### BUG-03 · `assets/js/sheets.js` · `SHEETS.saveNilaiUSBatch is not a function`
+
+**File:** `assets/js/sheets.js`
+
+**Gejala:** Saat guru menekan tombol **Simpan** di halaman `ujian-sekolah/input-nilai-us.html`, muncul error:
+
+```
+⛔ SHEETS.saveNilaiUSBatch is not a function
+```
+
+Tidak ada nilai yang tersimpan ke sheet `NILAI_US`.
+
+**Akar masalah:**
+
+Fungsi `saveNilaiUSBatch` *didefinisikan* di dalam IIFE `sheets.js` (baris 1101) tetapi **tidak dicantumkan dalam blok `return { … }` (public API)**. Akibatnya, `SHEETS.saveNilaiUSBatch` bernilai `undefined` saat dipanggil dari `input-nilai-us.html` baris 471.
+
+Regresi ini muncul saat perbaikan v10 (Sesi 24 · Fix Setoran TT) menyentuh bagian bawah `sheets.js` — blok `return` diedit untuk menambahkan fungsi-fungsi SetorTT, namun `saveNilaiUSBatch` yang sudah ada sejak v5 (SAJ-01) terlewat tidak diikutsertakan.
+
+**Perbaikan:**
+
+```diff
+  // Ujian Sekolah / Sumatif Akhir Jenjang
+  valuesBatchWrite,
+  getNilaiRaporRerata,
+  saveNilaiRaporRerata,
+  saveNilaiRaporReataBatch,
+  getNilaiUS,
+  saveNilaiUS,
++ saveNilaiUSBatch,
+```
+
+**Catatan pola regresi:** Setiap kali blok `return { … }` di `sheets.js` diubah, **seluruh fungsi yang didefinisikan di atas return wajib diverifikasi** masih tercantum. Lihat `ANTIREGRESI.md` untuk checklist lengkap.
+
+### 📋 File yang Diubah (v13)
+
+| File | Status | Keterangan |
+|------|--------|------------|
+| `assets/js/sheets.js` | **Diubah** | `saveNilaiUSBatch` ditambahkan ke blok `return { … }` |
+
+### 🔍 Penanda Kode — Anti-Regresi
+
+| File | Penanda |
+|------|---------|
+| `sheets.js` | `saveNilaiUSBatch,` ada di blok `return { … }` |
+
+---
+
 ## [2026-05-05] — v12 · Bugfix · Dropdown Kelas Mutasi Masuk
 
 ### 🐛 Perbaikan Bug
