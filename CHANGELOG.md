@@ -1,3 +1,21 @@
+## [2026-05-07] — v17 · Perbaikan Jarak Footer Rapor
+
+### 🐛 Perbaikan
+
+Semua perubahan hanya pada `rapor/preview.html`.
+
+| # | Masalah | Solusi |
+|---|---------|--------|
+| 1 | Jarak antara garis pembatas footer dan teks footer terlalu besar | `padding-top` pada `@bottom-left` dan `@bottom-right` di `@page` dikurangi dari **4pt → 3pt** |
+
+### 📋 File yang Diubah (v17)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — `@page @bottom-left` dan `@bottom-right`, `padding-top: 3pt` |
+
+---
+
 ## [2026-05-07] — v16 · Perbaikan Keputusan Naik/Tinggal Kelas di Rapor
 
 ### 🐛 Perbaikan
