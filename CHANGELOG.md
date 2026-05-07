@@ -1,3 +1,24 @@
+## [2026-05-07] — v16 · Perbaikan Keputusan Naik/Tinggal Kelas di Rapor
+
+### 🐛 Perbaikan
+
+Semua perubahan hanya pada `rapor/preview.html`.
+
+| # | Masalah | Solusi |
+|---|---------|--------|
+| 1 | "Naik ke Fase X" menampilkan fase yang salah — fase selalu naik satu huruf dari fase saat ini, padahal kelas 1→2 tetap fase A, kelas 3→4 tetap fase B, dst. | Tulis ulang `nextFase(f)` menjadi `nextFase(kelas)`: fase dihitung dari kelas **tujuan** (kelas+1), bukan dari fase saat ini. Pemetaan: kelas 1–2=A, 3–4=B, 5–6=C, 7+=D. Call site diubah dari `nextFase(d.fase)` → `nextFase(d.kelas)` di dua tempat (screen + print). |
+| 2 | "Tinggal di kelas 2B" — mencantumkan huruf rombongan belajar, seharusnya hanya tingkatan ("Tinggal di kelas 2") | Tambah helper `kelasPokok(k)`: ekstrak angka saja dari nama kelas. Pakai `kelasPokok(d.kelas)` di dua tempat (screen + print). |
+
+> **Catatan:** Ini adalah perbaikan ke-2 untuk masalah yang sama. Lihat ANTIREGRESI.md §7 untuk checklist dan penanda kode wajib.
+
+### 📋 File yang Diubah (v16)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — fungsi `nextFase`, helper baru `kelasPokok`, 4 call site (baris ~527–531, ~660–661, ~945–946) |
+
+---
+
 ## [2026-05-07] — v15 · Perbaikan Kokurikuler Terpotong di Cetak Rapor
 
 ### 🐛 Perbaikan

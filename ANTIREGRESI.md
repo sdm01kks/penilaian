@@ -154,6 +154,62 @@ async function kirimFinal() {
 
 **Jika menambahkan mode baru di masa depan:** tambahkan entri ke tabel kontrak di atas, update `renderTable()` dispatcher, dan update `simpanSemua()` dengan branch baru.
 
+### 7. Logika Fase dan Rombel di Keputusan Naik/Tinggal — `rapor/preview.html` ⚠️ BERULANG 2×
+
+**Mengapa berisiko:** Fungsi `nextFase` dan `kelasPokok` keduanya ada di dalam file yang sering diedit untuk keperluan lain (layout, print CSS, section baru). Saat ada refactor, dua kekeliruan berikut berulang terjadi:
+1. `nextFase` dikembalikan ke versi lama yang menerima `fase` bukan `kelas`, sehingga logika fase selalu naik satu huruf tanpa mempertimbangkan pemetaan kelas.
+2. `kelasPokok` dihapus atau tidak dipakai, sehingga nama rombel (huruf) ikut tampil di baris "Tinggal di kelas".
+
+**Pemetaan fase yang benar (wajib hafal):**
+
+| Kelas tujuan | Fase |
+|---|---|
+| 1, 2 | A |
+| 3, 4 | B |
+| 5, 6 | C |
+| 7, 8, 9 (SMP) | D |
+
+**Riwayat pengulangan:**
+
+| Kejadian | Pola penyebab |
+|----------|---------------|
+| Ke-1 & Ke-2 | `nextFase` ditulis ulang menerima `f` (fase) bukan `kelas`, dan/atau `kelasPokok` dihilangkan |
+
+**Penanda kode wajib — tidak boleh dihapus atau diubah:**
+
+```javascript
+// ✅ BENAR — nextFase menerima kelas (string seperti "2B"), bukan fase
+function nextFase(kelas) {
+  const n=parseInt(kelas.replace(/[^0-9]/g,''));
+  const nx=isNaN(n)?0:n+1;
+  return nx<=2?'A':nx<=4?'B':nx<=6?'C':'D';
+}
+
+// ✅ BENAR — kelasPokok membuang huruf rombel
+function kelasPokok(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN(n)?k:n; }
+
+// ✅ BENAR — call site: pakai d.kelas, bukan d.fase
+// Naik ke Fase ${nextFase(d.kelas)} | Kelas ${nextKelas(d.kelas)}
+// Tinggal di kelas ${kelasPokok(d.kelas)}
+
+// ❌ SALAH — versi lama yang sering muncul kembali
+// function nextFase(f) { return f==='A'?'B':f==='B'?'C':'D'; }  ← JANGAN pakai ini
+// nextFase(d.fase)   ← JANGAN, harus d.kelas
+// Tinggal di kelas ${d.kelas}  ← JANGAN, harus kelasPokok(d.kelas)
+```
+
+**Kapan risiko meningkat:** Setiap kali blok helper functions di sekitar baris 524–531 `rapor/preview.html` diedit, atau saat copy-paste dari versi lama.
+
+**Checklist wajib setelah mengubah `rapor/preview.html`:**
+- [ ] Cari `function nextFase` — pastikan parameternya `kelas`, bukan `f` atau `fase`
+- [ ] Cari `nextFase(d.` — pastikan argumennya `d.kelas`, bukan `d.fase` (harus ada di 2 tempat: screen + print)
+- [ ] Cari `function kelasPokok` — pastikan fungsi ini masih ada
+- [ ] Cari `Tinggal di kelas` — pastikan memakai `kelasPokok(d.kelas)`, bukan `d.kelas` mentah (harus ada di 2 tempat)
+- [ ] Uji kasus: kelas 1→ harusnya "Fase A", kelas 2→ harusnya "Fase B", kelas 4→ harusnya "Fase C"
+- [ ] Uji kasus tinggal: kelas "2B" → harus tampil "Tinggal di kelas 2" (tanpa huruf B)
+
+---
+
 ### 6. Konten Terpotong di Batas Halaman — `rapor/preview.html` ⚠️ BERULANG 4×
 
 **Mengapa berisiko:** `rapor/preview.html` menghasilkan HTML cetak via template string JavaScript. Setiap kali template CSS di-edit (untuk perbaikan tampilan, penyesuaian font, dll.), properti `break-inside` rawan terhapus atau terlupakan karena tidak terlihat efeknya di preview layar — hanya tampak saat dicetak atau di-PDF-kan.
@@ -214,6 +270,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 | File | Penanda Kode | Ditambahkan | Keterangan |
 |------|-------------|-------------|------------|
+| `rapor/preview.html` | `function nextFase(kelas)` — parameter harus `kelas`, bukan `f`/`fase` | v16 | **BERULANG 2×** — Fase dihitung dari kelas tujuan, bukan dari fase saat ini. Jangan kembalikan ke versi lama `nextFase(f)`. |
+| `rapor/preview.html` | `function kelasPokok(k)` — helper wajib ada | v16 | **BERULANG 2×** — Dipakai di "Tinggal di kelas". Tanpa ini, huruf rombel ikut tampil. |
+| `rapor/preview.html` | `nextFase(d.kelas)` di 2 call site (screen + print) | v16 | Jangan ganti ke `nextFase(d.fase)` — lihat §7 |
+| `rapor/preview.html` | `kelasPokok(d.kelas)` di 2 call site "Tinggal di kelas" (screen + print) | v16 | Jangan ganti ke `d.kelas` mentah — lihat §7 |
 | `rapor/preview.html` | `break-inside:avoid;page-break-inside:avoid` pada `.kok-box` (dalam template string `printHTML`) | v15 | **BERULANG 4×** — Wajib ada agar konten kokurikuler tidak terpotong di batas halaman cetak. Jangan hapus saat edit print CSS. |
 | `assets/js/sheets.js` | `saveNilaiUSBatch,` (di blok return) | v13 | Hotfix — pernah hilang dan menyebabkan error save nilai US |
 | `assets/js/sheets.js` | `append('SETORAN_TT!A1', [row])` | v10 | Anchor A1 wajib agar data tidak ditulis ke kolom acak |
