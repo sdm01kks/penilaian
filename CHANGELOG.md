@@ -6,13 +6,15 @@ Semua perubahan hanya pada `rapor/preview.html`.
 
 | # | Masalah | Solusi |
 |---|---------|--------|
-| 1 | Jarak antara garis pembatas footer dan teks footer masih terlalu besar | `padding-top` pada `@bottom-left` dan `@bottom-right` di `@page` dikurangi dari **3pt → 1pt** |
+| 1 | Jarak antara garis pembatas footer (`border-top`) dan teks footer terlalu besar, dan mengubah `padding-top` saja tidak berpengaruh pada jarak tersebut | Tambahkan `vertical-align: top` pada `@bottom-left` dan `@bottom-right`. Tanpa ini, teks di-align ke **tengah** margin box 1.5cm (default), sehingga border-top di ujung atas dan teks di tengah — gap ≈ 16pt tidak peduli berapa nilai `padding-top`. Dengan `vertical-align: top`, teks merapat ke atas dan `padding-top: 2pt` kini benar-benar mengontrol jarak garis–teks. |
+
+> **Catatan:** Sebelumnya salah memperbaiki `padding-top` saja (v17 awal) tanpa menyadari bahwa `vertical-align` yang sesungguhnya menentukan posisi vertikal teks di dalam margin box. Lihat ANTIREGRESI.md §8.
 
 ### 📋 File yang Diubah (v17)
 
 | File | Status |
 |------|--------|
-| `rapor/preview.html` | **Diubah** — `@page @bottom-left` dan `@bottom-right`, `padding-top: 3pt` |
+| `rapor/preview.html` | **Diubah** — `@page @bottom-left` dan `@bottom-right`: tambah `vertical-align: top`, `padding-top: 2pt` |
 
 ---
 

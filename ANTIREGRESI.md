@@ -154,6 +154,38 @@ async function kirimFinal() {
 
 **Jika menambahkan mode baru di masa depan:** tambahkan entri ke tabel kontrak di atas, update `renderTable()` dispatcher, dan update `simpanSemua()` dengan branch baru.
 
+### 8. Footer `@page` Margin Box — `vertical-align` Wajib Ada
+
+**Mengapa berisiko:** `@page` margin boxes (`@bottom-left`, `@bottom-right`) memiliki tinggi penuh sebesar margin bawah halaman (1.5cm ≈ 42.5pt). Teks secara **default di-align ke tengah** box tersebut. Akibatnya:
+- `border-top` berada di ujung atas box
+- Teks berada di tengah box
+- Jarak visual antara garis dan teks ≈ 16pt — besar — **tidak peduli berapa nilai `padding-top`**
+- Mengubah `padding-top` hanya menggeser posisi box secara keseluruhan (teks ikut bergerak), bukan mengubah jarak internal garis–teks
+
+**Penanda kode wajib:**
+
+```css
+/* ✅ BENAR — vertical-align: top wajib ada agar padding-top efektif */
+@bottom-left {
+  border-top: 1px solid #ccc;
+  vertical-align: top;   /* ← WAJIB — tanpa ini, padding-top tidak mengontrol gap */
+  padding-top: 2pt;      /* ← gap antara garis dan teks */
+}
+
+/* ❌ SALAH — tanpa vertical-align: top, padding-top tidak berpengaruh pada gap */
+@bottom-left {
+  border-top: 1px solid #ccc;
+  padding-top: 2pt;  /* tidak efektif karena teks masih di tengah box */
+}
+```
+
+**Checklist wajib setelah mengubah `@page` di `rapor/preview.html`:**
+- [ ] Pastikan `vertical-align: top` ada di `@bottom-left` DAN `@bottom-right`
+- [ ] `padding-top` mengontrol jarak garis–teks (nilai kecil, cukup 1–3pt)
+- [ ] Jangan hapus `vertical-align: top` meski terlihat seperti "tidak penting"
+
+---
+
 ### 7. Logika Fase dan Rombel di Keputusan Naik/Tinggal — `rapor/preview.html` ⚠️ BERULANG 2×
 
 **Mengapa berisiko:** Fungsi `nextFase` dan `kelasPokok` keduanya ada di dalam file yang sering diedit untuk keperluan lain (layout, print CSS, section baru). Saat ada refactor, dua kekeliruan berikut berulang terjadi:
@@ -270,6 +302,7 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 | File | Penanda Kode | Ditambahkan | Keterangan |
 |------|-------------|-------------|------------|
+| `rapor/preview.html` | `vertical-align: top` pada `@bottom-left` dan `@bottom-right` di `@page` | v17 | Wajib ada. Tanpanya, teks footer di-align ke tengah margin box — `padding-top` tidak efektif mengontrol gap garis–teks. Lihat §8. |
 | `rapor/preview.html` | `function nextFase(kelas)` — parameter harus `kelas`, bukan `f`/`fase` | v16 | **BERULANG 2×** — Fase dihitung dari kelas tujuan, bukan dari fase saat ini. Jangan kembalikan ke versi lama `nextFase(f)`. |
 | `rapor/preview.html` | `function kelasPokok(k)` — helper wajib ada | v16 | **BERULANG 2×** — Dipakai di "Tinggal di kelas". Tanpa ini, huruf rombel ikut tampil. |
 | `rapor/preview.html` | `nextFase(d.kelas)` di 2 call site (screen + print) | v16 | Jangan ganti ke `nextFase(d.fase)` — lihat §7 |
