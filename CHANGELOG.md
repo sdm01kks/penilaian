@@ -6,7 +6,7 @@ Semua perubahan hanya pada `rapor/preview.html`.
 
 | # | Masalah | Solusi |
 |---|---------|--------|
-| 1 | Jarak antara garis pembatas footer dan teks footer terlalu besar | `padding-top` pada `@bottom-left` dan `@bottom-right` di `@page` dikurangi dari **4pt → 3pt** |
+| 1 | Jarak antara garis pembatas footer dan teks footer masih terlalu besar | `padding-top` pada `@bottom-left` dan `@bottom-right` di `@page` dikurangi dari **3pt → 1pt** |
 
 ### 📋 File yang Diubah (v17)
 
