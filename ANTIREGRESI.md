@@ -8,7 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
-| v20 | `dashboard/guru-mapel.html`, `ujian-sekolah/input-nilai-us.html` | Akses & status dashboard guru bidang studi kelas 6 | `kelas='semua'` tidak ditangani di `hasKelas6` dan filter kelas; refresh sesi tidak memperbarui `kelas`; dashboard cek NILAI bukan NILAI_US |
+| v20 | `dashboard/guru-mapel.html` | Menu SAJ tidak muncul untuk guru PAI/B.Arab/KMH yang juga mengajar TT | Kondisi `!isTTGuru` terlalu luas — memblokir semua guru TT, termasuk yang juga mengajar mapel lain di kelas 6 |
 | v19 | `ujian-sekolah/config-skl.html`, `dashboard/guru-kelas.html`, `ujian-sekolah/input-nilai-us.html` | Akses Konfigurasi SKL guru kelas 6 + sinkronisasi bobot | `requireLogin` hanya mengizinkan `admin`; menu tidak ada di dashboard; input bobot editable di halaman yang salah; `updateBobot()` tidak dipanggil setelah config dimuat |
 | v18 | `penilaian/input-nilai.html` | `eksekusiImport` — gagal 429 | Per-row API call (`append` dipanggil satu kali per siswa per TP di dalam loop) → rate limit Google Sheets API |
 | v10 | `assets/js/sheets.js` | `saveNilaiUSBatch` | Blok `return { … }` diedit tapi satu fungsi terlewat tidak diekspor |
@@ -406,84 +406,46 @@ const user = AUTH.requireLogin(['admin']);
 
 ---
 
+### 12. Akses SAJ untuk Guru Mapel — Jangan Kembali ke `!isTTGuru` di `dashboard/guru-mapel.html`
 
-### 12. Guru Bidang Studi dengan `kelas='semua'` — Harus Ditangani di Semua Cek Kelas
+**Mengapa berisiko:** Kondisi `!isTTGuru` yang dulu dipakai untuk memblokir akses SAJ terlalu luas — ia memblokir guru mana pun yang mengajar tahsin-tahfizh, bahkan jika guru itu juga mengajar mapel lain (PAI, Bahasa Arab, KMH) di kelas 6. Ini adalah akar bug v20.
 
-**Mengapa berisiko:** Guru yang mengajar lintas tingkat (misalnya PAI, Bahasa Arab, Kemuhammadiyahan) bisa disimpan dengan `kelas='semua'` di USERS. Nilai ini valid di admin interface, tapi kode yang hanya mengecek `.startsWith('6')` atau mencocokkan nama kelas literal akan **diam-diam gagal** — menghasilkan menu tersembunyi, kelas kosong, atau API call tidak valid ke `getSiswa('semua')`.
+**Akar masalah (v20):** Asumsi awal salah — dikira guru TT tidak pernah sekaligus menjadi guru mapel reguler di kelas 6. Kenyataannya, guru PAI/B.Arab/KMH sering ikut mengampu tahsin-tahfizh.
 
-**Aturan wajib:**
+**Pola yang salah dan sering kembali muncul:**
 ```javascript
-// ✅ Benar — tangani 'semua' sebelum cek kelas 6
-const hasKelas6 = myKelas.includes('semua') || myKelas.some(k => String(k).startsWith('6'));
-
-// ✅ Benar — expand 'semua' ke daftar kelas riil sebelum query
-if (rawKelas.includes('semua') || rawKelas.length === 0) {
-  kelasdiampu = allKelas.map(k => k.nama).sort();
-} else {
-  kelasdiampu = rawKelas;
+// ❌ SALAH — memblokir guru TT yang juga punya mapel lain di kelas 6
+if (!isTTGuru) {
+  if (hasKelas6) { /* tampilkan SAJ menu */ }
 }
-
-// ✅ Benar — di filter kelas untuk input: tampilkan semua kelas 6 jika 'semua'
-kelasList = myKelas.includes('semua') || myKelas.length === 0
-  ? kelas6
-  : kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
-
-// ❌ Salah — 'semua'.startsWith('6') === false → menu SAJ tidak muncul
-const hasKelas6 = myKelas.some(k => String(k).startsWith('6'));
-
-// ❌ Salah — SHEETS.getSiswa('semua') bukan query yang valid
-kelasdiampu = rawKelas; // jika rawKelas = ['semua']
 ```
 
-**Penanda kode yang harus ada:**
+**Pola yang benar sejak v20:**
+```javascript
+// ✅ BENAR — hanya blokir guru yang HANYA mengajar TT (tanpa mapel lain)
+const isPureTTGuru = isTTGuru && mapelArr.every(m =>
+  m.includes('tahsin') || m.includes('tahfizh') ||
+  m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_') ||
+  m === 'tahsin-tahfizh' || m.replace(/[^a-z]/g,'').includes('tahsin')
+);
+if (hasKelas6 && !isPureTTGuru) { /* tampilkan SAJ menu */ }
+```
 
-| File | Penanda |
-|------|---------|
-| `dashboard/guru-mapel.html` | `myKelas.includes('semua') \|\|` di kondisi `hasKelas6` |
-| `dashboard/guru-mapel.html` | `rawKelas.includes('semua') \|\| rawKelas.length === 0` di `loadAll()` |
-| `ujian-sekolah/input-nilai-us.html` | `myKelas.includes('semua') \|\| myKelas.length === 0` di filter kelas guru_mapel |
-
-**Checklist wajib setelah mengubah logika visibilitas menu SAJ atau filter kelas:**
-- [ ] Pastikan `hasKelas6` memeriksa `myKelas.includes('semua')` sebelum `.startsWith('6')`
-- [ ] Pastikan `loadAll()` mengekspansi `'semua'` ke daftar kelas riil dari `allKelas`
-- [ ] Pastikan filter kelas di `input-nilai-us.html` menangani `'semua'` dengan menampilkan semua kelas 6
-- [ ] Uji dengan akun guru yang memiliki `kelas='semua'` — SAJ menu harus muncul dan semua kelas 6 harus tersedia
-
----
-
-### 13. Dashboard Guru Bidang Studi — Dua Sheet Nilai yang Harus Dicocokkan
-
-**Mengapa berisiko:** Guru bidang studi memiliki dua jalur input nilai:
-1. `penilaian/input-nilai.html` → menyimpan ke sheet **NILAI**
-2. `ujian-sekolah/input-nilai-us.html` → menyimpan ke sheet **NILAI_US**
-
-Dashboard `guru-mapel.html` hanya mengecek sheet NILAI via `SHEETS.getNilai()`. Jika guru memasukkan nilai ujian sekolah via jalur #2, dashboard selalu menampilkan "Belum Ada" meski nilai sudah ada di NILAI_US — karena sheet yang salah dicek.
-
-**Kontrak yang harus dijaga:**
-
-| Elemen | Yang benar | Yang salah |
-|--------|-----------|-----------|
-| `allNilaiUS` | Dideklarasikan global: `let allNilaiUS = {};` | Tidak dideklarasikan |
-| `loadAll()` | Muat `getNilaiUS` per kelas per mapel ID, simpan ke `allNilaiUS[kls]` | Hanya muat `getNilai` |
-| `renderRekapKelas` | Cek `nilai.some(...) \|\| nilaiUS.some(...)` | Hanya cek `nilai.some(...)` |
-| `renderSiswaTable` | Cek kedua | Hanya cek `allNilai` |
-| `filterSiswa` | Cek kedua | Hanya cek `allNilai` |
-| `renderStatsKelas` | Cek kedua | Hanya cek `allNilai` |
+**Mengapa aman:** Filter mapel TT sudah dilakukan di `input-nilai-us.html` via `TAHSIN_KW` — TT tidak akan muncul di daftar mapel ujian sekolah meski guru memiliki TT di field `mapel`-nya.
 
 **Penanda kode yang harus ada:**
 
 | File | Penanda |
 |------|---------|
-| `dashboard/guru-mapel.html` | `let allNilaiUS = {};` di deklarasi global |
-| `dashboard/guru-mapel.html` | `nilaiUSParts.flat()` di `loadAll()` |
-| `dashboard/guru-mapel.html` | `nilaiUS.some(n => n.id_siswa === s.id)` di semua fungsi render |
+| `dashboard/guru-mapel.html` | `isPureTTGuru` — jangan hapus atau ganti dengan `!isTTGuru` |
+| `dashboard/guru-mapel.html` | `// ANTIREGRESI v20: jangan kembalikan ke !isTTGuru` — komentar penanda |
 
-**Checklist wajib setelah mengubah `loadAll()` atau fungsi render di `guru-mapel.html`:**
-- [ ] Pastikan `allNilaiUS` masih dideklarasikan sebagai global `{}`
-- [ ] Pastikan `loadAll()` masih memanggil `SHEETS.getNilaiUS` per `mapelIdArr` dan menyimpan ke `allNilaiUS[kls]`
-- [ ] Pastikan semua 4 fungsi render (`renderStatsKelas`, `renderRekapKelas`, `renderSiswaTable`, `filterSiswa`) mengecek `allNilaiUS` di samping `allNilai`
-- [ ] Uji: guru masukkan nilai di `input-nilai-us.html` → refresh dashboard → status siswa harus berubah dari "Belum Ada" ke "Ada Nilai"
-- [ ] Jangan hapus `allNilaiUS` meski menambah cache lain — sheet NILAI dan NILAI_US adalah dua entitas berbeda
+**Checklist wajib setelah mengubah logika SAJ di `dashboard/guru-mapel.html`:**
+- [ ] Pastikan kondisi `isPureTTGuru` masih ada dan menggunakan pola `mapelArr.every(...)` bukan `isTTGuru` langsung
+- [ ] Pastikan tidak ada `if (!isTTGuru)` yang membungkus blok SAJ menu
+- [ ] Uji dengan akun guru yang mengajar PAI/B.Arab/KMH di kelas 6 sekaligus mengajar TT → menu SAJ **harus muncul**
+- [ ] Uji dengan akun guru yang **hanya** mengajar TT (tanpa mapel lain) → menu SAJ **tidak boleh muncul**
+- [ ] Uji dengan akun guru mapel non-TT di kelas 6 (PJOK, B.Indonesia, KKA) → menu SAJ tetap muncul seperti biasa
 
 ---
 
@@ -537,17 +499,14 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `siswa/mutasi.html` | `const payload = pendingPayload` | v1 | Simpan referensi lokal sebelum tutupModal() |
 | `siswa/mutasi.html` | `kelasDiampuArr` | v12 | Gabungan kelas utama+mapel untuk load siswa multi-kelas |
 | `penilaian/input-setoran-tt.html` | `m.startsWith('[')` di forEach lulusSet | v11 | Expand JSON array materi untuk progress bar multi-materi |
-| `dashboard/guru-mapel.html` | `myKelas.includes('semua') ||` di kondisi `hasKelas6` | v20 | Wajib ada. Tanpanya, guru dengan kelas='semua' tidak mendapat menu SAJ. Lihat §12. |
-| `dashboard/guru-mapel.html` | `rawKelas.includes('semua') || rawKelas.length === 0` di `loadAll()` | v20 | Wajib ada. Tanpanya, `getSiswa('semua')` dipanggil → API error. Lihat §12. |
-| `dashboard/guru-mapel.html` | `let allNilaiUS = {};` (global) + `nilaiUSParts.flat()` di `loadAll()` | v20 | Wajib ada. Dashboard harus cek NILAI_US agar status terkini setelah input-nilai-us. Lihat §13. |
-| `dashboard/guru-mapel.html` | `nilaiUS.some(n => n.id_siswa === s.id)` di semua fungsi render | v20 | Wajib ada di 4 fungsi: renderStatsKelas, renderRekapKelas, renderSiswaTable, filterSiswa. Lihat §13. |
-| `ujian-sekolah/input-nilai-us.html` | `myKelas.includes('semua') || myKelas.length === 0` di filter kelas guru_mapel | v20 | Wajib ada. Tanpanya, guru dengan kelas='semua' melihat dropdown kelas kosong. Lihat §12. |
 | `dashboard/guru-kelas.html` | `hasKelas6` | v1/SAJ-05 | Visibilitas menu SAJ kondisional |
 | `dashboard/guru-kelas.html` | `navSAJLabel` | v1/SAJ-05 | ID elemen nav SAJ |
 | `dashboard/guru-kelas.html` | `'navConfigSKL'` di array `hasKelas6` | v19 | Wajib ada agar menu Konfigurasi SKL muncul di sidebar guru kelas 6. Lihat §10. |
 | `ujian-sekolah/config-skl.html` | `AUTH.requireLogin(['admin','guru_kelas'])` | v19 | Wajib ada. Tanpa `guru_kelas`, guru kelas 6 diredirect ke login. Lihat §10. |
 | `ujian-sekolah/input-nilai-us.html` | `<input type="hidden" id="bobotTertulis">` dan `<input type="hidden" id="bobotPraktik">` | v19 | Wajib `type="hidden"`. Jika dikembalikan ke `type="number"`, bobot bisa diedit lokal tanpa tersimpan. Lihat §11. |
 | `ujian-sekolah/input-nilai-us.html` | `updateBobot()` dipanggil setelah `config['skl_bobot_us_praktik']` diapply di `init()` | v19 | Wajib ada. Tanpanya, header tabel hardcoded 60%/40% meski config SKL berbeda. Lihat §11. |
+| `dashboard/guru-mapel.html` | `isPureTTGuru` (menggantikan `!isTTGuru`) di blok SAJ menu | v20 | Wajib. `!isTTGuru` memblokir guru PAI/B.Arab/KMH yang sekaligus mengajar TT. Gunakan `isPureTTGuru` yang hanya blokir guru yang benar-benar hanya mengajar TT. Lihat §12. |
+| `dashboard/guru-mapel.html` | `// ANTIREGRESI v20: jangan kembalikan ke !isTTGuru` | v20 | Penanda komentar wajib ada. Lihat §12. |
 
 ---
 
