@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v20 | `dashboard/guru-mapel.html`, `ujian-sekolah/input-nilai-us.html` | Akses & status dashboard guru bidang studi kelas 6 | `kelas='semua'` tidak ditangani di `hasKelas6` dan filter kelas; refresh sesi tidak memperbarui `kelas`; dashboard cek NILAI bukan NILAI_US |
 | v19 | `ujian-sekolah/config-skl.html`, `dashboard/guru-kelas.html`, `ujian-sekolah/input-nilai-us.html` | Akses Konfigurasi SKL guru kelas 6 + sinkronisasi bobot | `requireLogin` hanya mengizinkan `admin`; menu tidak ada di dashboard; input bobot editable di halaman yang salah; `updateBobot()` tidak dipanggil setelah config dimuat |
 | v18 | `penilaian/input-nilai.html` | `eksekusiImport` — gagal 429 | Per-row API call (`append` dipanggil satu kali per siswa per TP di dalam loop) → rate limit Google Sheets API |
 | v10 | `assets/js/sheets.js` | `saveNilaiUSBatch` | Blok `return { … }` diedit tapi satu fungsi terlewat tidak diekspor |
@@ -405,6 +406,87 @@ const user = AUTH.requireLogin(['admin']);
 
 ---
 
+
+### 12. Guru Bidang Studi dengan `kelas='semua'` — Harus Ditangani di Semua Cek Kelas
+
+**Mengapa berisiko:** Guru yang mengajar lintas tingkat (misalnya PAI, Bahasa Arab, Kemuhammadiyahan) bisa disimpan dengan `kelas='semua'` di USERS. Nilai ini valid di admin interface, tapi kode yang hanya mengecek `.startsWith('6')` atau mencocokkan nama kelas literal akan **diam-diam gagal** — menghasilkan menu tersembunyi, kelas kosong, atau API call tidak valid ke `getSiswa('semua')`.
+
+**Aturan wajib:**
+```javascript
+// ✅ Benar — tangani 'semua' sebelum cek kelas 6
+const hasKelas6 = myKelas.includes('semua') || myKelas.some(k => String(k).startsWith('6'));
+
+// ✅ Benar — expand 'semua' ke daftar kelas riil sebelum query
+if (rawKelas.includes('semua') || rawKelas.length === 0) {
+  kelasdiampu = allKelas.map(k => k.nama).sort();
+} else {
+  kelasdiampu = rawKelas;
+}
+
+// ✅ Benar — di filter kelas untuk input: tampilkan semua kelas 6 jika 'semua'
+kelasList = myKelas.includes('semua') || myKelas.length === 0
+  ? kelas6
+  : kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
+
+// ❌ Salah — 'semua'.startsWith('6') === false → menu SAJ tidak muncul
+const hasKelas6 = myKelas.some(k => String(k).startsWith('6'));
+
+// ❌ Salah — SHEETS.getSiswa('semua') bukan query yang valid
+kelasdiampu = rawKelas; // jika rawKelas = ['semua']
+```
+
+**Penanda kode yang harus ada:**
+
+| File | Penanda |
+|------|---------|
+| `dashboard/guru-mapel.html` | `myKelas.includes('semua') \|\|` di kondisi `hasKelas6` |
+| `dashboard/guru-mapel.html` | `rawKelas.includes('semua') \|\| rawKelas.length === 0` di `loadAll()` |
+| `ujian-sekolah/input-nilai-us.html` | `myKelas.includes('semua') \|\| myKelas.length === 0` di filter kelas guru_mapel |
+
+**Checklist wajib setelah mengubah logika visibilitas menu SAJ atau filter kelas:**
+- [ ] Pastikan `hasKelas6` memeriksa `myKelas.includes('semua')` sebelum `.startsWith('6')`
+- [ ] Pastikan `loadAll()` mengekspansi `'semua'` ke daftar kelas riil dari `allKelas`
+- [ ] Pastikan filter kelas di `input-nilai-us.html` menangani `'semua'` dengan menampilkan semua kelas 6
+- [ ] Uji dengan akun guru yang memiliki `kelas='semua'` — SAJ menu harus muncul dan semua kelas 6 harus tersedia
+
+---
+
+### 13. Dashboard Guru Bidang Studi — Dua Sheet Nilai yang Harus Dicocokkan
+
+**Mengapa berisiko:** Guru bidang studi memiliki dua jalur input nilai:
+1. `penilaian/input-nilai.html` → menyimpan ke sheet **NILAI**
+2. `ujian-sekolah/input-nilai-us.html` → menyimpan ke sheet **NILAI_US**
+
+Dashboard `guru-mapel.html` hanya mengecek sheet NILAI via `SHEETS.getNilai()`. Jika guru memasukkan nilai ujian sekolah via jalur #2, dashboard selalu menampilkan "Belum Ada" meski nilai sudah ada di NILAI_US — karena sheet yang salah dicek.
+
+**Kontrak yang harus dijaga:**
+
+| Elemen | Yang benar | Yang salah |
+|--------|-----------|-----------|
+| `allNilaiUS` | Dideklarasikan global: `let allNilaiUS = {};` | Tidak dideklarasikan |
+| `loadAll()` | Muat `getNilaiUS` per kelas per mapel ID, simpan ke `allNilaiUS[kls]` | Hanya muat `getNilai` |
+| `renderRekapKelas` | Cek `nilai.some(...) \|\| nilaiUS.some(...)` | Hanya cek `nilai.some(...)` |
+| `renderSiswaTable` | Cek kedua | Hanya cek `allNilai` |
+| `filterSiswa` | Cek kedua | Hanya cek `allNilai` |
+| `renderStatsKelas` | Cek kedua | Hanya cek `allNilai` |
+
+**Penanda kode yang harus ada:**
+
+| File | Penanda |
+|------|---------|
+| `dashboard/guru-mapel.html` | `let allNilaiUS = {};` di deklarasi global |
+| `dashboard/guru-mapel.html` | `nilaiUSParts.flat()` di `loadAll()` |
+| `dashboard/guru-mapel.html` | `nilaiUS.some(n => n.id_siswa === s.id)` di semua fungsi render |
+
+**Checklist wajib setelah mengubah `loadAll()` atau fungsi render di `guru-mapel.html`:**
+- [ ] Pastikan `allNilaiUS` masih dideklarasikan sebagai global `{}`
+- [ ] Pastikan `loadAll()` masih memanggil `SHEETS.getNilaiUS` per `mapelIdArr` dan menyimpan ke `allNilaiUS[kls]`
+- [ ] Pastikan semua 4 fungsi render (`renderStatsKelas`, `renderRekapKelas`, `renderSiswaTable`, `filterSiswa`) mengecek `allNilaiUS` di samping `allNilai`
+- [ ] Uji: guru masukkan nilai di `input-nilai-us.html` → refresh dashboard → status siswa harus berubah dari "Belum Ada" ke "Ada Nilai"
+- [ ] Jangan hapus `allNilaiUS` meski menambah cache lain — sheet NILAI dan NILAI_US adalah dua entitas berbeda
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -455,6 +537,11 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `siswa/mutasi.html` | `const payload = pendingPayload` | v1 | Simpan referensi lokal sebelum tutupModal() |
 | `siswa/mutasi.html` | `kelasDiampuArr` | v12 | Gabungan kelas utama+mapel untuk load siswa multi-kelas |
 | `penilaian/input-setoran-tt.html` | `m.startsWith('[')` di forEach lulusSet | v11 | Expand JSON array materi untuk progress bar multi-materi |
+| `dashboard/guru-mapel.html` | `myKelas.includes('semua') ||` di kondisi `hasKelas6` | v20 | Wajib ada. Tanpanya, guru dengan kelas='semua' tidak mendapat menu SAJ. Lihat §12. |
+| `dashboard/guru-mapel.html` | `rawKelas.includes('semua') || rawKelas.length === 0` di `loadAll()` | v20 | Wajib ada. Tanpanya, `getSiswa('semua')` dipanggil → API error. Lihat §12. |
+| `dashboard/guru-mapel.html` | `let allNilaiUS = {};` (global) + `nilaiUSParts.flat()` di `loadAll()` | v20 | Wajib ada. Dashboard harus cek NILAI_US agar status terkini setelah input-nilai-us. Lihat §13. |
+| `dashboard/guru-mapel.html` | `nilaiUS.some(n => n.id_siswa === s.id)` di semua fungsi render | v20 | Wajib ada di 4 fungsi: renderStatsKelas, renderRekapKelas, renderSiswaTable, filterSiswa. Lihat §13. |
+| `ujian-sekolah/input-nilai-us.html` | `myKelas.includes('semua') || myKelas.length === 0` di filter kelas guru_mapel | v20 | Wajib ada. Tanpanya, guru dengan kelas='semua' melihat dropdown kelas kosong. Lihat §12. |
 | `dashboard/guru-kelas.html` | `hasKelas6` | v1/SAJ-05 | Visibilitas menu SAJ kondisional |
 | `dashboard/guru-kelas.html` | `navSAJLabel` | v1/SAJ-05 | ID elemen nav SAJ |
 | `dashboard/guru-kelas.html` | `'navConfigSKL'` di array `hasKelas6` | v19 | Wajib ada agar menu Konfigurasi SKL muncul di sidebar guru kelas 6. Lihat §10. |
@@ -464,5 +551,5 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 20 Mei 2026 (v19). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 20 Mei 2026 (v20). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

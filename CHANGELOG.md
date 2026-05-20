@@ -1,3 +1,26 @@
+## [2026-05-20] — v20 · Akses & Status Dashboard Guru Bidang Studi Kelas 6
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `dashboard/guru-mapel.html` | Guru PAI/Arab/Kemuhammadiyahan yang punya `kelas='semua'` (mengajar lintas kelas) tidak memiliki menu SAJ — `hasKelas6` selalu `false` karena `'semua'.startsWith('6')` = false. | Tambahkan `myKelas.includes('semua')` di kondisi `hasKelas6` sehingga nilai `'semua'` diakui sebagai "mengajar di semua kelas termasuk kelas 6". |
+| 2 | `dashboard/guru-mapel.html` | Kelas guru dengan `kelas='semua'` tidak dapat dimuat di `loadAll()` — `kelasdiampu` berisi string `'semua'` yang diteruskan ke `SHEETS.getSiswa('semua')` → API call tidak valid. | Tambahkan logika expand: jika `rawKelas` berisi `'semua'` atau kosong, `kelasdiampu` diisi dari `allKelas` yang dimuat dari sheet. |
+| 3 | `dashboard/guru-mapel.html` | Refresh data sesi hanya memperbarui `mapel`, tidak `kelas`/`kelasList` — perubahan admin (misalnya menambah kelas 6 ke guru yang bersangkutan) tidak efektif hingga guru login ulang. | Perluas blok refresh untuk juga memperbarui `currentUser.kelas` dan `currentUser.kelasList` dari data fresh sheet. |
+| 4 | `dashboard/guru-mapel.html` | Status dashboard guru bidang studi tidak update setelah mengisi nilai di `input-nilai-us.html` — dashboard hanya mengecek sheet `NILAI` (nilai reguler), sedangkan nilai ujian sekolah tersimpan di sheet `NILAI_US`. | Tambahkan `allNilaiUS` sebagai dict global. Dalam `loadAll()`, muat `SHEETS.getNilaiUS` per kelas per mapel dan simpan ke `allNilaiUS[kls]`. Semua fungsi render (`renderStatsKelas`, `renderRekapKelas`, `renderSiswaTable`, `filterSiswa`) diperbarui untuk memeriksa **kedua sheet**. |
+| 5 | `ujian-sekolah/input-nilai-us.html` | Guru dengan `kelas='semua'` tidak mendapat pilihan kelas di halaman Input Nilai US — filter `kelas6.filter(k => myKelas.some(mk => mk === k.nama))` tidak cocok dengan nilai `'semua'`. | Tambahkan cabang: jika `myKelas.includes('semua')` atau kosong, gunakan seluruh `kelas6` tanpa filter — konsisten dengan perlakuan admin. |
+
+> **Hubungan dengan v19:** Bug #1–3 dan #5 berkaitan — guru mendapat menu SAJ (v19) tapi tidak bisa menggunakannya karena kelas tidak ter-resolve. Bug #4 adalah masalah terpisah yang muncul bersamaan: nilai yang sudah diinput tidak tercermin di dashboard guru itu sendiri, meski terlihat benar di halaman guru kelas. Perbaikan v20 menangani keduanya secara bersama.
+
+### 📋 File yang Diubah (v20)
+
+| File | Status |
+|------|--------|
+| `dashboard/guru-mapel.html` | **Diubah** — (1) deklarasi `allNilaiUS`; (2) refresh sesi tambah kelas+kelasList; (3) `hasKelas6` handle 'semua'; (4) `loadAll()`: rawKelas, mapelIdArr, expand 'semua', getNilaiUS; (5) semua fungsi render cek NILAI+NILAI_US |
+| `ujian-sekolah/input-nilai-us.html` | **Diubah** — filter kelas handle 'semua' |
+
+---
+
 ## [2026-05-20] — v19 · Perbaikan Akses & Bobot Konfigurasi SKL untuk Guru Kelas 6
 
 ### 🐛 Perbaikan
