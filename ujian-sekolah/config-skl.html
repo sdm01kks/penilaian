@@ -337,7 +337,7 @@ const SKL_KEYS = [
 
 window.addEventListener('load', async () => {
   AUTH.init();
-  const user = AUTH.requireLogin(['admin']);
+  const user = AUTH.requireLogin(['admin','guru_kelas']);
   if (!user) return;
   document.getElementById('userName').textContent   = user.nama;
   document.getElementById('userAvatar').textContent = user.nama?.charAt(0)?.toUpperCase() || 'A';

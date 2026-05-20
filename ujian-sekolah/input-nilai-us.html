@@ -150,7 +150,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 <main class="main">
   <div class="page-header">
     <h1>Nilai Ujian Sekolah</h1>
-    <p>Input nilai ujian sekolah tertulis dan praktik/projek per mata pelajaran untuk setiap siswa kelas 6. Atur proporsi bobot tertulis dan praktik di bawah.</p>
+    <p>Input nilai ujian sekolah tertulis dan praktik/projek per mata pelajaran untuk setiap siswa kelas 6. Bobot nilai diambil dari <a href="config-skl.html" style="color:var(--green-dark);font-weight:600;">Konfigurasi SKL</a>.</p>
   </div>
 
   <div id="alertArea"></div>
@@ -174,15 +174,16 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
       </select>
     </div>
 
-    <!-- Bobot config -->
+    <!-- Bobot config — read-only, diambil dari Konfigurasi SKL -->
     <div class="bobot-bar">
       <span class="bobot-label">⚖️ Bobot Ujian Sekolah:</span>
       <span class="bobot-label">Tertulis</span>
-      <input type="number" class="bobot-input" id="bobotTertulis" value="60" min="0" max="100" oninput="updateBobot()"> %
+      <span class="bobot-label" id="bobotTertulisDisplay" style="font-size:14px;font-weight:700;color:var(--green-dark);">60%</span>
+      <input type="hidden" id="bobotTertulis" value="60">
       <span class="bobot-label">Praktik</span>
-      <input type="number" class="bobot-input" id="bobotPraktik" value="40" min="0" max="100" oninput="updateBobot()"> %
-      <span id="bobotTotal" style="font-size:11px;color:var(--red);font-weight:600;display:none;">⚠️ Total harus 100%</span>
-      <span style="flex:1;font-size:11px;color:var(--ink-muted);">Nilai US = (Tertulis × bobot) + (Praktik × bobot)</span>
+      <span class="bobot-label" id="bobotPraktikDisplay" style="font-size:14px;font-weight:700;color:var(--green-dark);">40%</span>
+      <input type="hidden" id="bobotPraktik" value="40">
+      <span style="flex:1;font-size:11px;color:var(--ink-muted);">Nilai US = (Tertulis × bobot) + (Praktik × bobot) &nbsp;·&nbsp; Atur bobot di <a href="config-skl.html" style="color:var(--green-dark);font-weight:600;">Konfigurasi SKL</a></span>
     </div>
   </div>
 
@@ -248,8 +249,11 @@ function getBobot() {
 
 function updateBobot() {
   const { bt, bp } = getBobot();
-  const ok = Math.abs(bt + bp - 100) < 0.01;
-  document.getElementById('bobotTotal').style.display = ok ? 'none' : 'inline';
+  // Sinkronkan tampilan read-only bobot
+  const dispT = document.getElementById('bobotTertulisDisplay');
+  const dispP = document.getElementById('bobotPraktikDisplay');
+  if (dispT) dispT.textContent = bt + '%';
+  if (dispP) dispP.textContent = bp + '%';
   document.getElementById('headTertulis').textContent = `(${bt}%)`;
   document.getElementById('headPraktik').textContent  = `(${bp}%)`;
   // Hitung ulang semua kolom Nilai US di tabel yang aktif (berlaku di kedua mode)
@@ -305,6 +309,7 @@ window.addEventListener('load', async () => {
     // Terapkan bobot dari konfigurasi SKL jika tersedia
     if (config['skl_bobot_us_tertulis']) document.getElementById('bobotTertulis').value = config['skl_bobot_us_tertulis'];
     if (config['skl_bobot_us_praktik'])  document.getElementById('bobotPraktik').value  = config['skl_bobot_us_praktik'];
+    updateBobot(); // Sinkronkan tampilan header tabel dan display bobot dengan nilai config SKL
 
     const allKelas = await SHEETS.getKelas();
     const kelas6 = allKelas.filter(k => String(k.tingkat) === '6' || String(k.nama).match(/^6/));
