@@ -320,7 +320,10 @@ window.addEventListener('load', async () => {
       kelasList = kelas6;
     } else {
       const myKelas = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
-      kelasList = kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
+      // v20: 'semua' berarti guru mengajar lintas kelas → tampilkan semua kelas 6
+      kelasList = myKelas.includes('semua') || myKelas.length === 0
+        ? kelas6
+        : kelas6.filter(k => myKelas.some(mk => mk.trim() === k.nama.trim() || mk.trim() === k.id));
     }
 
     // Untuk guru_mapel: filter allMapel hanya ke mapel yang diajar
