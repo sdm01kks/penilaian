@@ -405,7 +405,8 @@ let currentUser  = null;
 let kelasdiampu  = [];
 let allKelas     = [];
 let allSiswa     = {};   // { kelas: [siswa] }
-let allNilai     = {};   // { kelas: [nilai] }
+let allNilai     = {};   // { kelas: [nilai reguler] }
+let allNilaiUS   = {};   // { kelas: [nilai ujian sekolah] } — v20: sinkronisasi status input-nilai-us
 let activeKelas  = null;
 let config       = {};
 let namaMapel    = '—';
@@ -418,11 +419,19 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent  = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
 
-  // Refresh mapel dari sheet untuk hindari stale session cache
+  // Refresh mapel & kelas dari sheet untuk hindari stale session cache
   try {
     const allUsers  = await SHEETS.getUsers();
     const freshUser = allUsers.find(u => u.email === currentUser.email);
-    if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+    if (freshUser) {
+      if (freshUser.mapel) currentUser.mapel = freshUser.mapel;
+      // v20: Refresh kelas & kelasList juga — perubahan admin langsung efektif tanpa re-login
+      if (freshUser.kelas !== undefined) {
+        currentUser.kelas     = freshUser.kelas;
+        currentUser.kelasList = freshUser.kelasList ||
+          (freshUser.kelas ? freshUser.kelas.split(',').map(s => s.trim()).filter(Boolean) : []);
+      }
+    }
   } catch(e) { /* fallback ke session */ }
 
   // Tampilkan menu Tahsin-Tahfizh jika guru ini mengampu mapel TT
@@ -447,10 +456,11 @@ window.addEventListener('load', async () => {
   _checkEkskulPembina();
 
   // Tampilkan menu Ujian Sekolah/SAJ jika guru mengajar kelas 6 & bukan guru TT
+  // v20: 'semua' pada kelasList berarti guru mengajar lintas kelas (termasuk kelas 6)
   if (!isTTGuru) {
     const myKelas = currentUser.kelasList ||
       (currentUser.kelas ? currentUser.kelas.split(',').map(s => s.trim()) : []);
-    const hasKelas6 = myKelas.some(k => String(k).startsWith('6'));
+    const hasKelas6 = myKelas.includes('semua') || myKelas.some(k => String(k).startsWith('6'));
     if (hasKelas6) {
       ['navSAJLabel','navRataRapor','navNilaiUS','cardSAJ'].forEach(id => {
         const el = document.getElementById(id);
@@ -485,23 +495,31 @@ async function _checkEkskulPembina() {
 }
 
 async function loadAll() {
-  // Parse kelas yang diampu (bisa lebih dari 1, dipisah koma)
-  kelasdiampu = (currentUser.kelas || '')
-    .split(',')
-    .map(k => k.trim())
-    .filter(Boolean);
-
-  const idMapel = currentUser.mapel || '';
+  // Parse kelas yang diampu — simpan sebagai rawKelas dulu, expand setelah allKelas dimuat
+  const rawKelas   = (currentUser.kelas || '').split(',').map(k => k.trim()).filter(Boolean);
+  // v20: mapelIdArr untuk query per ID (mendukung guru multi-mapel & getNilaiUS)
+  const mapelIdArr = (currentUser.mapel || '').split(',').map(s => s.trim()).filter(Boolean);
+  const idMapel    = currentUser.mapel || '';
 
   [config, allKelas] = await Promise.all([
     SHEETS.getConfig(),
     SHEETS.getKelas(),
   ]);
 
-  // Nama mapel
+  // v20: Expand 'semua' → daftar kelas riil dari sheet
+  // Guru ISMUBA/PAI/Arab yang mengajar lintas kelas menyimpan kelas='semua'
+  if (rawKelas.length === 0 || rawKelas.includes('semua')) {
+    kelasdiampu = allKelas.map(k => k.nama).sort();
+  } else {
+    kelasdiampu = rawKelas;
+  }
+
+  // v20: Nama mapel — mendukung guru yang mengampu lebih dari satu mapel
   const mapelList = await SHEETS.getMapel();
-  const mapelObj  = mapelList.find(m => m.id === idMapel);
-  namaMapel = mapelObj?.nama || idMapel;
+  const mapelObjs = mapelIdArr.map(mid => mapelList.find(m => m.id === mid)).filter(Boolean);
+  namaMapel = mapelObjs.length > 0
+    ? mapelObjs.map(m => m.nama).join(', ')
+    : (idMapel || '—');
 
   const sem = config['semester_aktif'] || '?';
   const tp  = config['tahun_pelajaran'] || '?';
@@ -512,7 +530,7 @@ async function loadAll() {
   document.getElementById('userMapel').textContent =
     `Guru ${namaMapel}`;
 
-  // Load siswa & nilai untuk semua kelas sekaligus
+  // Load siswa, nilai reguler, DAN nilai ujian sekolah untuk semua kelas sekaligus
   await Promise.all(kelasdiampu.map(async (kls) => {
     const [siswa, nilai] = await Promise.all([
       SHEETS.getSiswa(kls),
@@ -520,6 +538,13 @@ async function loadAll() {
     ]);
     allSiswa[kls] = siswa;
     allNilai[kls] = nilai;
+
+    // v20: Muat NILAI_US per mapel ID — sinkronkan status jika guru mengisi via input-nilai-us
+    // getNilaiUS hanya menerima satu id_mapel → query per ID lalu gabungkan
+    const nilaiUSParts = await Promise.all(
+      mapelIdArr.map(mid => SHEETS.getNilaiUS({ kelas: kls, id_mapel: mid }))
+    );
+    allNilaiUS[kls] = nilaiUSParts.flat();
   }));
 
   renderKelasSelector();
@@ -583,12 +608,16 @@ function setActiveKelas(kls) {
 }
 
 function renderStatsKelas(kls) {
-  const siswa = allSiswa[kls] || [];
-  const nilai = allNilai[kls] || [];
-  const sudah = siswa.filter(s => nilai.some(n => n.id_siswa === s.id)).length;
+  const siswa   = allSiswa[kls] || [];
+  const nilai   = allNilai[kls] || [];
+  const nilaiUS = allNilaiUS[kls] || [];
+  // v20: hitung sudah dari nilai reguler ATAU nilai ujian sekolah
+  const sudah = siswa.filter(s =>
+    nilai.some(n => n.id_siswa === s.id) || nilaiUS.some(n => n.id_siswa === s.id)
+  ).length;
 
   document.getElementById('statSiswa').textContent = siswa.length;
-  document.getElementById('statNilai').textContent  = nilai.length;
+  document.getElementById('statNilai').textContent  = nilai.length + nilaiUS.length;
   document.getElementById('statBelum').textContent  = siswa.length - sudah;
 }
 
@@ -598,9 +627,13 @@ function renderRekapKelas() {
   allKelas.forEach(k => { kelasInfo[k.nama] = k; });
 
   tbody.innerHTML = kelasdiampu.map(kls => {
-    const siswa  = allSiswa[kls] || [];
-    const nilai  = allNilai[kls] || [];
-    const sudah  = siswa.filter(s => nilai.some(n => n.id_siswa === s.id)).length;
+    const siswa   = allSiswa[kls] || [];
+    const nilai   = allNilai[kls] || [];
+    const nilaiUS = allNilaiUS[kls] || [];
+    // v20: siswa dianggap sudah diinput jika ada di NILAI atau NILAI_US
+    const sudah  = siswa.filter(s =>
+      nilai.some(n => n.id_siswa === s.id) || nilaiUS.some(n => n.id_siswa === s.id)
+    ).length;
     const persen = siswa.length > 0 ? Math.round(sudah/siswa.length*100) : 0;
     const info   = kelasInfo[kls] || {};
     const status = persen >= 100 ? 'done' : persen > 0 ? 'partial' : 'empty';
@@ -623,8 +656,9 @@ function renderRekapKelas() {
 }
 
 function renderSiswaTable(kls) {
-  const siswa = allSiswa[kls] || [];
-  const nilai = allNilai[kls] || [];
+  const siswa   = allSiswa[kls] || [];
+  const nilai   = allNilai[kls] || [];
+  const nilaiUS = allNilaiUS[kls] || [];
   const tbody = document.getElementById('tbodySiswa');
 
   if (!siswa.length) {
@@ -633,7 +667,8 @@ function renderSiswaTable(kls) {
   }
 
   tbody.innerHTML = siswa.map((s, i) => {
-    const punya = nilai.some(n => n.id_siswa === s.id);
+    // v20: cek di NILAI (reguler) DAN NILAI_US (ujian sekolah)
+    const punya = nilai.some(n => n.id_siswa === s.id) || nilaiUS.some(n => n.id_siswa === s.id);
     const badge = punya
       ? '<span class="badge done">Ada Nilai</span>'
       : '<span class="badge empty">Belum Ada</span>';
@@ -659,10 +694,12 @@ function filterSiswa(q) {
   const filtered = (allSiswa[activeKelas]||[]).filter(s =>
     s.nama.toLowerCase().includes(q.toLowerCase())
   );
-  const nilai = allNilai[activeKelas] || [];
+  const nilai   = allNilai[activeKelas] || [];
+  const nilaiUS = allNilaiUS[activeKelas] || [];
   const tbody = document.getElementById('tbodySiswa');
   tbody.innerHTML = filtered.map((s,i) => {
-    const punya = nilai.some(n => n.id_siswa === s.id);
+    // v20: cek di NILAI (reguler) DAN NILAI_US (ujian sekolah)
+    const punya = nilai.some(n => n.id_siswa === s.id) || nilaiUS.some(n => n.id_siswa === s.id);
     return `
       <tr>
         <td>${i+1}</td>
