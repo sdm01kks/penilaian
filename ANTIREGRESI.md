@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v19 | `ujian-sekolah/config-skl.html`, `dashboard/guru-kelas.html`, `ujian-sekolah/input-nilai-us.html` | Akses Konfigurasi SKL guru kelas 6 + sinkronisasi bobot | `requireLogin` hanya mengizinkan `admin`; menu tidak ada di dashboard; input bobot editable di halaman yang salah; `updateBobot()` tidak dipanggil setelah config dimuat |
 | v18 | `penilaian/input-nilai.html` | `eksekusiImport` — gagal 429 | Per-row API call (`append` dipanggil satu kali per siswa per TP di dalam loop) → rate limit Google Sheets API |
 | v10 | `assets/js/sheets.js` | `saveNilaiUSBatch` | Blok `return { … }` diedit tapi satu fungsi terlewat tidak diekspor |
 | v8 | `ujian-sekolah/input-nilai-us.html` | Filter mapel guru_mapel | Asumsi salah tentang format data (`currentUser.mapel` berisi ID, bukan nama) — langsung digantikan v9 |
@@ -341,6 +342,69 @@ if (toAppend.length) {
 
 ---
 
+
+### 10. Role Access `config-skl.html` — Guru Kelas 6 Harus Selalu Diizinkan
+
+**Mengapa berisiko:** `config-skl.html` adalah satu-satunya tempat guru kelas 6 dapat mengatur bobot ujian sekolah. Jika role `guru_kelas` tidak ada di `AUTH.requireLogin`, guru akan diredirect ke halaman login tanpa pesan error yang jelas — tampaknya halaman "tidak ada" padahal sebenarnya akses ditolak.
+
+**Akar masalah (v19):** Halaman dibuat hanya untuk `admin` di awal, kemudian fitur diperluas ke guru kelas 6 tetapi array role tidak diperbarui.
+
+**Aturan wajib:**
+```javascript
+// ✅ Benar — guru_kelas harus selalu ada
+const user = AUTH.requireLogin(['admin','guru_kelas']);
+
+// ❌ Salah — menyebabkan guru kelas 6 diredirect ke login
+const user = AUTH.requireLogin(['admin']);
+```
+
+**Penanda kode yang harus ada:**
+
+| File | Penanda |
+|------|---------|
+| `ujian-sekolah/config-skl.html` | `AUTH.requireLogin(['admin','guru_kelas'])` |
+| `dashboard/guru-kelas.html` | `'navConfigSKL'` di array `hasKelas6` |
+
+**Checklist wajib setelah mengubah `config-skl.html` atau `dashboard/guru-kelas.html`:**
+- [ ] Pastikan `AUTH.requireLogin` di `config-skl.html` masih mencantumkan `'guru_kelas'`
+- [ ] Pastikan `'navConfigSKL'` masih ada di array `hasKelas6` di `dashboard/guru-kelas.html`
+- [ ] Uji login sebagai `guru_kelas` yang mengampu kelas 6 → menu Konfigurasi SKL harus muncul di sidebar
+- [ ] Uji login sebagai `guru_kelas` yang **tidak** mengampu kelas 6 → menu Konfigurasi SKL tidak boleh muncul
+
+---
+
+### 11. Bobot Ujian Sekolah — Satu Sumber Kebenaran di `config-skl.html`
+
+**Mengapa berisiko:** `input-nilai-us.html` membaca bobot dari config SKL (`skl_bobot_us_tertulis`, `skl_bobot_us_praktik`) dan menerapkannya ke field tersembunyi. Jika ada input editable bobot di halaman ini, guru bisa mengubah bobot secara lokal tanpa tersimpan ke config — perubahan hilang saat refresh dan header tabel tidak sinkron dengan angka yang ditampilkan.
+
+**Akar masalah (v19):** Input bobot yang bisa diedit ditinggalkan dari desain awal sebelum halaman Konfigurasi SKL dibuat. Setelah `config-skl.html` hadir, input ini seharusnya dihapus tetapi terlewat.
+
+**Kontrak yang harus dijaga:**
+
+| Elemen | Nilai yang benar | Yang salah |
+|--------|-----------------|-----------|
+| `#bobotTertulis` | `<input type="hidden">` — diisi dari config | `<input type="number">` yang bisa diedit pengguna |
+| `#bobotPraktik` | `<input type="hidden">` — diisi dari config | `<input type="number">` yang bisa diedit pengguna |
+| Display bobot | `<span id="bobotTertulisDisplay">` + `<span id="bobotPraktikDisplay">` — read-only | Input editable langsung |
+| `updateBobot()` | Dipanggil setelah config diapply di `init()` | Hanya dipanggil via `oninput` yang sudah tidak ada |
+
+**Penanda kode yang harus ada:**
+
+| File | Penanda |
+|------|---------|
+| `ujian-sekolah/input-nilai-us.html` | `<input type="hidden" id="bobotTertulis">` — bukan `type="number"` |
+| `ujian-sekolah/input-nilai-us.html` | `<input type="hidden" id="bobotPraktik">` — bukan `type="number"` |
+| `ujian-sekolah/input-nilai-us.html` | `updateBobot();` tepat setelah blok `if (config['skl_bobot_us_praktik'])` di `init()` |
+
+**Checklist wajib setelah mengubah area bobot di `input-nilai-us.html`:**
+- [ ] Pastikan `#bobotTertulis` dan `#bobotPraktik` adalah `type="hidden"`, bukan `type="number"`
+- [ ] Pastikan `updateBobot()` dipanggil setelah config diapply di `init()`
+- [ ] Pastikan `getBobot()` masih membaca dari `document.getElementById('bobotTertulis').value` — tidak boleh hardcoded
+- [ ] Uji: simpan bobot 70%/30% di Konfigurasi SKL → refresh halaman Input Nilai US → header kolom harus menampilkan `(70%)` / `(30%)`
+- [ ] Pastikan `document.querySelectorAll('#tbodyUS tr')` di `updateBobot` tidak diubah ke selector lain (lihat ANTIREGRESI §5)
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -393,8 +457,12 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `penilaian/input-setoran-tt.html` | `m.startsWith('[')` di forEach lulusSet | v11 | Expand JSON array materi untuk progress bar multi-materi |
 | `dashboard/guru-kelas.html` | `hasKelas6` | v1/SAJ-05 | Visibilitas menu SAJ kondisional |
 | `dashboard/guru-kelas.html` | `navSAJLabel` | v1/SAJ-05 | ID elemen nav SAJ |
+| `dashboard/guru-kelas.html` | `'navConfigSKL'` di array `hasKelas6` | v19 | Wajib ada agar menu Konfigurasi SKL muncul di sidebar guru kelas 6. Lihat §10. |
+| `ujian-sekolah/config-skl.html` | `AUTH.requireLogin(['admin','guru_kelas'])` | v19 | Wajib ada. Tanpa `guru_kelas`, guru kelas 6 diredirect ke login. Lihat §10. |
+| `ujian-sekolah/input-nilai-us.html` | `<input type="hidden" id="bobotTertulis">` dan `<input type="hidden" id="bobotPraktik">` | v19 | Wajib `type="hidden"`. Jika dikembalikan ke `type="number"`, bobot bisa diedit lokal tanpa tersimpan. Lihat §11. |
+| `ujian-sekolah/input-nilai-us.html` | `updateBobot()` dipanggil setelah `config['skl_bobot_us_praktik']` diapply di `init()` | v19 | Wajib ada. Tanpanya, header tabel hardcoded 60%/40% meski config SKL berbeda. Lihat §11. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 08 Mei 2026 (v18). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 20 Mei 2026 (v19). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

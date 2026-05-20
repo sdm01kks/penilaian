@@ -1,3 +1,26 @@
+## [2026-05-20] — v19 · Perbaikan Akses & Bobot Konfigurasi SKL untuk Guru Kelas 6
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/config-skl.html` | Guru kelas 6 tidak dapat mengakses halaman Konfigurasi SKL — `AUTH.requireLogin` hanya mengizinkan role `admin`, sehingga guru kelas 6 langsung diredirect ke halaman login saat membuka halaman tersebut. | Tambahkan `'guru_kelas'` ke array `AUTH.requireLogin`: `AUTH.requireLogin(['admin','guru_kelas'])`. Konsisten dengan halaman SAJ lain seperti `generate-skl.html` yang sudah mengizinkan `guru_kelas` sejak v1/SAJ-05. |
+| 2 | `dashboard/guru-kelas.html` | Menu "Konfigurasi SKL" tidak ada di sidebar dashboard guru, sehingga tidak ada jalur navigasi langsung ke halaman tersebut. Menu hanya muncul dari sidebar `input-nilai-us.html`, itupun mengarah ke halaman yang menolak akses (masalah #1). | Tambahkan elemen `<a id="navConfigSKL">` di sidebar, tepat di bawah label *Ujian Sekolah / SAJ* (sebelum `navRataRapor`). Masukkan `'navConfigSKL'` ke dalam array `hasKelas6` agar menu hanya tampil jika guru mengampu kelas 6 — sesuai pola yang sudah ada untuk seluruh menu SAJ. |
+| 3 | `ujian-sekolah/input-nilai-us.html` | Ada dua tempat pengaturan bobot ujian sekolah: satu di halaman Konfigurasi SKL dan satu lagi berupa input yang bisa diedit langsung di halaman Input Nilai US. Selain membingungkan guru, input di halaman ini tidak tersimpan ke config — perubahan hanya berlaku sementara dan hilang saat halaman di-refresh. | Ubah `<input type="number">` bobot menjadi `<input type="hidden">` + `<span>` read-only agar nilai selalu diambil dari Konfigurasi SKL. Tambahkan tautan langsung ke halaman Konfigurasi SKL di samping keterangan bobot. |
+| 4 | `ujian-sekolah/input-nilai-us.html` | Header kolom tabel (`Tertulis (60%)` / `Praktik (40%)`) hardcoded dan tidak mencerminkan pengaturan bobot yang disimpan di Konfigurasi SKL — meski config sudah dimuat, `updateBobot()` tidak pernah dipanggil setelah nilai diapply ke field. | Tambah pemanggilan `updateBobot()` tepat setelah `config['skl_bobot_us_tertulis']` dan `config['skl_bobot_us_praktik']` diapply ke field tersembunyi, sehingga header tabel dan display bobot langsung sinkron dengan config saat halaman dimuat. |
+
+> **Catatan:** Bug #1 dan #2 saling berkaitan — menu tidak ada di dashboard (bug #2) dan ketika ditemukan via sidebar `input-nilai-us.html`, halaman menolak akses (bug #1). Bug #3 dan #4 saling berkaitan — input bobot yang bisa diedit (bug #3) menyebabkan header tabel tidak sinkron dengan config (bug #4) karena `updateBobot()` hanya dipanggil oleh event `oninput` yang sudah dihapus. Lihat ANTIREGRESI.md §10.
+
+### 📋 File yang Diubah (v19)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/config-skl.html` | **Diubah** — `AUTH.requireLogin`: tambah `'guru_kelas'` |
+| `dashboard/guru-kelas.html` | **Diubah** — tambah `navConfigSKL` di sidebar SAJ dan di array `hasKelas6` |
+| `ujian-sekolah/input-nilai-us.html` | **Diubah** — (1) bobot-bar: ganti `<input type="number">` dengan `<input type="hidden">` + `<span>` read-only; (2) tambah `updateBobot()` setelah config diapply |
+
+---
+
 ## [2026-05-08] — v18 · Perbaikan Import Nilai: 429 Too Many Requests & ID Collision
 
 ### 🐛 Perbaikan
