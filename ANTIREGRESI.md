@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v21 | `siswa/edit-siswa-kelas.html` *(baru)* | Tombol simpan gagal dengan error 403 | `simpanSemua()` memanggil `SHEETS.read()` ulang di dalam fungsi save — request read kedua dalam sesi aktif memicu 403. Diperbaiki dengan cache-first pattern (§14). |
 | v20 | `dashboard/guru-mapel.html` | Menu SAJ tidak muncul untuk guru PAI/B.Arab/KMH yang juga mengajar TT | Kondisi `!isTTGuru` terlalu luas — memblokir semua guru TT, termasuk yang juga mengajar mapel lain di kelas 6 |
 | v19 | `ujian-sekolah/config-skl.html`, `dashboard/guru-kelas.html`, `ujian-sekolah/input-nilai-us.html` | Akses Konfigurasi SKL guru kelas 6 + sinkronisasi bobot | `requireLogin` hanya mengizinkan `admin`; menu tidak ada di dashboard; input bobot editable di halaman yang salah; `updateBobot()` tidak dipanggil setelah config dimuat |
 | v18 | `penilaian/input-nilai.html` | `eksekusiImport` — gagal 429 | Per-row API call (`append` dipanggil satu kali per siswa per TP di dalam loop) → rate limit Google Sheets API |
@@ -449,6 +450,104 @@ if (hasKelas6 && !isPureTTGuru) { /* tampilkan SAJ menu */ }
 
 ---
 
+### 13. Halaman Edit Parsial — Gunakan Targeted Write, Bukan Overwrite Baris Penuh
+
+**Mengapa berisiko:** Saat membuat halaman yang hanya mengedit *sebagian* kolom dari sebuah baris (misalnya hanya TTL dan NISN dari sheet SISWA yang punya 16 kolom), ada godaan untuk membaca baris penuh, memodifikasi beberapa kolom, lalu menulis kembali seluruh baris. Ini bermasalah karena:
+- Kolom yang tidak diedit halaman ini bisa berbeda versinya antara `rawRowsCache` dan sheet aktual (admin mungkin mengedit saat guru sedang di halaman ini)
+- Jika schema sheet berubah di masa depan (kolom ditambah menjadi A:Q misalnya), overwrite baris penuh akan memotong data kolom baru
+
+**Pola yang salah (overwrite baris penuh):**
+```javascript
+// ❌ SALAH — menulis 16 kolom padahal hanya 5 yang diedit
+const row = [id, nama, nis, nisn_baru, kelas, agama, alamat, ...dst];
+await SHEETS.write(`SISWA!A${r}:P${r}`, [row]);
+```
+
+**Pola wajib sejak v21 (targeted write):**
+```javascript
+// ✅ BENAR — hanya tulis kolom yang memang diedit halaman ini
+await SHEETS.valuesBatchWrite([
+  [`SISWA!D${r}`,      [[fmtNum(data.nisn)]]],          // hanya kolom D
+  [`SISWA!M${r}:O${r}`, [[tempat, tgl, wali]]],          // hanya kolom M–O
+  [`SISWA!P${r}`,      [[data.no_peserta_ismuba]]],      // hanya kolom P
+]);
+```
+
+**Keuntungan ganda:** (1) Kolom lain tidak bisa teroverwrite meski ada perbedaan versi cache. (2) Tetap bekerja jika sheet diperluas ke kolom Q, R, dst di masa depan.
+
+**Kapan risiko meningkat:** Setiap kali membuat halaman baru yang mengedit subset kolom dari sheet SISWA, USERS, atau sheet master lain.
+
+**Checklist wajib saat membuat halaman edit parsial:**
+- [ ] Identifikasi kolom mana saja yang benar-benar diedit halaman ini
+- [ ] Gunakan `valuesBatchWrite` dengan range per-kolom atau per-grup-kolom, bukan range penuh
+- [ ] Jangan membaca baris penuh hanya untuk menulis kembali sebagian — gunakan cache
+- [ ] Dokumentasikan di komentar kode: "halaman ini hanya menulis kolom X, Y, Z"
+
+---
+
+### 14. Cache-First Save — Jangan Re-read Sheet Saat Menyimpan
+
+**Mengapa berisiko:** Pola umum yang terlihat "aman" adalah: sebelum menyimpan, baca sheet terbaru dulu untuk mendapatkan indeks baris yang akurat. Masalahnya:
+- Request `SHEETS.read()` kedua dalam sesi yang sama bisa memicu error **403 Forbidden** jika Google Sheets API menganggap token sedang dalam konteks yang berbeda (terutama saat sesi OAuth sudah berjalan beberapa menit)
+- Dua request berurutan (read + write) meningkatkan kemungkinan rate limit 429
+- Saat save batch (banyak baris), setiap baris yang melakukan read sendiri menghasilkan N read + N write = 2N API calls
+
+**Pola yang salah (re-read saat save):**
+```javascript
+// ❌ SALAH — SHEETS.read() dipanggil ulang di dalam fungsi save
+async function simpanBaris(id) {
+  const rows = await SHEETS.read('SISWA!A:P');  // ← re-read → bisa 403
+  const idx  = rows.findIndex(r => r[0] === id);
+  await SHEETS.write(`SISWA!A${idx+1}:P${idx+1}`, [row]);
+}
+```
+
+**Pola wajib sejak v21 (cache-first):**
+```javascript
+// ✅ BENAR — cache dibaca sekali saat init, dipakai selamanya
+let rawRowsCache = null;
+
+async function muatData() {
+  rawRowsCache = await SHEETS.read('SISWA!A:P');  // ← satu kali saja
+  // ... render tabel ...
+}
+
+async function simpanBaris(id) {
+  // Tidak ada SHEETS.read() di sini
+  const idx = rawRowsCache.findIndex(r => String(r[0]||'').trim() === id);
+  await SHEETS.valuesBatchWrite([...]);
+  perbaruiCache(id, data);  // ← update cache setelah save
+}
+```
+
+**Tiga aturan cache-first:**
+
+| Aturan | Alasan |
+|--------|--------|
+| Baca sheet hanya sekali di `muatData()` atau `init()` | Mencegah 403 dari re-read berulang |
+| Perbarui `rawRowsCache` setelah setiap save berhasil (`perbaruiCache`) | Menjaga cache tetap akurat tanpa harus re-read |
+| Jika user klik "Muat Ulang", baru baca ulang sheet | Eksplisit dan terkontrol |
+
+**Kapan re-read boleh dilakukan:**
+- Hanya saat user secara eksplisit meminta muat ulang
+- Bukan di dalam fungsi save, fungsi preview, atau handler event lain
+
+**Penanda kode yang harus ada di `siswa/edit-siswa-kelas.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| `rawRowsCache = await SHEETS.read('SISWA!A:P')` hanya di `muatData()` | Satu-satunya tempat read dilakukan |
+| `// FIX: tidak ada SHEETS.read() di sini; pakai rawRowsCache` | Komentar wajib di `simpanBaris()` dan `simpanSemua()` |
+| `perbaruiCache(id, data)` setelah setiap save berhasil | Menjaga cache sinkron tanpa re-read |
+
+**Checklist wajib setelah mengubah `siswa/edit-siswa-kelas.html`:**
+- [ ] Pastikan `SHEETS.read('SISWA!A:P')` **hanya ada** di fungsi `muatData()` — tidak di fungsi save manapun
+- [ ] Pastikan `simpanBaris()` dan `simpanSemua()` menggunakan `cariIdxDiCache()` bukan `SHEETS.read()`
+- [ ] Pastikan `perbaruiCache()` dipanggil setelah setiap save berhasil (per-baris maupun batch)
+- [ ] Uji: simpan beberapa baris berturut-turut — tidak boleh ada error 403
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -507,8 +606,13 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/input-nilai-us.html` | `updateBobot()` dipanggil setelah `config['skl_bobot_us_praktik']` diapply di `init()` | v19 | Wajib ada. Tanpanya, header tabel hardcoded 60%/40% meski config SKL berbeda. Lihat §11. |
 | `dashboard/guru-mapel.html` | `isPureTTGuru` (menggantikan `!isTTGuru`) di blok SAJ menu | v20 | Wajib. `!isTTGuru` memblokir guru PAI/B.Arab/KMH yang sekaligus mengajar TT. Gunakan `isPureTTGuru` yang hanya blokir guru yang benar-benar hanya mengajar TT. Lihat §12. |
 | `dashboard/guru-mapel.html` | `// ANTIREGRESI v20: jangan kembalikan ke !isTTGuru` | v20 | Penanda komentar wajib ada. Lihat §12. |
+| `siswa/edit-siswa-kelas.html` | `rawRowsCache = await SHEETS.read('SISWA!A:P')` hanya di `muatData()` — tidak di fungsi save | v21 | Wajib. Re-read saat save menyebabkan error 403. Lihat §14. |
+| `siswa/edit-siswa-kelas.html` | `// FIX: tidak ada SHEETS.read() di sini; pakai rawRowsCache` di `simpanBaris()` dan `simpanSemua()` | v21 | Penanda komentar wajib ada agar pola tidak dibalik. Lihat §14. |
+| `siswa/edit-siswa-kelas.html` | `perbaruiCache(id, data)` dipanggil setelah setiap save berhasil | v21 | Wajib. Menjaga cache sinkron tanpa re-read. Lihat §14. |
+| `siswa/edit-siswa-kelas.html` | `SHEETS.valuesBatchWrite` dengan range per-kolom (`SISWA!D${r}`, `SISWA!M${r}:O${r}`, `SISWA!P${r}`) | v21 | Targeted write — tidak overwrite baris penuh. Lihat §13. |
+| `dashboard/guru-kelas.html` | Nav item `edit-siswa-kelas.html` di seksi "Data Siswa" sidebar | v21 | Jalur navigasi ke halaman edit. Tidak masuk array `hasKelas6` (tampil untuk semua guru kelas). |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 20 Mei 2026 (v20). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 25 Mei 2026 (v21). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

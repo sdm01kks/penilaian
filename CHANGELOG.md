@@ -1,3 +1,44 @@
+## [2026-05-25] — v21 · Fitur Edit Data Siswa untuk Guru Kelas (TTL, Ekspor/Impor XLSX)
+
+### ✨ Fitur Baru
+
+| # | File | Deskripsi |
+|---|------|-----------|
+| 1 | `siswa/edit-siswa-kelas.html` *(baru)* | Halaman baru bagi guru kelas untuk melengkapi data siswa — khususnya Tempat & Tanggal Lahir yang dibutuhkan untuk penerbitan ijazah dan SKL. Menampilkan tabel inline-editable hanya untuk siswa di kelas yang diampu guru tersebut. Mendukung multi-kelas (tab kelas). |
+| 2 | `siswa/edit-siswa-kelas.html` | **Ekspor template XLSX** — menghasilkan file Excel berisi daftar siswa kelas aktif lengkap dengan kolom yang bisa langsung diisi, ditambah sheet Petunjuk yang menjelaskan format tanggal yang diterima. |
+| 3 | `siswa/edit-siswa-kelas.html` | **Impor XLSX/CSV** — baca file hasil ekspor atau format bebas, cocokkan baris ke siswa via NIS → NISN → Nama, tampilkan modal pratinjau perbandingan nilai lama vs baru, terapkan ke form (bukan langsung ke sheet), lalu guru menyimpan setelah tinjauan. |
+
+### 🔧 Mekanisme Teknis Penting
+
+**Targeted write — bukan overwrite baris penuh:**
+Penyimpanan hanya menulis kolom yang relevan (`SISWA!D`, `SISWA!M:O`, `SISWA!P`) via `valuesBatchWrite`. Kolom lain (nama, kelas, agama, alamat, data orang tua, dll.) tidak pernah tersentuh — tidak ada risiko data hilang akibat perbedaan jumlah kolom atau versi sheet.
+
+**Cache-first save — tidak ada re-read saat penyimpanan:**
+Sheet `SISWA!A:P` hanya dibaca sekali saat halaman dimuat (`rawRowsCache`). Fungsi `simpanBaris()` dan `simpanSemua()` menggunakan cache ini untuk mencari indeks baris — tidak memanggil `SHEETS.read()` lagi. Cache diperbarui setelah setiap simpan berhasil. Ini mencegah error 403 yang terjadi ketika re-read dipicu di tengah sesi aktif.
+
+**Format tanggal lahir sinkron dengan ijazah/SKL:**
+Tanggal disimpan dalam format `YYYY-MM-DD` — format yang sudah dikenal `fmtTgl()` di `preview-skl.html` dan `formatTglLahir()` di `generate-skl.html`. Saat dicetak di dokumen, format otomatis menjadi "18 Juni 2013". Input `type="date"` di halaman ini dilengkapi preview langsung dalam format panjang Indonesia.
+
+**Parser tanggal saat impor (multi-format):**
+Impor menerima `YYYY-MM-DD`, `DD/MM/YYYY`, `DD Bulan YYYY` (Indonesia), dan serial angka Excel. Normalisasi selalu menghasilkan `YYYY-MM-DD` sebelum disimpan ke sheet.
+
+### 🔒 Batasan Akses
+
+- Hanya `guru_kelas` yang dapat mengakses halaman ini (`AUTH.requireLogin('guru_kelas')`)
+- Tabel hanya menampilkan siswa yang `kelas`-nya cocok dengan `currentUser.kelas` (split koma, ANTIREGRESI §2)
+- Kolom yang tidak dapat diedit guru: nama lengkap, kelas, NIS, agama, alamat, data orang tua, no HP
+
+### 📋 File yang Diubah (v21)
+
+| File | Status |
+|------|--------|
+| `siswa/edit-siswa-kelas.html` | **Baru** — halaman edit data siswa untuk guru kelas |
+| `dashboard/guru-kelas.html` | **Diubah** — tambah nav item "✏️ Edit Data Siswa" di sidebar (seksi Data Siswa) + tombol di toolbar tabel siswa |
+| `ANTIREGRESI.md` | **Diubah** — tambah §13 (targeted write), §14 (cache-first save), penanda kumulatif v21 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v21 ini |
+
+---
+
 ## [2026-05-20] — v20 · Perbaikan Akses Menu SAJ untuk Guru Mapel yang Juga Mengajar TT
 
 ### 🐛 Perbaikan
