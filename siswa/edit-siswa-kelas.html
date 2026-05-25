@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 15px; scroll-behavior: smooth; }
@@ -19,10 +20,8 @@ html { font-size: 15px; scroll-behavior: smooth; }
   --green-pale:  #e5f2ec;
   --green-ghost: #f0f7f3;
   --gold:        #c9882a;
-  --gold-light:  #f5c97a;
   --yellow:      #f39c12;
   --yellow-light:#fef9e7;
-  --cream:       #faf8f4;
   --white:       #ffffff;
   --ink:         #1c1b18;
   --ink-mid:     #4a4840;
@@ -34,7 +33,6 @@ html { font-size: 15px; scroll-behavior: smooth; }
   --sidebar-w:   260px;
   --topbar-h:    64px;
   --radius:      12px;
-  --shadow:      0 2px 16px rgba(15,50,38,.10);
   --shadow-card: 0 4px 24px rgba(15,50,38,.08);
   --border:      rgba(30,77,59,.10);
 }
@@ -102,6 +100,10 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
 .btn-secondary:hover { background: var(--green-ghost); }
 .btn-success   { background: #27ae60; color: #fff; }
 .btn-success:hover { background: #219a52; }
+.btn-gold      { background: var(--gold); color: #fff; }
+.btn-gold:hover { background: #b07722; }
+.btn-blue      { background: var(--blue); color: #fff; }
+.btn-blue:hover { background: #236ea3; }
 .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
@@ -114,10 +116,10 @@ tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr.dirty { background: rgba(243,156,18,.07); }
 tbody tr.saved  { background: rgba(74,160,122,.08); }
+tbody tr.imported { background: rgba(41,128,185,.06); }
 td { padding: 8px 10px; font-size: 13px; vertical-align: middle; }
 .td-no { width: 36px; text-align: center; color: var(--ink-muted); font-size: 12px; }
 .td-nama { font-weight: 600; color: var(--ink); min-width: 160px; }
-.td-kelas { font-size: 12px; font-weight: 700; color: var(--green-dark); background: var(--green-ghost); border-radius: 6px; padding: 3px 8px; display: inline-block; }
 
 /* ── Inline Inputs ── */
 .cell-input { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12.5px; font-family: inherit; color: var(--ink); background: var(--white); transition: border-color .15s, box-shadow .15s; min-width: 110px; }
@@ -146,6 +148,35 @@ input[type="date"].cell-input { min-width: 140px; }
 .loading-text { font-size: 14px; color: var(--green-dark); font-weight: 600; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Modal Impor ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 800; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+.modal-overlay.hidden { display: none; }
+.modal-box { background: var(--white); border-radius: 16px; width: 100%; max-width: 860px; box-shadow: 0 8px 40px rgba(0,0,0,.25); overflow: hidden; }
+.modal-header { background: var(--green-dark); color: #fff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-family: 'Amiri', serif; font-size: 18px; font-weight: 700; }
+.modal-close { background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 20px; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.modal-close:hover { background: rgba(255,255,255,.3); }
+.modal-body { padding: 20px 24px; }
+.modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: #fafafa; }
+.impor-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.impor-stat { padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; }
+.impor-stat.matched  { background: var(--green-pale); color: var(--green-dark); }
+.impor-stat.unmatched { background: var(--red-light); color: var(--red); }
+.impor-stat.total    { background: var(--blue-light); color: var(--blue); }
+.preview-table-wrap { max-height: 420px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border); }
+.preview-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.preview-table th { background: var(--green-pale); color: var(--green-dark); padding: 8px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; white-space: nowrap; }
+.preview-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.preview-table tr:last-child td { border-bottom: none; }
+.preview-table tr.unmatched-row { background: rgba(192,57,43,.04); }
+.preview-table tr.matched-row   { background: rgba(39,174,96,.04); }
+.change-pair { display: flex; flex-direction: column; gap: 2px; }
+.val-old { color: var(--ink-muted); text-decoration: line-through; font-size: 11px; }
+.val-new { color: var(--green-dark); font-weight: 600; font-size: 12px; }
+.val-same { color: var(--ink-muted); font-size: 11.5px; }
+.badge-unmatched { background: var(--red-light); color: var(--red); font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 700; }
+.badge-matched   { background: var(--green-pale); color: var(--green-dark); font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 700; }
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
@@ -165,6 +196,44 @@ input[type="date"].cell-input { min-width: 140px; }
 
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
+<!-- ── Modal Impor Preview ── -->
+<div class="modal-overlay hidden" id="modalImpor">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📥 Pratinjau Impor Data</div>
+      <button class="modal-close" onclick="tutupModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="impor-stats" id="imporStats"></div>
+      <p style="font-size:12.5px;color:var(--ink-muted);margin-bottom:12px;">
+        Centang baris yang ingin diterapkan. Data akan masuk ke tabel — simpan setelah tinjauan.
+      </p>
+      <div class="preview-table-wrap">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th style="width:32px;"><input type="checkbox" id="chkAll" onchange="toggleAllCheck(this)"></th>
+              <th>Nama Siswa</th>
+              <th>NISN</th>
+              <th>Tempat Lahir</th>
+              <th>Tanggal Lahir</th>
+              <th>Nama Wali</th>
+              <th>No. ISMUBA</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyPreview"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal()">Batal</button>
+      <button class="btn btn-success" id="btnTerapkan" onclick="terapkanImpor()">
+        ✅ Terapkan ke Tabel
+      </button>
+    </div>
+  </div>
+</div>
+
 <header class="topbar">
   <a class="topbar-logo" href="../dashboard/guru-kelas.html">
     <div>
@@ -183,59 +252,29 @@ input[type="date"].cell-input { min-width: 140px; }
 
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Utama</div>
-  <a class="nav-item" href="../dashboard/guru-kelas.html">
-    <span class="nav-icon">🏠</span> Dashboard
-  </a>
+  <a class="nav-item" href="../dashboard/guru-kelas.html"><span class="nav-icon">🏠</span> Dashboard</a>
 
   <div class="sidebar-section-label">Input Penilaian</div>
-  <a class="nav-item" href="../penilaian/input-nilai.html">
-    <span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS
-  </a>
-  <a class="nav-item" href="../penilaian/input-dpl.html">
-    <span class="nav-icon">🌱</span> Input Kokurikuler
-  </a>
-  <a class="nav-item" href="../penilaian/input-ekskul.html">
-    <span class="nav-icon">🏆</span> Input Ekstrakurikuler
-  </a>
-  <a class="nav-item" href="../penilaian/input-absensi.html">
-    <span class="nav-icon">📋</span> Input Absensi &amp; Catatan
-  </a>
-  <a class="nav-item" href="../penilaian/input-setoran-tt.html">
-    <span class="nav-icon">📖</span> Setoran Tahsin-Tahfizh
-  </a>
+  <a class="nav-item" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS</a>
+  <a class="nav-item" href="../penilaian/input-dpl.html"><span class="nav-icon">🌱</span> Input Kokurikuler</a>
+  <a class="nav-item" href="../penilaian/input-ekskul.html"><span class="nav-icon">🏆</span> Input Ekstrakurikuler</a>
+  <a class="nav-item" href="../penilaian/input-absensi.html"><span class="nav-icon">📋</span> Input Absensi &amp; Catatan</a>
+  <a class="nav-item" href="../penilaian/input-setoran-tt.html"><span class="nav-icon">📖</span> Setoran Tahsin-Tahfizh</a>
 
   <div class="sidebar-section-label">Rapor &amp; Leger</div>
-  <a class="nav-item" href="../rapor/preview.html">
-    <span class="nav-icon">🖨️</span> Preview &amp; Cetak Rapor
-  </a>
-  <a class="nav-item" href="../rapor/leger-kelas.html">
-    <span class="nav-icon">📊</span> Leger Nilai Kelas
-  </a>
-  <a class="nav-item" href="../rapor/laporan-tt.html">
-    <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
-  </a>
+  <a class="nav-item" href="../rapor/preview.html"><span class="nav-icon">🖨️</span> Preview &amp; Cetak Rapor</a>
+  <a class="nav-item" href="../rapor/leger-kelas.html"><span class="nav-icon">📊</span> Leger Nilai Kelas</a>
+  <a class="nav-item" href="../rapor/laporan-tt.html"><span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh</a>
 
   <div class="sidebar-section-label">Data Siswa</div>
-  <a class="nav-item active" href="edit-siswa-kelas.html">
-    <span class="nav-icon">✏️</span> Edit Data Siswa
-  </a>
-  <a class="nav-item" href="mutasi.html">
-    <span class="nav-icon">🔄</span> Pengajuan Mutasi
-  </a>
+  <a class="nav-item active" href="edit-siswa-kelas.html"><span class="nav-icon">✏️</span> Edit Data Siswa</a>
+  <a class="nav-item" href="mutasi.html"><span class="nav-icon">🔄</span> Pengajuan Mutasi</a>
 
   <div class="sidebar-section-label">Kurikulum</div>
-  <a class="nav-item" href="../setup/mapel-tp.html">
-    <span class="nav-icon">📚</span> TP &amp; KKTP Mapel Saya
-  </a>
-  <a class="nav-item" href="../setup/kokurikuler.html">
-    <span class="nav-icon">🌱</span> KKTP Kokurikuler
-  </a>
-  <a class="nav-item" href="../setup/ekskul-kktp.html">
-    <span class="nav-icon">🏅</span> KKTP Ekskul
-  </a>
-  <a class="nav-item" href="../setup/tahsin-tahfizh.html">
-    <span class="nav-icon">📖</span> Setup Tahsin-Tahfizh
-  </a>
+  <a class="nav-item" href="../setup/mapel-tp.html"><span class="nav-icon">📚</span> TP &amp; KKTP Mapel Saya</a>
+  <a class="nav-item" href="../setup/kokurikuler.html"><span class="nav-icon">🌱</span> KKTP Kokurikuler</a>
+  <a class="nav-item" href="../setup/ekskul-kktp.html"><span class="nav-icon">🏅</span> KKTP Ekskul</a>
+  <a class="nav-item" href="../setup/tahsin-tahfizh.html"><span class="nav-icon">📖</span> Setup Tahsin-Tahfizh</a>
 </nav>
 
 <main class="main">
@@ -250,7 +289,7 @@ input[type="date"].cell-input { min-width: 140px; }
     <strong>ℹ️ Catatan:</strong> Halaman ini memungkinkan Anda melengkapi data siswa di kelas Anda — khususnya
     <strong>Tempat &amp; Tanggal Lahir</strong> yang dibutuhkan untuk penerbitan ijazah dan SKL.
     Data yang Anda simpan akan langsung sinkron dengan dokumen ijazah dan SKL.
-    Untuk mengubah kelas, nama lengkap, atau data orang tua, silakan hubungi admin.
+    Gunakan <strong>Ekspor Template</strong> untuk mengunduh data ke Excel, isi di sana, lalu <strong>Impor</strong> kembali.
   </div>
 
   <div class="kelas-tabs" id="kelasTabs" style="display:none;"></div>
@@ -260,6 +299,9 @@ input[type="date"].cell-input { min-width: 140px; }
     <div class="toolbar-right">
       <span class="dirty-count" id="dirtyCount" style="display:none;">0 perubahan belum disimpan</span>
       <button class="btn btn-secondary btn-sm" onclick="muatUlang()">🔄 Muat Ulang</button>
+      <button class="btn btn-gold btn-sm" id="btnEkspor" onclick="eksporXLSX()" disabled>📤 Ekspor Template</button>
+      <button class="btn btn-blue btn-sm" id="btnImpor" onclick="triggerImpor()" disabled>📥 Impor XLSX/CSV</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="imporFile(this)">
       <button class="btn btn-success" id="btnSimpanSemua" onclick="simpanSemua()" disabled>
         💾 Simpan Semua Perubahan
       </button>
@@ -289,7 +331,7 @@ input[type="date"].cell-input { min-width: 140px; }
     </div>
   </div>
 
-  <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:8px;" id="bottomToolbar" style="display:none;">
+  <div style="margin-top:18px; display:flex; justify-content:flex-end; gap:8px;" id="bottomToolbar">
     <span class="dirty-count" id="dirtyCountBottom" style="display:none;">0 perubahan belum disimpan</span>
     <button class="btn btn-success" id="btnSimpanSemua2" onclick="simpanSemua()" disabled>
       💾 Simpan Semua Perubahan
@@ -300,43 +342,49 @@ input[type="date"].cell-input { min-width: 140px; }
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/sheets.js"></script>
 <script>
-// ── ANTIREGRESI: Halaman ini hanya membaca dan menulis SISWA!A:P.
-// Tidak mengubah sheets.js. Gunakan SHEETS.write() per baris atau
-// SHEETS.valuesBatchWrite() untuk batch. Selalu preserve kolom yang tidak diedit.
-// Lihat ANTIREGRESI.md §1 (format currentUser.kelas), §3 (anchor A1 tidak berlaku
-// untuk write, hanya append).
+// ══════════════════════════════════════════════════════════════
+// ANTIREGRESI:
+// • Halaman ini HANYA menulis SISWA kolom D, M, N, O, P (targeted).
+// • TIDAK menulis kolom lain → tidak ada risiko overwrite data lain.
+// • TIDAK memanggil SHEETS.read() ulang saat save → gunakan rawRowsCache.
+// • rawRowsCache diupdate setiap kali baris berhasil disimpan.
+// • sheets.js & auth.js tidak dimodifikasi.
+// ══════════════════════════════════════════════════════════════
 
 let currentUser  = null;
-let allSiswa     = [];   // array objek siswa yang sudah dimapping
-let rawRowsCache = null; // cache SISWA!A:P untuk keperluan save
+let allSiswa     = [];
+let rawRowsCache = null;  // cache SISWA!A:P; diupdate setelah setiap save
 let activeKelas  = null;
 let kelasList    = [];
-const dirtySet   = new Set(); // set id_siswa yang sudah diubah tapi belum disimpan
+let imporPreview = [];    // data hasil parse impor sebelum diterapkan
+const dirtySet   = new Set();
 
-// Format angka bulan → nama bulan Indonesia
 const BULAN_ID = ['','Januari','Februari','Maret','April','Mei','Juni',
                    'Juli','Agustus','September','Oktober','November','Desember'];
 
-/** Format YYYY-MM-DD → "18 Juni 2013". Jika bukan format itu, kembalikan raw. */
+/** Format YYYY-MM-DD → "18 Juni 2013". */
 function fmtTgl(raw) {
   if (!raw) return '';
   const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? `${parseInt(m[3])} ${BULAN_ID[parseInt(m[2])]} ${m[1]}` : raw;
 }
 
-/** Pastikan nilai tanggal adalah YYYY-MM-DD agar input[type=date] bisa membacanya. */
+/** Untuk input[type=date]: hanya terima YYYY-MM-DD, selain itu kosong. */
 function toDateInput(raw) {
-  if (!raw) return '';
-  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw || '') ? raw : '';
 }
 
-/** Hapus apostrof di depan angka (perlakuan khusus Google Sheets force-text). */
+/** Hapus apostrof prefix (Google Sheets force-text). */
 function stripNum(v) { return String(v || '').replace(/^'+/, '').trim(); }
 
-/** Tambah apostrof di depan angka agar Google Sheets menyimpan sebagai teks. */
+/** Tambah apostrof prefix agar Google Sheets simpan angka sebagai teks. */
 function fmtNum(v) { const s = String(v || '').trim(); return s ? "'" + s : ''; }
 
-// ── INIT ────────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ─────────────────────────────────────────────────────
 
 window.addEventListener('load', async () => {
   AUTH.init();
@@ -346,46 +394,36 @@ window.addEventListener('load', async () => {
   document.getElementById('userAvatar').textContent = (currentUser.nama || 'G')[0].toUpperCase();
   document.getElementById('userName').textContent   = currentUser.nama || '—';
 
-  // ANTIREGRESI §2: currentUser.kelas bisa berisi banyak kelas dipisahkan koma
+  // ANTIREGRESI §2: currentUser.kelas bisa berisi kelas dipisah koma
   kelasList = (currentUser.kelas || '').split(',').map(s => s.trim()).filter(Boolean);
 
-  if (kelasList.length === 0) {
+  if (!kelasList.length) {
     showAlert('error', '⛔ Tidak Ada Kelas', 'Akun Anda tidak memiliki kelas yang ditetapkan. Hubungi admin.');
     hideLoading();
     return;
   }
 
   activeKelas = kelasList[0];
-
   if (kelasList.length > 1) {
     renderKelasTabs();
     document.getElementById('kelasTabs').style.display = '';
   }
 
-  try {
-    await muatData();
-  } catch(e) {
-    console.error(e);
-    showAlert('error', '⛔ Gagal memuat data', e.message);
-    hideLoading();
-  }
+  try { await muatData(); }
+  catch(e) { showAlert('error', '⛔ Gagal memuat', e.message); hideLoading(); }
 });
 
-// ── KELAS TABS ──────────────────────────────────────────────────────────────
+// ── KELAS TABS ───────────────────────────────────────────────
 
 function renderKelasTabs() {
-  const wrap = document.getElementById('kelasTabs');
-  wrap.innerHTML = kelasList.map(k => `
-    <button class="kelas-tab ${k === activeKelas ? 'active' : ''}"
-            onclick="gantiKelas('${k}')">${k}</button>
-  `).join('');
+  document.getElementById('kelasTabs').innerHTML = kelasList.map(k =>
+    `<button class="kelas-tab ${k===activeKelas?'active':''}" onclick="gantiKelas('${k}')">${k}</button>`
+  ).join('');
 }
 
 async function gantiKelas(kls) {
   if (kls === activeKelas) return;
-  if (dirtySet.size > 0) {
-    if (!confirm('Ada perubahan yang belum disimpan. Ganti kelas sekarang?')) return;
-  }
+  if (dirtySet.size > 0 && !confirm('Ada perubahan belum disimpan. Ganti kelas?')) return;
   dirtySet.clear();
   activeKelas = kls;
   renderKelasTabs();
@@ -393,38 +431,28 @@ async function gantiKelas(kls) {
   await muatData();
 }
 
-// ── LOAD DATA ───────────────────────────────────────────────────────────────
+// ── LOAD DATA ────────────────────────────────────────────────
 
 async function muatData() {
   showLoading('Memuat data siswa…');
   try {
-    // Baca SISWA!A:P (termasuk kolom P = no_peserta_ismuba) agar saat save
-    // kita bisa preserve semua kolom yang tidak diedit di halaman ini.
+    // Baca A:P (16 kolom). Kolom P = no_peserta_ismuba.
+    // SATU kali read per sesi; hasil dicache → tidak perlu re-read saat save.
     rawRowsCache = await SHEETS.read('SISWA!A:P');
 
-    const dataRows = rawRowsCache.slice(2); // baris 0-1 = header/skip
-
-    allSiswa = dataRows
+    allSiswa = rawRowsCache.slice(2)
       .map((r, i) => ({
-        rawIdx:            i + 2,               // indeks di rawRowsCache (untuk SHEETS.write)
-        id:                r[0] || '',
-        nama:              r[1] || '',
+        rawIdx:            i + 2,
+        id:                r[0]  || '',
+        nama:              r[1]  || '',
         nis:               stripNum(r[2]),
         nisn:              stripNum(r[3]),
-        kelas:             r[4] || '',
-        agama:             r[5] || 'Islam',
-        alamat:            r[6] || '',
-        nama_ayah:         r[7] || '',
-        nama_ibu:          r[8] || '',
-        pekerjaan_ayah:    r[9] || '',
-        pekerjaan_ibu:     r[10] || '',
-        no_hp:             stripNum(r[11]),
+        kelas:             r[4]  || '',
         tempat_lahir:      r[12] || '',
         tgl_lahir:         r[13] || '',
         nama_wali:         r[14] || '',
         no_peserta_ismuba: r[15] || '',
       }))
-      // Filter: hanya yang punya id, bukan header, dan sesuai kelas aktif
       .filter(s => s.id && s.id !== 'id_siswa' && s.kelas === activeKelas);
 
     document.getElementById('tableTitle').textContent =
@@ -432,24 +460,23 @@ async function muatData() {
     document.getElementById('pageSubTitle').textContent =
       `Melengkapi data siswa kelas ${activeKelas} untuk keperluan ijazah dan rapor.`;
 
+    const hasSiswa = allSiswa.length > 0;
+    document.getElementById('btnEkspor').disabled = !hasSiswa;
+    document.getElementById('btnImpor').disabled  = !hasSiswa;
+
     renderTable();
     hideLoading();
-  } catch(e) {
-    hideLoading();
-    throw e;
-  }
+  } catch(e) { hideLoading(); throw e; }
 }
 
 async function muatUlang() {
-  if (dirtySet.size > 0) {
-    if (!confirm('Ada perubahan yang belum disimpan. Muat ulang sekarang?')) return;
-  }
+  if (dirtySet.size > 0 && !confirm('Ada perubahan belum disimpan. Muat ulang?')) return;
   dirtySet.clear();
   updateDirtyUI();
   await muatData();
 }
 
-// ── RENDER TABLE ─────────────────────────────────────────────────────────────
+// ── RENDER TABLE ─────────────────────────────────────────────
 
 function renderTable() {
   const tbody = document.getElementById('tbodySiswa');
@@ -460,106 +487,94 @@ function renderTable() {
   }
 
   tbody.innerHTML = allSiswa.map((s, i) => {
-    const ttlOk     = s.tempat_lahir && s.tgl_lahir;
-    const ttlPartial = !ttlOk && (s.tempat_lahir || s.tgl_lahir);
-    const badgeClass = ttlOk ? 'badge-ok' : ttlPartial ? 'badge-partial' : 'badge-empty';
-    const badgeLabel = ttlOk ? '✓ Lengkap' : ttlPartial ? '⚠ Sebagian' : '✗ Kosong';
-
-    const tglPreview = fmtTgl(s.tgl_lahir);
-    const tglInput   = toDateInput(s.tgl_lahir);
+    const ok      = s.tempat_lahir && s.tgl_lahir;
+    const partial = !ok && (s.tempat_lahir || s.tgl_lahir);
+    const badgeC  = ok ? 'badge-ok' : partial ? 'badge-partial' : 'badge-empty';
+    const badgeL  = ok ? '✓ Lengkap' : partial ? '⚠ Sebagian' : '✗ Kosong';
+    const tglPrev = fmtTgl(s.tgl_lahir);
+    const tglIn   = toDateInput(s.tgl_lahir);
 
     return `
-<tr id="row-${s.id}" data-id="${s.id}" data-rawIdx="${s.rawIdx}">
-  <td class="td-no">${i + 1}</td>
+<tr id="row-${s.id}" data-id="${s.id}">
+  <td class="td-no">${i+1}</td>
   <td class="td-nama">
     ${escHtml(s.nama)}
     ${s.nis ? `<div style="font-size:11px;color:var(--ink-muted);margin-top:2px;">NIS: ${escHtml(s.nis)}</div>` : ''}
   </td>
   <td>
     <input class="cell-input" type="text" id="nisn-${s.id}"
-           value="${escHtml(s.nisn)}" placeholder="NISN…"
-           maxlength="20"
-           oninput="markDirty('${s.id}', this)">
+           value="${escHtml(s.nisn)}" placeholder="NISN…" maxlength="20"
+           oninput="markDirty('${s.id}',this)">
   </td>
   <td>
     <input class="cell-input" type="text" id="tempat_lahir-${s.id}"
            value="${escHtml(s.tempat_lahir)}" placeholder="Kota / kabupaten…"
-           oninput="markDirty('${s.id}', this)">
+           oninput="markDirty('${s.id}',this)">
   </td>
   <td>
     <input class="cell-input" type="date" id="tgl_lahir-${s.id}"
-           value="${tglInput}"
-           oninput="markDirty('${s.id}', this); previewTgl('${s.id}')">
-    <div class="cell-preview" id="tgl-preview-${s.id}">${tglPreview ? '📅 ' + tglPreview : ''}</div>
+           value="${tglIn}"
+           oninput="markDirty('${s.id}',this); previewTgl('${s.id}')">
+    <div class="cell-preview" id="tgl-preview-${s.id}">${tglPrev ? '📅 '+tglPrev : ''}</div>
   </td>
   <td>
     <input class="cell-input" type="text" id="nama_wali-${s.id}"
            value="${escHtml(s.nama_wali)}" placeholder="Nama orang tua/wali…"
-           oninput="markDirty('${s.id}', this)">
+           oninput="markDirty('${s.id}',this)">
   </td>
   <td>
     <input class="cell-input" type="text" id="no_peserta_ismuba-${s.id}"
-           value="${escHtml(s.no_peserta_ismuba)}" placeholder="No. peserta…"
-           maxlength="30"
-           oninput="markDirty('${s.id}', this)">
+           value="${escHtml(s.no_peserta_ismuba)}" placeholder="No. peserta…" maxlength="30"
+           oninput="markDirty('${s.id}',this)">
   </td>
-  <td><span class="badge ${badgeClass}" id="badge-${s.id}">${badgeLabel}</span></td>
+  <td><span class="badge ${badgeC}" id="badge-${s.id}">${badgeL}</span></td>
   <td style="text-align:center;">
-    <button class="btn-row-save" id="save-${s.id}"
-            onclick="simpanBaris('${s.id}')" disabled>💾</button>
+    <button class="btn-row-save" id="save-${s.id}" onclick="simpanBaris('${s.id}')" disabled>💾</button>
   </td>
 </tr>`;
   }).join('');
 }
 
-/** Escaping HTML untuk mencegah injeksi. */
-function escHtml(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/** Tampilkan preview tanggal saat input berubah. */
 function previewTgl(id) {
   const val = (document.getElementById(`tgl_lahir-${id}`) || {}).value || '';
-  const preview = document.getElementById(`tgl-preview-${id}`);
-  if (preview) {
-    preview.textContent = val ? '📅 ' + fmtTgl(val) : '';
-  }
+  const el  = document.getElementById(`tgl-preview-${id}`);
+  if (el) el.textContent = val ? '📅 ' + fmtTgl(val) : '';
 }
 
-// ── DIRTY TRACKING ───────────────────────────────────────────────────────────
+// ── DIRTY TRACKING ────────────────────────────────────────────
 
 function markDirty(id, inputEl) {
   dirtySet.add(id);
   const row = document.getElementById(`row-${id}`);
-  if (row) { row.classList.add('dirty'); row.classList.remove('saved'); }
+  if (row) { row.classList.add('dirty'); row.classList.remove('saved','imported'); }
   if (inputEl) inputEl.classList.add('changed');
   const btn = document.getElementById(`save-${id}`);
-  if (btn) { btn.disabled = false; }
+  if (btn) btn.disabled = false;
   updateDirtyUI();
 }
 
 function updateDirtyUI() {
   const n = dirtySet.size;
   const label = n > 0 ? `${n} perubahan belum disimpan` : '';
-
-  ['dirtyCount', 'dirtyCountBottom'].forEach(elId => {
-    const el = document.getElementById(elId);
+  ['dirtyCount','dirtyCountBottom'].forEach(id => {
+    const el = document.getElementById(id);
     if (el) { el.textContent = label; el.style.display = n > 0 ? '' : 'none'; }
   });
-
-  ['btnSimpanSemua', 'btnSimpanSemua2'].forEach(elId => {
-    const el = document.getElementById(elId);
+  ['btnSimpanSemua','btnSimpanSemua2'].forEach(id => {
+    const el = document.getElementById(id);
     if (el) el.disabled = n === 0;
   });
-
-  // Tampilkan bottom toolbar hanya jika ada data
-  const bottomTb = document.getElementById('bottomToolbar');
-  if (bottomTb) bottomTb.style.display = allSiswa.length > 0 ? '' : 'none';
 }
 
-// ── SAVE: SATU BARIS ─────────────────────────────────────────────────────────
+// ── SAVE PER BARIS ─────────────────────────────────────────────
+// FIX: tidak ada SHEETS.read() di sini; pakai rawRowsCache.
+// Hanya menulis kolom yang diedit (D, M, N, O, P) = targeted write.
 
 async function simpanBaris(id) {
+  if (!rawRowsCache) {
+    showAlert('error', '⛔ Cache kosong', 'Coba muat ulang halaman terlebih dahulu.');
+    return;
+  }
   const siswa = allSiswa.find(s => s.id === id);
   if (!siswa) return;
 
@@ -568,175 +583,135 @@ async function simpanBaris(id) {
 
   try {
     const data = bacaFormBaris(id);
-    await tulisKeSiswaSheet(id, data);
+    const idx  = cariIdxDiCache(id);
+    if (idx < 0) throw new Error(`Siswa (${siswa.nama}) tidak ditemukan di cache. Muat ulang.`);
 
-    // Update allSiswa lokal
+    const sheetRow = idx + 1; // 1-based untuk Google Sheets API
+    await SHEETS.valuesBatchWrite([
+      [`SISWA!D${sheetRow}`,      [[fmtNum(data.nisn)]]],
+      [`SISWA!M${sheetRow}:O${sheetRow}`, [[data.tempat_lahir, data.tgl_lahir, data.nama_wali]]],
+      [`SISWA!P${sheetRow}`,      [[data.no_peserta_ismuba]]],
+    ]);
+
+    // Update state lokal
     Object.assign(siswa, data);
-    // Update rawRowsCache agar Simpan Semua tidak menimpa dengan data lama
-    updateRawCache(id, data);
-
+    perbaruiCache(id, data);
     dirtySet.delete(id);
-    const row = document.getElementById(`row-${id}`);
-    if (row) { row.classList.remove('dirty'); row.classList.add('saved'); }
 
-    // Reset warna changed pada input di baris ini
+    const row = document.getElementById(`row-${id}`);
+    if (row) { row.classList.remove('dirty','imported'); row.classList.add('saved'); }
     ['nisn','tempat_lahir','tgl_lahir','nama_wali','no_peserta_ismuba'].forEach(f => {
       const el = document.getElementById(`${f}-${id}`);
       if (el) el.classList.remove('changed');
     });
-
-    // Perbarui badge TTL
-    refreshTTLBadge(id, data.tempat_lahir, data.tgl_lahir);
-
+    refreshBadge(id, data.tempat_lahir, data.tgl_lahir);
     if (btn) { btn.textContent = '✓'; btn.classList.remove('saving'); btn.classList.add('saved'); }
-    setTimeout(() => {
-      if (btn) { btn.textContent = '💾'; btn.classList.remove('saved'); }
-    }, 2000);
+    setTimeout(() => { if (btn) { btn.textContent = '💾'; btn.classList.remove('saved'); } }, 2000);
 
     updateDirtyUI();
     showAlert('success', '✅ Tersimpan', `Data ${siswa.nama} berhasil diperbarui.`);
   } catch(e) {
     console.error(e);
-    showAlert('error', '⛔ Gagal menyimpan', `${e.message}`);
+    showAlert('error', '⛔ Gagal menyimpan', e.message);
     if (btn) { btn.disabled = false; btn.textContent = '💾'; btn.classList.remove('saving'); }
   }
 }
 
-// ── SAVE: SEMUA PERUBAHAN (BATCH) ────────────────────────────────────────────
+// ── SAVE SEMUA (BATCH) ─────────────────────────────────────────
+// FIX: tidak ada SHEETS.read() di sini; pakai rawRowsCache.
+// Targeted writes dalam satu batchUpdate = satu API call.
 
 async function simpanSemua() {
   if (dirtySet.size === 0) return;
+  if (!rawRowsCache) {
+    showAlert('error', '⛔ Cache kosong', 'Coba muat ulang halaman terlebih dahulu.');
+    return;
+  }
 
   const ids = [...dirtySet];
   const btnTop = document.getElementById('btnSimpanSemua');
   const btnBot = document.getElementById('btnSimpanSemua2');
   [btnTop, btnBot].forEach(b => { if (b) { b.disabled = true; b.textContent = '⏳ Menyimpan…'; } });
-
   showLoading(`Menyimpan ${ids.length} data siswa…`);
 
   try {
-    // Baca ulang sheet agar indeks baris akurat (ada kemungkinan admin juga mengedit)
-    const freshRows = await SHEETS.read('SISWA!A:P');
-
-    // Kumpulkan semua pasangan [range, values] untuk batch write
-    const pairs = [];
+    const pairs      = [];  // semua range+value untuk satu batchUpdate
+    const berhasil   = [];  // { id, data } yang berhasil disiapkan
 
     for (const id of ids) {
-      const siswa = allSiswa.find(s => s.id === id);
-      if (!siswa) continue;
-
       const data = bacaFormBaris(id);
-
-      // ANTIREGRESI §1: gunakan .trim() untuk menghindari mismatch karena spasi
-      const idx = freshRows.findIndex(r => String(r[0] || '').trim() === String(id).trim());
+      const idx  = cariIdxDiCache(id);
       if (idx < 0) {
-        showAlert('error', '⛔ Siswa tidak ditemukan', `ID ${id} (${siswa.nama}) tidak ditemukan di database.`);
+        const s = allSiswa.find(s => s.id === id);
+        showAlert('warning', '⚠ Siswa tidak ditemukan', `${s?.nama || id} dilewati.`);
         continue;
       }
-
-      const existingRow = freshRows[idx];
-      const row = bangunBarisSiswa(id, data, existingRow);
-      // Baris idx di JS array = baris idx+1 di Google Sheets (1-indexed)
-      pairs.push([`SISWA!A${idx + 1}:P${idx + 1}`, [row]]);
+      const r = idx + 1; // 1-based sheet row
+      pairs.push([`SISWA!D${r}`,      [[fmtNum(data.nisn)]]]);
+      pairs.push([`SISWA!M${r}:O${r}`, [[data.tempat_lahir, data.tgl_lahir, data.nama_wali]]]);
+      pairs.push([`SISWA!P${r}`,      [[data.no_peserta_ismuba]]]);
+      berhasil.push({ id, data });
     }
 
     if (pairs.length > 0) {
       await SHEETS.valuesBatchWrite(pairs);
     }
 
-    // Update state lokal
-    let savedCount = 0;
-    for (const id of ids) {
+    // Update state lokal setelah API berhasil
+    for (const { id, data } of berhasil) {
       const siswa = allSiswa.find(s => s.id === id);
-      if (!siswa) continue;
-      const data = bacaFormBaris(id);
-      Object.assign(siswa, data);
-      updateRawCache(id, data);
-
+      if (siswa) Object.assign(siswa, data);
+      perbaruiCache(id, data);
       dirtySet.delete(id);
-      const row = document.getElementById(`row-${id}`);
-      if (row) { row.classList.remove('dirty'); row.classList.add('saved'); }
 
+      const row = document.getElementById(`row-${id}`);
+      if (row) { row.classList.remove('dirty','imported'); row.classList.add('saved'); }
       ['nisn','tempat_lahir','tgl_lahir','nama_wali','no_peserta_ismuba'].forEach(f => {
         const el = document.getElementById(`${f}-${id}`);
         if (el) el.classList.remove('changed');
       });
-      refreshTTLBadge(id, data.tempat_lahir, data.tgl_lahir);
-
+      refreshBadge(id, data.tempat_lahir, data.tgl_lahir);
       const saveBtn = document.getElementById(`save-${id}`);
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '💾'; saveBtn.classList.remove('saving','saved'); }
-      savedCount++;
     }
 
     updateDirtyUI();
     hideLoading();
-    showAlert('success', '✅ Semua Tersimpan', `${savedCount} data siswa berhasil diperbarui.`);
+    showAlert('success', '✅ Semua Tersimpan', `${berhasil.length} data siswa berhasil diperbarui.`);
   } catch(e) {
     console.error(e);
     hideLoading();
-    showAlert('error', '⛔ Gagal menyimpan batch', e.message);
+    showAlert('error', '⛔ Gagal menyimpan', e.message);
   } finally {
-    [btnTop, btnBot].forEach(b => { if (b) { b.disabled = dirtySet.size === 0; b.textContent = '💾 Simpan Semua Perubahan'; } });
+    [btnTop, btnBot].forEach(b => {
+      if (b) { b.disabled = dirtySet.size === 0; b.textContent = '💾 Simpan Semua Perubahan'; }
+    });
   }
 }
 
-// ── HELPERS SAVE ─────────────────────────────────────────────────────────────
+// ── HELPERS SAVE ──────────────────────────────────────────────
 
-/** Baca nilai form inputs untuk satu baris siswa. */
 function bacaFormBaris(id) {
-  const g = (field) => (document.getElementById(`${field}-${id}`) || {}).value || '';
+  const g = f => (document.getElementById(`${f}-${id}`) || {}).value || '';
   return {
     nisn:              g('nisn').trim(),
     tempat_lahir:      g('tempat_lahir').trim(),
-    tgl_lahir:         g('tgl_lahir').trim(),   // YYYY-MM-DD dari input[type=date]
+    tgl_lahir:         g('tgl_lahir').trim(),  // YYYY-MM-DD dari input[type=date]
     nama_wali:         g('nama_wali').trim(),
     no_peserta_ismuba: g('no_peserta_ismuba').trim(),
   };
 }
 
-/**
- * Bangun array 16 kolom (A:P) untuk ditulis ke sheet.
- * Kolom yang tidak diedit diambil dari existingRow (baris yang sudah ada di sheet).
- * Ini memastikan tidak ada data yang hilang saat guru hanya mengedit TTL.
- */
-function bangunBarisSiswa(id, data, existingRow) {
-  return [
-    id,                             // A: id_siswa
-    existingRow[1] || '',           // B: nama (preserve)
-    fmtNum(existingRow[2]),         // C: nis (preserve, re-apply fmtNum)
-    fmtNum(data.nisn),              // D: nisn (editable)
-    existingRow[4] || '',           // E: kelas (preserve)
-    existingRow[5] || 'Islam',      // F: agama (preserve)
-    existingRow[6] || '',           // G: alamat (preserve)
-    existingRow[7] || '',           // H: nama_ayah (preserve)
-    existingRow[8] || '',           // I: nama_ibu (preserve)
-    existingRow[9] || '',           // J: pekerjaan_ayah (preserve)
-    existingRow[10] || '',          // K: pekerjaan_ibu (preserve)
-    fmtNum(existingRow[11]),        // L: no_hp (preserve, re-apply fmtNum)
-    data.tempat_lahir || '',        // M: tempat_lahir (editable)
-    data.tgl_lahir || '',           // N: tgl_lahir (editable, format YYYY-MM-DD)
-    data.nama_wali || '',           // O: nama_wali (editable)
-    data.no_peserta_ismuba || '',   // P: no_peserta_ismuba (editable)
-  ];
+/** Cari index baris di rawRowsCache berdasarkan id_siswa. */
+function cariIdxDiCache(id) {
+  if (!rawRowsCache) return -1;
+  return rawRowsCache.findIndex(r => String(r[0] || '').trim() === String(id).trim());
 }
 
-/** Tulis satu baris ke sheet. Digunakan oleh simpanBaris() (per-row save). */
-async function tulisKeSiswaSheet(id, data) {
-  // Baca ulang untuk mendapatkan indeks yang akurat
-  const rows = await SHEETS.read('SISWA!A:P');
-  // ANTIREGRESI §1: trim untuk menghindari mismatch spasi
-  const idx  = rows.findIndex(r => String(r[0] || '').trim() === String(id).trim());
-  if (idx < 0) throw new Error('Data siswa tidak ditemukan di database.');
-
-  const row = bangunBarisSiswa(id, data, rows[idx]);
-  await SHEETS.write(`SISWA!A${idx + 1}:P${idx + 1}`, [row]);
-}
-
-/** Update cache rawRowsCache setelah save agar simpanSemua tidak pakai data basi. */
-function updateRawCache(id, data) {
-  if (!rawRowsCache) return;
-  const idx = rawRowsCache.findIndex(r => String(r[0] || '').trim() === String(id).trim());
-  if (idx < 0) return;
+/** Update rawRowsCache setelah save agar save berikutnya tidak pakai data basi. */
+function perbaruiCache(id, data) {
+  const idx = cariIdxDiCache(id);
+  if (idx < 0 || !rawRowsCache[idx]) return;
   rawRowsCache[idx][3]  = data.nisn;
   rawRowsCache[idx][12] = data.tempat_lahir;
   rawRowsCache[idx][13] = data.tgl_lahir;
@@ -744,35 +719,359 @@ function updateRawCache(id, data) {
   rawRowsCache[idx][15] = data.no_peserta_ismuba;
 }
 
-/** Perbarui badge status TTL setelah save. */
-function refreshTTLBadge(id, tempat, tgl) {
+function refreshBadge(id, tempat, tgl) {
   const badge = document.getElementById(`badge-${id}`);
   if (!badge) return;
-  const ok      = tempat && tgl;
-  const partial = !ok && (tempat || tgl);
-  badge.className = 'badge ' + (ok ? 'badge-ok' : partial ? 'badge-partial' : 'badge-empty');
+  const ok = tempat && tgl, partial = !ok && (tempat || tgl);
+  badge.className  = 'badge ' + (ok ? 'badge-ok' : partial ? 'badge-partial' : 'badge-empty');
   badge.textContent = ok ? '✓ Lengkap' : partial ? '⚠ Sebagian' : '✗ Kosong';
 }
 
-// ── UI HELPERS ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// EKSPOR XLSX
+// ══════════════════════════════════════════════════════════════
+
+function eksporXLSX() {
+  if (!allSiswa.length) return;
+
+  // Sheet 1: Data Siswa
+  const headers = [
+    'No', 'Nama Siswa', 'NIS', 'NISN',
+    'Tempat Lahir', 'Tanggal Lahir (YYYY-MM-DD)',
+    'Nama Wali', 'No. Peserta ISMUBA',
+  ];
+
+  const dataRows = allSiswa.map((s, i) => [
+    i + 1,
+    s.nama,
+    s.nis,
+    s.nisn,
+    s.tempat_lahir,
+    s.tgl_lahir,   // YYYY-MM-DD — tersimpan sebagai teks agar tidak berubah format
+    s.nama_wali,
+    s.no_peserta_ismuba,
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+
+  // Lebar kolom
+  ws['!cols'] = [
+    {wch:4}, {wch:28}, {wch:12}, {wch:14},
+    {wch:18}, {wch:22}, {wch:24}, {wch:20},
+  ];
+
+  // Sheet 2: Petunjuk
+  const petunjuk = XLSX.utils.aoa_to_sheet([
+    ['PETUNJUK PENGISIAN'],
+    [''],
+    ['1. Isi kolom yang bertanda * (wajib untuk ijazah):'],
+    ['   - Tempat Lahir : nama kota/kabupaten, contoh: Depok'],
+    ['   - Tanggal Lahir: format YYYY-MM-DD, contoh: 2013-06-18'],
+    [''],
+    ['2. Kolom Nama Siswa dan NIS TIDAK perlu diubah (hanya referensi).'],
+    [''],
+    ['3. Kolom NISN: isi tanpa tanda baca, contoh: 3147380382'],
+    [''],
+    ['4. Setelah diisi, simpan file lalu gunakan tombol Impor di aplikasi.'],
+    [''],
+    ['5. Aplikasi mendukung format tanggal:'],
+    ['   - YYYY-MM-DD (dianjurkan): 2013-06-18'],
+    ['   - DD/MM/YYYY             : 18/06/2013'],
+    ['   - DD Bulan YYYY          : 18 Juni 2013'],
+  ]);
+  petunjuk['!cols'] = [{wch: 60}];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data Siswa');
+  XLSX.utils.book_append_sheet(wb, wb_sheet_petunjuk(petunjuk), 'Petunjuk');
+
+  const tgl  = new Date().toLocaleDateString('id-ID').replace(/\//g, '-');
+  const nama = `Data_Siswa_${activeKelas}_${tgl}.xlsx`;
+  XLSX.writeFile(wb, nama);
+
+  showAlert('success', '📤 Template Diunduh', `File "${nama}" berhasil diunduh. Isi dan impor kembali.`);
+}
+
+// Helper: kembalikan sheet petunjuk (wb sudah di-assign di atas)
+function wb_sheet_petunjuk(ws) { return ws; }
+
+// ══════════════════════════════════════════════════════════════
+// IMPOR XLSX / CSV
+// ══════════════════════════════════════════════════════════════
+
+function triggerImpor() {
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileInput').click();
+}
+
+async function imporFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  showLoading('Membaca file…');
+  try {
+    const rows = await bacaFile(file);
+    imporPreview = prosesImpor(rows);
+    hideLoading();
+    tampilkanModalImpor(imporPreview);
+  } catch(e) {
+    hideLoading();
+    showAlert('error', '⛔ Gagal membaca file', e.message);
+  }
+}
+
+/** Baca file XLSX/CSV → array of arrays menggunakan SheetJS. */
+function bacaFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb   = XLSX.read(data, { type: 'array', cellDates: true });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        // defval: '' agar sel kosong tidak undefined
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+        resolve(rows);
+      } catch(err) { reject(new Error('Format file tidak didukung: ' + err.message)); }
+    };
+    reader.onerror = () => reject(new Error('Gagal membaca file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/** Temukan index kolom berdasarkan daftar nama alternatif (case-insensitive). */
+function cariKolom(headers, alternatif) {
+  for (const opt of alternatif) {
+    const idx = headers.indexOf(opt.toLowerCase().trim());
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+/** Parse berbagai format tanggal → YYYY-MM-DD. */
+function parseTanggal(raw) {
+  if (!raw) return '';
+
+  // SheetJS dengan cellDates:true + raw:false sudah mengkonversi ke string tanggal
+  // tapi kita juga tangani format lain
+  const s = String(raw).trim();
+  if (!s) return '';
+
+  // YYYY-MM-DD (sudah benar)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // DD/MM/YYYY atau DD-MM-YYYY
+  const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+
+  // M/D/YYYY (format Excel en-US)
+  const m1b = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m1b) {
+    // Ambiguous; kita asumsikan DD/MM/YYYY (Indonesia)
+    return `${m1b[3]}-${m1b[2].padStart(2,'0')}-${m1b[1].padStart(2,'0')}`;
+  }
+
+  // "18 Juni 2013" atau "18 Jun 2013"
+  const BMAP = {
+    januari:1,februari:2,maret:3,april:4,mei:5,juni:6,
+    juli:7,agustus:8,september:9,oktober:10,november:11,desember:12,
+    jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,agu:8,sep:9,okt:10,nov:11,des:12,
+  };
+  const m2 = s.match(/^(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})$/);
+  if (m2) {
+    const bln = BMAP[m2[2].toLowerCase()];
+    if (bln) return `${m2[3]}-${String(bln).padStart(2,'0')}-${m2[1].padStart(2,'0')}`;
+  }
+
+  // Excel numeric serial (mis. 41443)
+  const serial = parseFloat(s);
+  if (!isNaN(serial) && serial > 1000 && serial < 200000) {
+    const d  = new Date(Math.round((serial - 25569) * 86400 * 1000));
+    const y  = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth()+1).padStart(2,'0');
+    const dd = String(d.getUTCDate()).padStart(2,'0');
+    if (y > 1900 && y < 2100) return `${y}-${mo}-${dd}`;
+  }
+
+  return ''; // tidak bisa di-parse
+}
+
+/** Proses rows hasil SheetJS → array preview item. */
+function prosesImpor(rows) {
+  if (!rows || rows.length < 2) throw new Error('File kosong atau hanya berisi header.');
+
+  const hdr = rows[0].map(h => String(h || '').toLowerCase().trim());
+
+  const col = {
+    nis:  cariKolom(hdr, ['nis', 'no. induk', 'nomor induk', 'no induk']),
+    nisn: cariKolom(hdr, ['nisn', 'no. induk siswa nasional', 'no induk siswa nasional']),
+    nama: cariKolom(hdr, ['nama siswa', 'nama lengkap', 'nama']),
+    tempat_lahir:      cariKolom(hdr, ['tempat lahir', 'tempat_lahir', 'kota lahir']),
+    tgl_lahir:         cariKolom(hdr, ['tanggal lahir (yyyy-mm-dd)', 'tanggal lahir', 'tgl lahir', 'tanggal_lahir', 'tgl_lahir']),
+    nama_wali:         cariKolom(hdr, ['nama wali', 'wali', 'nama_wali', 'orang tua']),
+    no_peserta_ismuba: cariKolom(hdr, ['no. peserta ismuba', 'no peserta ismuba', 'ismuba', 'no_peserta_ismuba']),
+  };
+
+  const preview = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.every(c => String(c || '').trim() === '')) continue; // baris kosong
+
+    const ambil = (c) => c >= 0 ? String(r[c] || '').trim() : '';
+
+    const nis  = ambil(col.nis);
+    const nisn = ambil(col.nisn);
+    const nama = ambil(col.nama);
+
+    const data = {
+      nisn:              col.nisn              >= 0 ? nisn                        : null,
+      tempat_lahir:      col.tempat_lahir      >= 0 ? ambil(col.tempat_lahir)     : null,
+      tgl_lahir:         col.tgl_lahir         >= 0 ? parseTanggal(r[col.tgl_lahir]) : null,
+      nama_wali:         col.nama_wali         >= 0 ? ambil(col.nama_wali)        : null,
+      no_peserta_ismuba: col.no_peserta_ismuba >= 0 ? ambil(col.no_peserta_ismuba): null,
+    };
+
+    // Cocokkan ke siswa: NIS → NISN → Nama (case-insensitive)
+    let matched = null;
+    if (nis)  matched = allSiswa.find(s => s.nis  === nis);
+    if (!matched && nisn) matched = allSiswa.find(s => s.nisn === nisn && nisn !== '');
+    if (!matched && nama) matched = allSiswa.find(s => s.nama.toLowerCase() === nama.toLowerCase());
+
+    preview.push({ rowNum: i+1, nis, nisn, nama, matched, data, selected: !!matched });
+  }
+
+  return preview;
+}
+
+// ── MODAL IMPOR ───────────────────────────────────────────────
+
+function tampilkanModalImpor(preview) {
+  const matched   = preview.filter(p => p.matched).length;
+  const unmatched = preview.filter(p => !p.matched).length;
+
+  document.getElementById('imporStats').innerHTML = `
+    <div class="impor-stat total">📄 Total: ${preview.length} baris</div>
+    <div class="impor-stat matched">✅ Cocok: ${matched} siswa</div>
+    ${unmatched ? `<div class="impor-stat unmatched">⚠ Tidak cocok: ${unmatched} baris</div>` : ''}
+  `;
+
+  const tbody = document.getElementById('tbodyPreview');
+  tbody.innerHTML = preview.map((p, i) => {
+    const s = p.matched;
+
+    const renderField = (field, lama) => {
+      const baru = p.data[field];
+      if (baru === null) return '<span class="val-same">—</span>';
+      if (!baru) return '<span class="val-same">(kosong)</span>';
+      if (baru === lama) return `<span class="val-same">${escHtml(baru)}</span>`;
+      return `<div class="change-pair">
+        ${lama ? `<div class="val-old">${escHtml(lama)}</div>` : ''}
+        <div class="val-new">→ ${escHtml(baru)}${field==='tgl_lahir' ? `<br><small style="font-weight:400;color:var(--ink-muted)">${fmtTgl(baru)}</small>` : ''}</div>
+      </div>`;
+    };
+
+    const rowClass = s ? 'matched-row' : 'unmatched-row';
+    const chk = s
+      ? `<input type="checkbox" class="impor-chk" data-idx="${i}" ${p.selected ? 'checked' : ''}>`
+      : '–';
+    const namaCell = s
+      ? `${escHtml(s.nama)} <span class="badge-matched">✓</span>`
+      : `${escHtml(p.nama||p.nisn||p.nis||'?')} <span class="badge-unmatched">Tidak ditemukan</span>`;
+
+    return `<tr class="${rowClass}">
+      <td>${chk}</td>
+      <td style="font-weight:600;">${namaCell}</td>
+      <td>${renderField('nisn', s?.nisn)}</td>
+      <td>${renderField('tempat_lahir', s?.tempat_lahir)}</td>
+      <td>${renderField('tgl_lahir', s?.tgl_lahir)}</td>
+      <td>${renderField('nama_wali', s?.nama_wali)}</td>
+      <td>${renderField('no_peserta_ismuba', s?.no_peserta_ismuba)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('chkAll').checked = true;
+  document.getElementById('btnTerapkan').disabled = matched === 0;
+  document.getElementById('modalImpor').classList.remove('hidden');
+}
+
+function tutupModal() {
+  document.getElementById('modalImpor').classList.add('hidden');
+}
+
+function toggleAllCheck(chkAll) {
+  document.querySelectorAll('.impor-chk').forEach(chk => {
+    chk.checked = chkAll.checked;
+    const idx = parseInt(chk.dataset.idx);
+    if (imporPreview[idx]) imporPreview[idx].selected = chkAll.checked;
+  });
+}
+
+/** Terapkan data impor yang dipilih ke form tabel (tidak langsung ke sheet). */
+function terapkanImpor() {
+  // Sinkronkan state selected dari checkbox
+  document.querySelectorAll('.impor-chk').forEach(chk => {
+    const idx = parseInt(chk.dataset.idx);
+    if (imporPreview[idx]) imporPreview[idx].selected = chk.checked;
+  });
+
+  let n = 0;
+  for (const p of imporPreview) {
+    if (!p.selected || !p.matched) continue;
+    const id = p.matched.id;
+
+    // Terapkan ke form inputs
+    const fields = ['nisn','tempat_lahir','tgl_lahir','nama_wali','no_peserta_ismuba'];
+    let ada_perubahan = false;
+
+    fields.forEach(f => {
+      if (p.data[f] === null) return; // kolom tidak ada di file
+      const el = document.getElementById(`${f}-${id}`);
+      if (!el) return;
+
+      const baru = p.data[f];
+      // Hanya terapkan jika berbeda dari nilai saat ini
+      if (el.value !== baru) {
+        el.value = baru;
+        el.classList.add('changed');
+        ada_perubahan = true;
+        if (f === 'tgl_lahir') previewTgl(id);
+      }
+    });
+
+    if (ada_perubahan) {
+      dirtySet.add(id);
+      const row = document.getElementById(`row-${id}`);
+      if (row) { row.classList.add('dirty','imported'); row.classList.remove('saved'); }
+      const btn = document.getElementById(`save-${id}`);
+      if (btn) btn.disabled = false;
+      n++;
+    }
+  }
+
+  tutupModal();
+  updateDirtyUI();
+
+  if (n > 0) {
+    showAlert('success', `✅ ${n} baris diterapkan`,
+      'Data berhasil diisi ke tabel. Tinjau, lalu klik "Simpan Semua Perubahan".');
+  } else {
+    showAlert('info', 'ℹ Tidak ada perubahan', 'Data di file sama dengan yang sudah ada, atau tidak ada yang dipilih.');
+  }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────
 
 function showAlert(type, title, text) {
-  const icon = type === 'success' ? '✅' : type === 'error' ? '⛔' : type === 'warning' ? '⚠️' : 'ℹ️';
+  const icon = {success:'✅', error:'⛔', warning:'⚠️', info:'ℹ️'}[type] || 'ℹ️';
   document.getElementById('alertArea').innerHTML = `
     <div class="alert ${type}">
       <div class="alert-icon">${icon}</div>
-      <div>
-        <div class="alert-title">${title}</div>
-        <div class="alert-text">${text}</div>
-      </div>
+      <div><div class="alert-title">${title}</div><div class="alert-text">${escHtml(text)}</div></div>
     </div>`;
-  // Hilangkan otomatis setelah 5 detik untuk pesan sukses
-  if (type === 'success') {
-    setTimeout(() => {
-      const el = document.getElementById('alertArea');
-      if (el) el.innerHTML = '';
-    }, 5000);
-  }
+  if (type === 'success') setTimeout(() => {
+    const el = document.getElementById('alertArea'); if (el) el.innerHTML = '';
+  }, 6000);
 }
 
 function showLoading(msg) {
@@ -787,12 +1086,8 @@ function toggleSidebar() {
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
-// Peringatan jika meninggalkan halaman dengan perubahan belum disimpan
-window.addEventListener('beforeunload', (e) => {
-  if (dirtySet.size > 0) {
-    e.preventDefault();
-    e.returnValue = 'Ada perubahan yang belum disimpan. Yakin ingin meninggalkan halaman?';
-  }
+window.addEventListener('beforeunload', e => {
+  if (dirtySet.size > 0) { e.preventDefault(); e.returnValue = 'Ada perubahan belum disimpan.'; }
 });
 </script>
 </body>
