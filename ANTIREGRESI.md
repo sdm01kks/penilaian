@@ -548,6 +548,53 @@ async function simpanBaris(id) {
 
 ---
 
+### 15. Status Message Halaman Login — Wajib `style="display:none"` di HTML
+
+**Mengapa berisiko:** Di `index.html`, dua elemen status memiliki kelas CSS yang sudah meng-override `display:none`:
+
+```css
+/* Di CSS global index.html */
+.status-msg         { display: none; }   /* ← awalnya tersembunyi */
+.status-msg.loading { display: flex; }   /* ← override ke flex! */
+.status-msg.error   { display: flex; }   /* ← override ke flex! */
+```
+
+Jika elemen HTML sudah punya kelas `loading` atau `error` sejak halaman dimuat, keduanya **langsung terlihat** sebelum user menekan tombol apapun — muncul "Sedang memverifikasi akun Anda…" dan "Terjadi kesalahan." secara bersamaan.
+
+**Penyebab terdeteksi v22:** Regresi visual ini muncul karena elemen HTML memiliki kelas lengkap sejak awal:
+```html
+<!-- ❌ SALAH — kelas loading/error langsung terpakai saat halaman dibuka -->
+<div class="status-msg loading" id="statusLoading">
+<div class="status-msg error"   id="statusError">
+```
+
+**Pola wajib sejak v22:**
+```html
+<!-- ✅ BENAR — inline style menimpa CSS, elemen tersembunyi saat pertama dibuka -->
+<div class="status-msg loading" id="statusLoading" style="display:none;">
+<div class="status-msg error"   id="statusError"   style="display:none;">
+```
+
+Inline style (`style="display:none"`) memiliki spesifisitas lebih tinggi dari class selector manapun, sehingga elemen tetap tersembunyi sampai JavaScript secara eksplisit memanggil `showLoading(true)` atau `showError(pesan)`.
+
+**Penting:** Visibility kedua elemen ini HANYA boleh dikendalikan via fungsi JS `showLoading()` dan `showError()` di `index.html` — tidak dengan menambah/menghapus kelas dari JavaScript.
+
+**Penanda wajib di `index.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| `style="display:none;"` pada `#statusLoading` | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.loading { display:flex }` |
+| `style="display:none;"` pada `#statusError` | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.error { display:flex }` |
+
+**Catatan terkait COOP warning di console:**
+```
+Cross-Origin-Opener-Policy policy would block the window.closed call.
+Cross-Origin-Opener-Policy policy would block the window.parent call.
+```
+Warning ini berasal dari library Google Identity Services (GIS) saat mencoba berkomunikasi dengan popup OAuth-nya di browser yang menerapkan kebijakan COOP. Ini **bukan regresi dari kode aplikasi** — tidak ada yang bisa dilakukan dari sisi HTML/JS karena header COOP ditetapkan di level server/hosting. Warning ini bersifat informatif dan tidak memblokir proses login secara fungsional. Jangan pernah memodifikasi `auth.js` sebagai respons atas warning ini.
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -611,8 +658,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `siswa/edit-siswa-kelas.html` | `perbaruiCache(id, data)` dipanggil setelah setiap save berhasil | v21 | Wajib. Menjaga cache sinkron tanpa re-read. Lihat §14. |
 | `siswa/edit-siswa-kelas.html` | `SHEETS.valuesBatchWrite` dengan range per-kolom (`SISWA!D${r}`, `SISWA!M${r}:O${r}`, `SISWA!P${r}`) | v21 | Targeted write — tidak overwrite baris penuh. Lihat §13. |
 | `dashboard/guru-kelas.html` | Nav item `edit-siswa-kelas.html` di seksi "Data Siswa" sidebar | v21 | Jalur navigasi ke halaman edit. Tidak masuk array `hasKelas6` (tampil untuk semua guru kelas). |
+| `index.html` | `style="display:none;"` pada `#statusLoading` | v22 | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.loading { display:flex }`. Lihat §15. |
+| `index.html` | `style="display:none;"` pada `#statusError` | v22 | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.error { display:flex }`. Lihat §15. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 25 Mei 2026 (v21). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 26 Mei 2026 (v22). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

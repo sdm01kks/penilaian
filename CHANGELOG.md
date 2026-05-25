@@ -1,3 +1,32 @@
+## [2026-05-26] — v22 · Perbaikan Bug Visual Halaman Login (Status Tampil Sebelum Login)
+
+### 🐛 Perbaikan Regresi
+
+**Gejala:** Halaman `index.html` saat pertama dibuka langsung menampilkan dua pesan sekaligus — "Sedang memverifikasi akun Anda…" dan "Terjadi kesalahan." — meskipun user belum menekan tombol login. Hal ini membuat guru mengira sistem bermasalah dan enggan mencoba login.
+
+**Akar masalah:** CSS `index.html` mendefinisikan:
+```css
+.status-msg         { display: none; }   /* tersembunyi secara default */
+.status-msg.loading { display: flex; }   /* ← override! */
+.status-msg.error   { display: flex; }   /* ← override! */
+```
+Kedua elemen status sudah memiliki kelas `loading` dan `error` di HTML sejak halaman pertama dimuat, sehingga langsung terlihat tanpa aksi user apapun. Bukan regresi dari perubahan logika, melainkan dari CSS specificity yang tidak disadari.
+
+**Perbaikan:** Tambahkan `style="display:none;"` sebagai inline style pada kedua elemen status di `index.html`. Inline style memiliki spesifisitas lebih tinggi dari class selector sehingga elemen tetap tersembunyi sampai JavaScript memanggil `showLoading()` atau `showError()` secara eksplisit.
+
+**Terkait warning COOP di console:**
+Warning `Cross-Origin-Opener-Policy policy would block the window.closed call` berasal dari library Google Identity Services (GIS) — bukan dari kode aplikasi. Warning ini sudah ada sebelumnya, tidak memengaruhi fungsionalitas login, dan tidak ada yang bisa dilakukan dari sisi HTML/JS. Didokumentasikan di ANTIREGRESI §15 agar tidak menjadi sumber kebingungan di masa depan.
+
+### 📋 File yang Diubah (v22)
+
+| File | Status |
+|------|--------|
+| `index.html` | **Diubah** — tambah `style="display:none;"` pada `#statusLoading` dan `#statusError` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §15 (CSS display bug), penanda kumulatif v22 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v22 ini |
+
+---
+
 ## [2026-05-25] — v21 · Fitur Edit Data Siswa untuk Guru Kelas (TTL, Ekspor/Impor XLSX)
 
 ### ✨ Fitur Baru
