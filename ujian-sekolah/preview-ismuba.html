@@ -364,8 +364,21 @@ function getNilaiISMUBA(rapRows,usRows,fieldKey){
   // Untuk Al-Islam: fallback ke mapel PAI jika nama tidak ditemukan
   let mapelNama=cfg[cfgKey]||'';
   if(!mapelNama && fieldKey==='ismuba_pai') mapelNama=cfg['map_pai']||'';
-  if(!mapelNama)return null;
-  const m=findMapelFuzzy(mapelNama);
+  // ANTIREGRESI v23: Pendidikan Al-Islam (Muhammadiyah) dan
+  // Pendidikan Agama Islam dan Budi Pekerti (Kurikulum Merdeka)
+  // adalah mata pelajaran yang sama dengan nama berbeda. findMapelFuzzy
+  // gagal mencocokkan keduanya karena kata "agama" tidak ada di "al-islam"
+  // dan sebaliknya. Solusi: jika fuzzy match gagal untuk ismuba_pai,
+  // cari langsung dengan alias kata kunci PAI/Al-Islam.
+  let m=mapelNama?findMapelFuzzy(mapelNama):null;
+  if(!m && fieldKey==='ismuba_pai'){
+    m=allMapel.find(mp=>{
+      const n=mp.nama.toLowerCase();
+      return n.includes('al-islam')||
+             n.includes('al islam')||
+             (n.includes('agama')&&n.includes('islam'));
+    });
+  }
   if(!m)return null;
   const br=parseFloat(cfg['skl_bobot_rapor']||'60');
   const bu=parseFloat(cfg['skl_bobot_us']||'40');
