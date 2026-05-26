@@ -595,6 +595,52 @@ Warning ini berasal dari library Google Identity Services (GIS) saat mencoba ber
 
 ---
 
+### 16. Alias Mapel Lintas Kurikulum — Jangan Andalkan Hanya pada `findMapelFuzzy`
+
+**Mengapa berisiko:** SD Muhammadiyah menggunakan nama-nama mata pelajaran khas Muhammadiyah yang berbeda dari nama Kurikulum Merdeka resmi, meski merujuk pada ID mapel yang sama di database. Pasangan nama yang diketahui bermasalah:
+
+| Nama di Kurikulum Merdeka (config SKL) | Nama di Muhammadiyah (label dokumen) |
+|----------------------------------------|--------------------------------------|
+| Pendidikan Agama Islam dan Budi Pekerti | Pendidikan Al-Islam |
+
+**Mengapa `findMapelFuzzy` gagal pada kasus ini:**
+
+`findMapelFuzzy` membuang stop words (`pendidikan`, `al`, `budi`, `pekerti`), lalu mencocokkan sisa kata. Untuk dua nama di atas, kata yang tersisa berbeda total (`"agama","islam"` vs `"al-islam"`) sehingga tidak ada irisan yang ditemukan.
+
+**Pola wajib sejak v23 — alias search setelah fuzzy match gagal:**
+
+Untuk setiap mapel yang nama Muhammadiyah-nya berbeda secara leksikal dari nama Kurikulum Merdeka, tambahkan langkah alias search **lokal** (bukan di `findMapelFuzzy`, karena fungsi itu digunakan banyak konteks):
+
+```javascript
+// Setelah findMapelFuzzy gagal (m === null):
+if(!m && fieldKey === 'ismuba_pai'){
+  m = allMapel.find(mp => {
+    const n = mp.nama.toLowerCase();
+    return n.includes('al-islam') ||
+           n.includes('al islam') ||
+           (n.includes('agama') && n.includes('islam'));
+  });
+}
+```
+
+**Yang TIDAK boleh dilakukan:**
+- Mengubah `findMapelFuzzy` untuk menangani kasus ini — fungsi tersebut dipakai di banyak konteks dan perubahan bisa menimbulkan false positive di tempat lain
+- Menambahkan `'agama'` atau `'islam'` ke daftar stop words — justru akan memperburuk match di konteks lain
+
+**Penanda wajib di `ujian-sekolah/preview-ismuba.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| Komentar `// ANTIREGRESI v23` di dalam `getNilaiISMUBA()` | Menjelaskan mengapa alias search diperlukan; jangan dihapus |
+| Blok `if(!m && fieldKey==='ismuba_pai')` setelah `findMapelFuzzy` | Alias search wajib ada; menghapusnya mengembalikan bug nilai Al-Islam kosong |
+
+**Checklist jika menambahkan mapel ISMUBA baru di masa depan:**
+- [ ] Apakah nama mapel di Muhammadiyah berbeda dari nama di Kurikulum Merdeka?
+- [ ] Jika ya, tambahkan alias search serupa untuk `ismuba_kmmd` dan `ismuba_arab` jika ternyata juga bermasalah
+- [ ] Uji: buka preview-ismuba.html dengan siswa yang sudah ada nilai → pastikan ketiga nilai ISMUBA muncul
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -660,8 +706,9 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `dashboard/guru-kelas.html` | Nav item `edit-siswa-kelas.html` di seksi "Data Siswa" sidebar | v21 | Jalur navigasi ke halaman edit. Tidak masuk array `hasKelas6` (tampil untuk semua guru kelas). |
 | `index.html` | `style="display:none;"` pada `#statusLoading` | v22 | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.loading { display:flex }`. Lihat §15. |
 | `index.html` | `style="display:none;"` pada `#statusError` | v22 | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.error { display:flex }`. Lihat §15. |
+| `ujian-sekolah/preview-ismuba.html` | Komentar `// ANTIREGRESI v23` + blok `if(!m && fieldKey==='ismuba_pai')` di `getNilaiISMUBA()` | v23 | Alias search PAI/Al-Islam. Menghapusnya mengembalikan bug nilai Al-Islam kosong. Lihat §16. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 26 Mei 2026 (v22). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 26 Mei 2026 (v23). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

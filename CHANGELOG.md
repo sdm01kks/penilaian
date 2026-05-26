@@ -1,3 +1,46 @@
+## [2026-05-26] — v23 · Perbaikan Nilai Al-Islam Kosong di Preview & Cetak ISMUBA
+
+### 🐛 Perbaikan Regresi
+
+**Gejala:** Kolom "Pendidikan Al-Islam" di halaman Preview & Cetak ISMUBA (`ujian-sekolah/preview-ismuba.html`) selalu menampilkan `—` (kosong) meski nilai sudah diinput, sementara Preview & Cetak SKL menampilkan nilai PAI dengan benar.
+
+**Akar masalah — ketidakcocokan nama antar kurikulum:**
+
+"Pendidikan Al-Islam" (nama kurikulum Muhammadiyah) dan "Pendidikan Agama Islam dan Budi Pekerti" (nama Kurikulum Merdeka) adalah mata pelajaran yang sama tetapi dengan nama berbeda. Keduanya mengacu pada ID mapel yang sama di database.
+
+Fungsi `findMapelFuzzy()` di `preview-ismuba.html` memecah nama menjadi kata kunci, membuang stop words (`pendidikan`, `al`, `budi`, `pekerti`), lalu mencari irisan. Dengan kedua nama tersebut:
+- `"Pendidikan Agama Islam dan Budi Pekerti"` → kata kunci: `["agama","islam"]`
+- `"Pendidikan Al-Islam"` di database → tidak mengandung kata `"agama"`
+
+Irisan kosong → fuzzy match gagal → `getNilaiISMUBA` mengembalikan `null`.
+
+**Perbaikan — alias search untuk PAI/Al-Islam:**
+
+Setelah fuzzy match biasa, jika hasilnya `null` dan field yang dicari adalah `ismuba_pai`, dilakukan pencarian langsung menggunakan alias kata kunci:
+
+```javascript
+if(!m && fieldKey==='ismuba_pai'){
+  m = allMapel.find(mp => {
+    const n = mp.nama.toLowerCase();
+    return n.includes('al-islam') ||
+           n.includes('al islam') ||
+           (n.includes('agama') && n.includes('islam'));
+  });
+}
+```
+
+Pendekatan ini **tidak mengubah `findMapelFuzzy`** (digunakan banyak tempat), hanya menambah satu langkah fallback lokal di `getNilaiISMUBA` khusus untuk `ismuba_pai`. Preview SKL (`preview-skl.html`), Generate SKL (`generate-skl.html`), dan `sheets.js` tidak disentuh.
+
+### 📋 File yang Diubah (v23)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — tambah alias search PAI/Al-Islam di `getNilaiISMUBA()` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §16 (alias mapel lintas kurikulum), penanda kumulatif v23 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v23 ini |
+
+---
+
 ## [2026-05-26] — v22 · Perbaikan Bug Visual Halaman Login (Status Tampil Sebelum Login)
 
 ### 🐛 Perbaikan Regresi
