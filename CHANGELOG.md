@@ -1,3 +1,44 @@
+## [2026-05-27] — v25 · Rename ISMUBA → TKA, File preview-tka.html, Hapus Border Sertifikat
+
+### ✨ Fitur & Perubahan
+
+| # | Perubahan | Detail |
+|---|-----------|--------|
+| 1 | `preview-ismuba.html` → `preview-tka.html` | File baru sebagai halaman Preview & Cetak TKA. File `preview-ismuba.html` asli **tidak dihapus** — dipertahankan untuk halaman Preview & Cetak ISMUBA baru yang akan hadir. |
+| 2 | Semua nav "Preview & Cetak ISMUBA" → "Preview & Cetak TKA" | Diperbarui di 8 file (dashboard guru, dashboard admin, dan 6 halaman ujian-sekolah). |
+| 3 | Hapus border sertifikat TKA | `border:1px solid #000` dan `box-shadow:inset` pada `.cert-page` dihilangkan di `preview-tka.html`. Border tabel nilai di dalam dokumen **tetap ada**. |
+| 4 | Nav "Preview & Cetak ISMUBA" placeholder | Ditambahkan di semua sidebar sebagai item disabled (`opacity:.45; pointer-events:none`) sambil menunggu template ISMUBA baru. |
+
+### 🔧 Mekanisme Teknis
+
+**Strategi rename — copy, bukan move:**
+`preview-tka.html` adalah salinan `preview-ismuba.html` yang sudah dimodifikasi. File asli `preview-ismuba.html` dipertahankan utuh karena akan menjadi basis halaman ISMUBA baru dengan template berbeda. Dengan demikian tidak ada data/logika yang hilang, dan `navISMUBA` di `guru-kelas.html` sudah siap diaktifkan begitu halaman ISMUBA baru tersedia.
+
+**Border yang dihapus vs yang dipertahankan:**
+- ❌ Dihapus: `border:1px solid #000` dan `box-shadow:inset 0 0 0 4px #fff, inset 0 0 0 6px #000` pada `.cert-page` (frame kotak di sekeliling halaman)
+- ✅ Dipertahankan: `border:1px solid #000` pada `.cert-tbl th` dan `.cert-tbl td` (garis tabel nilai di dalam sertifikat)
+
+**navISMUBA di `guru-kelas.html`:**
+`navISMUBA` tetap ada di array `hasKelas6` dan mengarah ke `preview-ismuba.html`, namun saat ini `display:none`. Ini menyiapkan "slot" yang tinggal diaktifkan saat halaman ISMUBA baru siap — tanpa perlu menyentuh array `hasKelas6` lagi.
+
+### 📋 File yang Diubah (v25)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-tka.html` | **Baru** — salinan preview-ismuba dengan label TKA dan tanpa border |
+| `ujian-sekolah/preview-ismuba.html` | **Tidak diubah** — dipertahankan untuk halaman ISMUBA baru |
+| `dashboard/guru-kelas.html` | **Diubah** — tambah `navTKA` di sidebar dan array `hasKelas6` |
+| `dashboard/admin.html` | **Diubah** — nav TKA aktif, nav ISMUBA placeholder |
+| `ujian-sekolah/config-skl.html` | **Diubah** — nav TKA + ISMUBA placeholder |
+| `ujian-sekolah/leger-us.html` | **Diubah** — nav TKA + ISMUBA placeholder |
+| `ujian-sekolah/input-rata-rapor.html` | **Diubah** — nav TKA + ISMUBA placeholder |
+| `ujian-sekolah/preview-skl.html` | **Diubah** — nav TKA + ISMUBA placeholder |
+| `ujian-sekolah/generate-skl.html` | **Diubah** — nav TKA + ISMUBA placeholder |
+| `ANTIREGRESI.md` | **Diubah** — tambah §18 (strategi rename ISMUBA→TKA), penanda kumulatif v25 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v25 ini |
+
+---
+
 ## [2026-05-27] — v24 · Fitur Leger Nilai Ujian Sekolah
 
 ### ✨ Fitur Baru

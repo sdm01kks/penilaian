@@ -686,6 +686,41 @@ Tidak boleh ada operasi write (`SHEETS.write`, `SHEETS.append`, `valuesBatchWrit
 
 ---
 
+### 18. Rename Halaman ISMUBA → TKA — Strategi Copy, Bukan Move
+
+**Konteks:** Halaman `preview-ismuba.html` berfungsi ganda: dipakai untuk sertifikat TKA (Tes Kemampuan Akademik) ISMUBA, yang formatnya berbeda dari dokumen ISMUBA standar. Saat ini kedua dokumen menggunakan file yang sama, namun ke depan akan dipisah.
+
+**Strategi yang digunakan (v25):**
+- `preview-tka.html` = salinan `preview-ismuba.html` dengan label TKA dan tanpa border — **ini yang aktif digunakan**
+- `preview-ismuba.html` = file asli dipertahankan utuh — **akan menjadi basis halaman ISMUBA baru**
+
+**Yang TIDAK boleh dilakukan:**
+- Menghapus `preview-ismuba.html` — file ini akan dipakai untuk halaman ISMUBA baru
+- Menghapus `navISMUBA` dari array `hasKelas6` di `guru-kelas.html` — sudah disiapkan sebagai slot untuk halaman ISMUBA baru
+- Mengubah isi logika/JS di `preview-tka.html` tanpa menyinkronkan perubahan ke `preview-ismuba.html` jika perubahan menyangkut data (misalnya perubahan cara ambil nilai, perubahan mapping mapel)
+
+**Border di sertifikat TKA — dua jenis, perlakuan berbeda:**
+
+| Elemen | CSS | Status v25 |
+|--------|-----|------------|
+| Frame kotak sekeliling halaman A4 | `border:1px solid #000` + `box-shadow:inset ...` pada `.cert-page` | ❌ **Dihapus** |
+| Garis tabel nilai di dalam sertifikat | `border:1px solid #000` pada `.cert-tbl th/td` | ✅ **Dipertahankan** |
+
+**Penanda wajib di `ujian-sekolah/preview-tka.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| Komentar `/* ANTIREGRESI v25: border ... dihilangkan */` pada `.cert-page` | Mengingatkan bahwa tidak ada frame; jangan tambahkan kembali |
+| `href="preview-tka.html"` pada nav-item active | Self-link wajib mengarah ke `preview-tka.html`, bukan `preview-ismuba.html` |
+
+**Checklist saat halaman ISMUBA baru siap diaktifkan:**
+- [ ] Buat/modifikasi `preview-ismuba.html` dengan template baru
+- [ ] Aktifkan `navISMUBA` di `guru-kelas.html`: hapus `style="display:none;"` tidak perlu — sudah dihandle `hasKelas6`
+- [ ] Hapus `style="opacity:.45;pointer-events:none;"` dari semua nav placeholder ISMUBA di 8 file nav
+- [ ] Update ANTIREGRESI dan CHANGELOG
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -755,8 +790,11 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/leger-us.html` | Komentar `// ANTIREGRESI` + keterangan read-only di atas blok `<script>` | v24 | Wajib ada. Mengingatkan bahwa halaman ini tidak boleh memiliki operasi write. Lihat §17. |
 | `ujian-sekolah/leger-us.html` | `requireLogin(['admin', 'guru_kelas'])` — bukan hanya `'guru_kelas'` | v24 | Admin harus bisa mengakses leger ini. Lihat §17. |
 | `dashboard/guru-kelas.html` | `'navLegerUS'` di dalam array `hasKelas6` | v24 | Wajib masuk array; jika di luar array, menu muncul untuk semua guru kelas bukan hanya kelas 6. Lihat §17. |
+| `ujian-sekolah/preview-tka.html` | Komentar `/* ANTIREGRESI v25: border ... dihilangkan */` pada `.cert-page` | v25 | Mengingatkan tidak ada frame; jangan tambahkan kembali. Lihat §18. |
+| `ujian-sekolah/preview-tka.html` | `href="preview-tka.html"` pada nav-item active (self-link) | v25 | Wajib; jika kembali ke `preview-ismuba.html` maka navigasi aktif salah. Lihat §18. |
+| `dashboard/guru-kelas.html` | `navISMUBA` tetap di array `hasKelas6` (walaupun saat ini mengarah ke file yang belum aktif) | v25 | Slot yang disiapkan untuk halaman ISMUBA baru — jangan dihapus dari array. Lihat §18. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 27 Mei 2026 (v24). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 27 Mei 2026 (v25). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
