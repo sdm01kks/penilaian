@@ -298,6 +298,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" id="navGenerateSKL" href="../ujian-sekolah/generate-skl.html" style="display:none;">
     <span class="nav-icon">📄</span> Generate Dokumen SKL
   </a>
+  <a class="nav-item" id="navLegerUS" href="../ujian-sekolah/leger-us.html" style="display:none;">
+    <span class="nav-icon">📋</span> Leger Nilai Ujian Sekolah
+  </a>
 
   <div class="sidebar-section-label">Kurikulum</div>
   <a class="nav-item" href="../setup/mapel-tp.html">
@@ -465,7 +468,7 @@ window.addEventListener('load', async () => {
   const kelasList = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
   const hasKelas6 = kelasList.some(k => String(k).startsWith('6'));
   if (hasKelas6) {
-    ['navSAJLabel','navConfigSKL','navRataRapor','navNilaiUS','navSKL','navISMUBA','navGenerateSKL','cardSAJ'].forEach(id => {
+    ['navSAJLabel','navConfigSKL','navRataRapor','navNilaiUS','navSKL','navISMUBA','navGenerateSKL','navLegerUS','cardSAJ'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
