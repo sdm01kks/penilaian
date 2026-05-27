@@ -641,6 +641,51 @@ if(!m && fieldKey === 'ismuba_pai'){
 
 ---
 
+### 17. Halaman Read-Only SAJ — Formula `hitungNilaiUS` Harus Konsisten di Tiga Tempat
+
+**Mengapa berisiko:** Formula `hitungNilaiUS(nt, np, bt, bp)` digunakan di tiga halaman berbeda untuk menghitung nilai akhir ujian sekolah dari komponen tertulis dan praktik:
+
+| Halaman | Konteks penggunaan |
+|---------|--------------------|
+| `ujian-sekolah/generate-skl.html` | Nilai yang dicetak di dokumen SKL & ijazah |
+| `ujian-sekolah/preview-skl.html` | Pratinjau nilai sebelum cetak |
+| `ujian-sekolah/leger-us.html` | Leger rekap nilai per siswa per mapel |
+
+Jika formula di salah satu halaman diubah tanpa menyamakan di tempat lain, akan terjadi inkonsistensi: nilai di leger berbeda dengan nilai di SKL yang sudah dicetak.
+
+**Formula yang wajib identik di ketiga halaman:**
+```javascript
+function hitungNilaiUS(nt, np, bt, bp) {
+  const hasT = nt !== null && nt !== undefined;
+  const hasP = np !== null && np !== undefined;
+  if (!hasT && !hasP) return null;
+  if (!hasT) return np;
+  if (!hasP) return nt;
+  return (nt * bt / 100) + (np * bp / 100);
+}
+```
+
+**Sumber bobot:** Selalu dari config SKL (`skl_bobot_us_tertulis`, default 60; `skl_bobot_us_praktik`, default 40). Jangan hardcode angka bobot di halaman manapun.
+
+**Halaman `leger-us.html` bersifat READ-ONLY:**
+Tidak boleh ada operasi write (`SHEETS.write`, `SHEETS.append`, `valuesBatchWrite`, `saveNilai*`) di halaman ini. Halaman ini hanya membaca `NILAI_US` dan `SISWA`.
+
+**Penanda kumulatif wajib di `ujian-sekolah/leger-us.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| Komentar `// ANTIREGRESI` di atas script | Mencantumkan sifat read-only dan sumber formula |
+| `requireLogin(['admin', 'guru_kelas'])` | Bukan hanya `'guru_kelas'`; admin harus bisa akses |
+| `navLegerUS` di array `hasKelas6` di `guru-kelas.html` | Wajib; menghapusnya menyebabkan menu muncul untuk semua guru |
+
+**Checklist jika memperbarui formula bobot US di masa depan:**
+- [ ] Ubah di `generate-skl.html` → `hitungNilaiUS`
+- [ ] Ubah di `preview-skl.html` → `hitungNilaiUS` / `fmtTgl`
+- [ ] Ubah di `leger-us.html` → `hitungNilaiUS`
+- [ ] Pastikan sumber bobot tetap dari config, bukan hardcoded
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -707,8 +752,11 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `index.html` | `style="display:none;"` pada `#statusLoading` | v22 | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.loading { display:flex }`. Lihat §15. |
 | `index.html` | `style="display:none;"` pada `#statusError` | v22 | Wajib ada. Tanpanya elemen tampil otomatis karena `.status-msg.error { display:flex }`. Lihat §15. |
 | `ujian-sekolah/preview-ismuba.html` | Komentar `// ANTIREGRESI v23` + blok `if(!m && fieldKey==='ismuba_pai')` di `getNilaiISMUBA()` | v23 | Alias search PAI/Al-Islam. Menghapusnya mengembalikan bug nilai Al-Islam kosong. Lihat §16. |
+| `ujian-sekolah/leger-us.html` | Komentar `// ANTIREGRESI` + keterangan read-only di atas blok `<script>` | v24 | Wajib ada. Mengingatkan bahwa halaman ini tidak boleh memiliki operasi write. Lihat §17. |
+| `ujian-sekolah/leger-us.html` | `requireLogin(['admin', 'guru_kelas'])` — bukan hanya `'guru_kelas'` | v24 | Admin harus bisa mengakses leger ini. Lihat §17. |
+| `dashboard/guru-kelas.html` | `'navLegerUS'` di dalam array `hasKelas6` | v24 | Wajib masuk array; jika di luar array, menu muncul untuk semua guru kelas bukan hanya kelas 6. Lihat §17. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 26 Mei 2026 (v23). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 27 Mei 2026 (v24). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

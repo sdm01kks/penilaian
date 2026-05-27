@@ -1,3 +1,49 @@
+## [2026-05-27] — v24 · Fitur Leger Nilai Ujian Sekolah
+
+### ✨ Fitur Baru
+
+| # | File | Deskripsi |
+|---|------|-----------|
+| 1 | `ujian-sekolah/leger-us.html` *(baru)* | Halaman leger (rekap tabel) nilai akhir ujian sekolah per siswa per mata pelajaran, khusus kelas 6. Dapat diakses oleh guru kelas yang mengampu kelas 6 dan admin. |
+
+### 📐 Struktur Tabel Leger
+
+| Kolom | Sumber Data |
+|-------|-------------|
+| No, Nama Siswa, NISN | `SISWA` sheet via `SHEETS.getSiswa()` |
+| Nilai Akhir US per mapel | `NILAI_US` sheet via `SHEETS.getNilaiUS()` · formula `hitungNilaiUS(nt, np, bt, bp)` |
+| Nilai Rata-rata | Rata-rata nilai akhir US seluruh mapel per siswa |
+| Peringkat | Ranking berdasarkan Nilai Rata-rata (🥇🥈🥉 untuk 3 besar) |
+| Baris Rata-rata Kelas | Rata-rata per mapel dari seluruh siswa di kelas |
+
+Mapel Tahsin/Tahfizh dikecualikan dari tabel (konsisten dengan `input-nilai-us.html`).
+
+### 🔧 Mekanisme Teknis
+
+**Formula `hitungNilaiUS` identik dengan `generate-skl.html` dan `preview-skl.html`:**
+Bobot tertulis dan praktik diambil dari config SKL (`skl_bobot_us_tertulis`, `skl_bobot_us_praktik`), sehingga angka di leger selalu konsisten dengan angka di dokumen SKL dan ijazah.
+
+**Read-only — tidak ada write apapun:**
+Halaman ini murni membaca `NILAI_US` dan `SISWA`. Tidak ada `SHEETS.write()`, `SHEETS.append()`, maupun `valuesBatchWrite()`.
+
+**Akses & filter:**
+- `requireLogin(['admin', 'guru_kelas'])` — kedua role dapat mengakses
+- Guru kelas: filter otomatis ke kelas sendiri; hanya tampil kelas 6
+- Admin: semua kelas 6 tersedia; link dashboard mengarah ke admin dashboard
+- Di sidebar guru kelas: menu muncul via `hasKelas6` — tidak tampil untuk guru kelas non-6
+
+### 📋 File yang Diubah (v24)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/leger-us.html` | **Baru** — halaman leger nilai ujian sekolah |
+| `dashboard/guru-kelas.html` | **Diubah** — tambah `navLegerUS` di sidebar + masuk array `hasKelas6` |
+| `dashboard/admin.html` | **Diubah** — tambah link leger-us di seksi "Ujian Sekolah / SAJ" sidebar |
+| `ANTIREGRESI.md` | **Diubah** — tambah §17 (halaman read-only SAJ), penanda kumulatif v24 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v24 ini |
+
+---
+
 ## [2026-05-26] — v23 · Perbaikan Nilai Al-Islam Kosong di Preview & Cetak ISMUBA
 
 ### 🐛 Perbaikan Regresi
