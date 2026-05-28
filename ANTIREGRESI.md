@@ -721,6 +721,54 @@ Tidak boleh ada operasi write (`SHEETS.write`, `SHEETS.append`, `valuesBatchWrit
 
 ---
 
+### 19. Syahadah ISMUBA — Dua `cert-page` per Siswa, Nilai Identik dengan TKA
+
+**Struktur dokumen:** Setiap siswa menghasilkan 2 halaman cetak (2 elemen `.cert-page`):
+- Halaman 1: Syahadah (identitas, kalimat lulus, tanda tangan)
+- Halaman 2: Daftar Nilai (tabel 3 mapel, jumlah, rata-rata, tanda tangan)
+
+**Nilai identik dengan `preview-tka.html`:**
+Fungsi `getNilaiISMUBA()` di `preview-ismuba.html` harus selalu identik dengan yang ada di `preview-tka.html` — termasuk ANTIREGRESI v23 (alias search Al-Islam/PAI). Jika logika nilai diubah di salah satu, wajib disamakan di keduanya.
+
+| File | Fungsi yang harus identik |
+|------|--------------------------|
+| `ujian-sekolah/preview-tka.html` | `getNilaiISMUBA()` + alias search v23 |
+| `ujian-sekolah/preview-ismuba.html` | `getNilaiISMUBA()` + alias search v23 |
+
+**Tidak ada border/frame pada cert-page:** Lihat §18 — berlaku juga untuk `preview-ismuba.html`.
+
+**Config keys Syahadah (wajib ada di sheet CONFIG):**
+
+| Key | Keterangan |
+|-----|------------|
+| `ismuba_pwm_nama` | Nama Pimpinan Wilayah Muhammadiyah |
+| `ismuba_ketua_nama` | Nama Ketua Majelis Dikdasmen & PNF PWM |
+| `ismuba_ketua_nbm` | NBM Ketua Majelis |
+| `ismuba_tgl_mulai` | Tanggal mulai pelaksanaan TKA |
+| `ismuba_tgl_selesai` | Tanggal selesai pelaksanaan TKA |
+| `ismuba_tgl_ttd_hijri` | Tanggal tanda tangan dalam kalender Hijriah |
+| `ismuba_tgl_ttd_masehi` | Tanggal tanda tangan dalam kalender Masehi |
+| `ismuba_no_sertif_prefix` | Prefix nomor sertifikat |
+| `ismuba_nama_sekolah` | Nama sekolah yang tercetak di dokumen ISMUBA |
+
+Semua key ini disimpan dan dibaca via `SHEETS.getConfig()` / `SHEETS.saveConfig()` — tidak ada hardcode di JS.
+
+**Penanda wajib di `ujian-sekolah/preview-ismuba.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| `// ANTIREGRESI v26` di blok script | Menyebutkan sifat read-only dan sumber formula |
+| `// ANTIREGRESI v23` di `getNilaiISMUBA()` | Alias search Al-Islam wajib dipertahankan |
+| `border:none;box-shadow:none` pada `.cert-page` | Tidak ada frame halaman |
+
+**Checklist jika mengubah `preview-ismuba.html` di masa depan:**
+- [ ] Pastikan `getNilaiISMUBA()` tetap identik dengan `preview-tka.html`
+- [ ] Pastikan tidak ada `SHEETS.write/append/valuesBatchWrite` di halaman ini
+- [ ] Pastikan `border:none;box-shadow:none` pada `.cert-page` tidak dihapus
+- [ ] Jika ada config key baru, tambahkan juga ke array `KEYS_TO_SAVE` di `config-skl.html`
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -793,8 +841,11 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/preview-tka.html` | Komentar `/* ANTIREGRESI v25: border ... dihilangkan */` pada `.cert-page` | v25 | Mengingatkan tidak ada frame; jangan tambahkan kembali. Lihat §18. |
 | `ujian-sekolah/preview-tka.html` | `href="preview-tka.html"` pada nav-item active (self-link) | v25 | Wajib; jika kembali ke `preview-ismuba.html` maka navigasi aktif salah. Lihat §18. |
 | `dashboard/guru-kelas.html` | `navISMUBA` tetap di array `hasKelas6` (walaupun saat ini mengarah ke file yang belum aktif) | v25 | Slot yang disiapkan untuk halaman ISMUBA baru — jangan dihapus dari array. Lihat §18. |
+| `ujian-sekolah/preview-ismuba.html` | Komentar `// ANTIREGRESI v26` di atas blok script (read-only, sumber formula) | v26 | Wajib ada. Mengingatkan tidak ada write dan formula harus identik dengan preview-tka.html. Lihat §19. |
+| `ujian-sekolah/preview-ismuba.html` | `getNilaiISMUBA()` identik dengan `preview-tka.html` termasuk alias search v23 | v26 | Jika diubah di satu file, wajib disamakan di keduanya. Lihat §19. |
+| `ujian-sekolah/config-skl.html` | 10 config key Syahadah baru ada di form dan di array `KEYS_TO_SAVE` | v26 | Wajib ada keduanya. Jika hanya di form tapi tidak di array, nilai tidak tersimpan. Lihat §19. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 27 Mei 2026 (v25). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 28 Mei 2026 (v26). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

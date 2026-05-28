@@ -1,3 +1,66 @@
+## [2026-05-28] — v26 · Halaman Syahadah ISMUBA (preview-ismuba.html)
+
+### ✨ Fitur Baru
+
+| # | File | Deskripsi |
+|---|------|-----------|
+| 1 | `ujian-sekolah/preview-ismuba.html` *(baru)* | Halaman Preview & Cetak Syahadah ISMUBA — ijazah ISMUBA 2 halaman per siswa: Halaman 1 (Syahadah) dan Halaman 2 (Daftar Nilai). |
+| 2 | `ujian-sekolah/config-skl.html` | Tambah 10 config key baru untuk Syahadah: nama PWM, ketua majelis, tanggal TKA, tanggal TTD (Hijriah & Masehi), prefix nomor sertifikat, nama sekolah. |
+
+### 📄 Struktur Dokumen Syahadah (2 halaman per siswa)
+
+**Halaman 1 — Syahadah:**
+Logo PP Muh + SDM · Nama organisasi dan PWM · Judul "SYAHADAH" dengan Basmalah Arab ·
+Identitas siswa (nama caps, TTL caps, nama orang tua, NISN, sekolah asal, NPSN) ·
+Kalimat lulus TKA dengan tanggal pelaksanaan · Tanggal TTD Hijriah/Masehi ·
+Dua kolom tanda tangan (Ketua Majelis Dikdasmen & PNF PWM ← Pas Foto 3×4 → Kepala Sekolah)
+
+**Halaman 2 — Daftar Nilai:**
+Judul "Daftar Nilai TKA ISMUBA" · Identitas siswa · Tabel nilai 3 mapel (angka + huruf terbilang) ·
+Baris Jumlah dan Rata-rata · Dua kolom tanda tangan
+
+### 🔧 Mekanisme Teknis
+
+**Nilai dari `getNilaiISMUBA` — identik dengan `preview-tka.html`:**
+Termasuk fix ANTIREGRESI v23 (alias search Al-Islam/PAI). Tidak ada duplikasi logika baru.
+
+**Terbilang:** Fungsi `terbilang()` lokal mengkonversi angka ke kata Indonesia.
+Rata-rata dengan desimal ditampilkan sebagai "Delapan puluh sembilan koma tiga puluh tiga".
+
+**Tidak ada border/frame:** CSS `.cert-page` menggunakan `border:none; box-shadow:none` (lihat §18).
+
+**Config keys baru (diisi di halaman Konfigurasi SKL):**
+
+| Key | Keterangan | Contoh |
+|-----|------------|--------|
+| `ismuba_pwm_nama` | Nama PWM | Jawa Barat |
+| `ismuba_ketua_nama` | Nama ketua majelis | Drs. Nur Komarudin, M.M.Pd. |
+| `ismuba_ketua_nbm` | NBM ketua majelis | 555.835 |
+| `ismuba_tgl_mulai` | Tanggal mulai TKA | 1 Maret 2026 |
+| `ismuba_tgl_selesai` | Tanggal selesai TKA | 5 Maret 2026 |
+| `ismuba_tgl_ttd_hijri` | Tanggal TTD Hijriah | 11 Syawal 1447 H |
+| `ismuba_tgl_ttd_masehi` | Tanggal TTD Masehi | 30 Maret 2026 M |
+| `ismuba_no_sertif_prefix` | Prefix nomor sertifikat | No. |
+| `ismuba_nama_sekolah` | Nama sekolah untuk dokumen ISMUBA | SD Muhammadiyah 01 Kukusan |
+
+### 📋 File yang Diubah (v26)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Baru** — halaman Syahadah ISMUBA 2 halaman |
+| `ujian-sekolah/config-skl.html` | **Diubah** — tambah 10 config key baru Syahadah |
+| `ujian-sekolah/preview-tka.html` | **Diubah** — tambah nav item ISMUBA di sidebar |
+| `ujian-sekolah/preview-skl.html` | **Diubah** — aktifkan nav ISMUBA (hapus disabled) |
+| `ujian-sekolah/generate-skl.html` | **Diubah** — aktifkan nav ISMUBA |
+| `ujian-sekolah/leger-us.html` | **Diubah** — aktifkan nav ISMUBA |
+| `ujian-sekolah/input-rata-rapor.html` | **Diubah** — aktifkan nav ISMUBA |
+| `ujian-sekolah/config-skl.html` | **Diubah** — aktifkan nav ISMUBA |
+| `dashboard/admin.html` | **Diubah** — aktifkan nav ISMUBA |
+| `ANTIREGRESI.md` | **Diubah** — tambah §19 (Syahadah 2 halaman), update v26 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v26 ini |
+
+---
+
 ## [2026-05-27] — v25 · Rename ISMUBA → TKA, File preview-tka.html, Hapus Border Sertifikat
 
 ### ✨ Fitur & Perubahan
