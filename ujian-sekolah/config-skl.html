@@ -94,7 +94,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
   <a class="nav-item" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
   <a class="nav-item" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview &amp; Cetak SKL</a>
   <a class="nav-item" href="preview-tka.html"><span class="nav-icon">📜</span> Preview &amp; Cetak TKA</a>
-  <a class="nav-item" href="preview-ismuba.html" style="opacity:.45;pointer-events:none;" title="Segera hadir"><span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA</a>
+  <a class="nav-item" href="preview-ismuba.html"><span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA</a>
   <a class="nav-item" href="generate-skl.html"><span class="nav-icon">📄</span> Generate Dokumen SKL</a>
   <a class="nav-item active" href="config-skl.html"><span class="nav-icon">⚙️</span> Konfigurasi SKL</a>
   <div class="sidebar-section-label">Kembali</div>
@@ -297,6 +297,42 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
         <label>NBM Kepala Sekolah</label>
         <input type="text" id="ismuba_kepsek_nbm" placeholder="1167327">
       </div>
+      <div class="form-group">
+        <label>Nama PWM <span class="hint">[ismuba_pwm_nama]</span></label>
+        <input type="text" id="ismuba_pwm_nama" placeholder="Jawa Barat" value="Jawa Barat">
+      </div>
+      <div class="form-group">
+        <label>Nama Ketua Majelis Dikdasmen &amp; PNF PWM</label>
+        <input type="text" id="ismuba_ketua_nama" placeholder="Drs. Nur Komarudin, M.M.Pd.">
+      </div>
+      <div class="form-group">
+        <label>NBM Ketua Majelis</label>
+        <input type="text" id="ismuba_ketua_nbm" placeholder="555.835">
+      </div>
+      <div class="form-group">
+        <label>Tanggal Mulai TKA</label>
+        <input type="text" id="ismuba_tgl_mulai" placeholder="1 Maret 2026">
+      </div>
+      <div class="form-group">
+        <label>Tanggal Selesai TKA</label>
+        <input type="text" id="ismuba_tgl_selesai" placeholder="5 Maret 2026">
+      </div>
+      <div class="form-group">
+        <label>Tanggal TTD — Hijriah</label>
+        <input type="text" id="ismuba_tgl_ttd_hijri" placeholder="11 Syawal 1447 H">
+      </div>
+      <div class="form-group">
+        <label>Tanggal TTD — Masehi</label>
+        <input type="text" id="ismuba_tgl_ttd_masehi" placeholder="30 Maret 2026 M">
+      </div>
+      <div class="form-group">
+        <label>Prefix No. Sertifikat</label>
+        <input type="text" id="ismuba_no_sertif_prefix" placeholder="No. ">
+      </div>
+      <div class="form-group">
+        <label>Nama Sekolah (untuk dokumen ISMUBA)</label>
+        <input type="text" id="ismuba_nama_sekolah" placeholder="SD Muhammadiyah 01 Kukusan">
+      </div>
     </div>
     <div style="margin-top:14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-muted);margin-bottom:8px;">Pemetaan Mapel ISMUBA</div>
     <div class="form-grid">
@@ -333,6 +369,9 @@ const SKL_KEYS = [
   // ISMUBA
   'ismuba_no_se','ismuba_tahun_ajaran','ismuba_no_sk_pwm','ismuba_tgl_sk',
   'ismuba_tgl_penetapan','ismuba_kota','ismuba_npsn','ismuba_kepsek_nama','ismuba_kepsek_nbm',
+  'ismuba_pwm_nama','ismuba_ketua_nama','ismuba_ketua_nbm',
+  'ismuba_tgl_mulai','ismuba_tgl_selesai','ismuba_tgl_ttd_hijri','ismuba_tgl_ttd_masehi',
+  'ismuba_no_sertif_prefix','ismuba_nama_sekolah',
   'map_ismuba_pai','map_ismuba_kmmd','map_ismuba_arab',
 ];
 
