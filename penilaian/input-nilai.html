@@ -1224,8 +1224,15 @@ async function simpanTP(tpIdx) {
 
   showLoading('Menyimpan ' + toSave.length + ' nilai TP ' + (tpIdx+1) + '…');
   try {
-    // Baca semua baris NILAI untuk deteksi existing
+    // Baca semua baris NILAI untuk deteksi existing.
+    // ANTIREGRESI §20: kumpulkan toUpdate/toAppend terlebih dahulu,
+    // eksekusi batch SETELAH loop — bukan per-item API call di dalam loop.
     const rows = await SHEETS.read('NILAI!A:K');
+
+    const toUpdate     = [];  // baris yang perlu diperbarui (existing row)
+    const toAppend     = [];  // baris baru (INSERT via append)
+    const nilaiDBLocal = {};  // perubahan nilaiDB diterapkan setelah batch berhasil
+    let _saveSeq       = 0;   // counter ID unik; lihat ANTIREGRESI §9 & §20
 
     for (const item of toSave) {
       // Cek apakah sudah ada baris ini
@@ -1242,11 +1249,10 @@ async function simpanTP(tpIdx) {
       // Handle hapus (nilai dikosongkan)
       if (item.hapus) {
         if (existIdx > 1) {
-          await SHEETS.write('NILAI!A' + (existIdx+1) + ':K' + (existIdx+1),
-            [Array(11).fill('')]);
+          toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [Array(11).fill('')]]);
           rows[existIdx] = Array(11).fill('');
         }
-        delete nilaiDB[item.id_siswa + '|' + tp.id_tp];
+        nilaiDBLocal[item.id_siswa + '|' + tp.id_tp] = null; // null = hapus dari nilaiDB
         continue;
       }
 
@@ -1267,18 +1273,36 @@ async function simpanTP(tpIdx) {
 
       if (existIdx > 1) {
         row[0] = rows[existIdx][0]; // pertahankan ID
-        await SHEETS.write('NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]);
+        toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]]);
       } else {
-        row[0] = 'NL' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
-        // Hitung baris berikutnya min row 3 agar slice(2) di getNilai selalu membacanya
-        const nextNilaiRow = Math.max(rows.length + 1, 3);
-        await SHEETS.write('NILAI!A' + nextNilaiRow + ':K' + nextNilaiRow, [row]);
-        rows.push(row);
+        // ANTIREGRESI §20: pakai append() (bukan write()) untuk INSERT baris baru.
+        // MENGAPA: write() / values.update (PUT) gagal error 400 jika nomor baris
+        // melewati batas alokasi fisik sheet (sheet tidak auto-extend via PUT).
+        // append() / values.append otomatis memperluas sheet — tidak pernah 400.
+        // Counter _saveSeq menjamin ID unik dalam satu batch (Date.now() identik
+        // di semua iterasi loop sinkron — birthday paradox jika pakai Math.random saja).
+        row[0] = 'NL' + Date.now().toString(36) + (_saveSeq++).toString(36).padStart(3,'0');
+        toAppend.push(row);
+        rows.push(row); // wajib: jaga local rows agar findIndex berikutnya tidak duplikat
       }
 
-      // Update nilaiDB lokal
-      const key = item.id_siswa + '|' + tp.id_tp;
-      nilaiDB[key] = { slm: item.slm, sas: item.sas };
+      nilaiDBLocal[item.id_siswa + '|' + tp.id_tp] = { slm: item.slm, sas: item.sas };
+    }
+
+    // Eksekusi batch setelah loop selesai — ANTIREGRESI §20
+    // Maks 2 API call total (valuesBatchWrite + append), bukan N call per-item
+    const CHUNK = 100;
+    for (let i = 0; i < toUpdate.length; i += CHUNK) {
+      await SHEETS.valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+    }
+    if (toAppend.length) {
+      await SHEETS.append('NILAI!A1', toAppend); // A1 anchor wajib — lihat §3 & §9
+    }
+
+    // Terapkan perubahan nilaiDB lokal setelah seluruh batch berhasil
+    for (const [key, val] of Object.entries(nilaiDBLocal)) {
+      if (val === null) delete nilaiDB[key];
+      else nilaiDB[key] = val;
     }
 
     // Bersihkan buffer untuk TP ini
