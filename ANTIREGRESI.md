@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v27 | `penilaian/input-nilai.html` | `simpanTP()` — gagal simpan SLM/SAS error 400 | `write()` / values.update (PUT) dipakai untuk INSERT baris baru; gagal 400 jika nomor baris melewati batas alokasi fisik sheet. Per-item API call dalam loop (`eksekusiImport` diperbaiki v18 tapi `simpanTP` terlewat). |
 | v21 | `siswa/edit-siswa-kelas.html` *(baru)* | Tombol simpan gagal dengan error 403 | `simpanSemua()` memanggil `SHEETS.read()` ulang di dalam fungsi save — request read kedua dalam sesi aktif memicu 403. Diperbaiki dengan cache-first pattern (§14). |
 | v20 | `dashboard/guru-mapel.html` | Menu SAJ tidak muncul untuk guru PAI/B.Arab/KMH yang juga mengajar TT | Kondisi `!isTTGuru` terlalu luas — memblokir semua guru TT, termasuk yang juga mengajar mapel lain di kelas 6 |
 | v19 | `ujian-sekolah/config-skl.html`, `dashboard/guru-kelas.html`, `ujian-sekolah/input-nilai-us.html` | Akses Konfigurasi SKL guru kelas 6 + sinkronisasi bobot | `requireLogin` hanya mengizinkan `admin`; menu tidak ada di dashboard; input bobot editable di halaman yang salah; `updateBobot()` tidak dipanggil setelah config dimuat |
@@ -769,6 +770,119 @@ Semua key ini disimpan dan dibaca via `SHEETS.getConfig()` / `SHEETS.saveConfig(
 
 ---
 
+### 20. `simpanTP()` di `input-nilai.html` — Pakai Batch, Bukan Per-Row Write ⚠️ BERULANG
+
+**Mengapa berisiko:** `simpanTP()` adalah fungsi simpan utama untuk nilai SLM & SAS. Bug 400 ini pernah muncul, tampak sembuh sendiri (karena dicoba di sheet yang kecil), lalu muncul kembali saat sheet NILAI sudah besar (ribuan baris). Kodenya hampir identik dengan anti-pattern yang diperbaiki di `eksekusiImport` (v18/§9), namun terlewat saat itu.
+
+**Dua lapisan masalah yang saling terkait:**
+
+**Lapisan 1 — `write()` untuk INSERT baris baru:**
+
+Google Sheets API `values.update` (HTTP PUT) hanya bekerja pada sel/baris yang **sudah teralokasi** di dalam sheet. Jika sheet NILAI hanya punya 4027 baris teralokasi, menulis ke baris 4028 via PUT → **HTTP 400 Bad Request**. Bug ini laten: tidak muncul di awal semester (sheet kecil), muncul setelah berbulan-bulan penggunaan.
+
+`values.append` (HTTP POST, dipakai `SHEETS.append()`) **otomatis memperluas sheet** — tidak pernah 400 karena batas baris.
+
+```javascript
+// ❌ SALAH — KODE LAMA yang menyebabkan error 400
+const nextNilaiRow = Math.max(rows.length + 1, 3);
+await SHEETS.write('NILAI!A' + nextNilaiRow + ':K' + nextNilaiRow, [row]);
+// Error: "Sheets write error 400: NILAI!A4028:K4028"
+// Terjadi karena sheet tidak memiliki baris 4028 teralokasi.
+
+// ✅ BENAR — pakai append() untuk baris baru (ANTIREGRESI §20)
+toAppend.push(row);
+// ...setelah loop:
+await SHEETS.append('NILAI!A1', toAppend); // auto-extend sheet, tidak pernah 400
+```
+
+**Lapisan 2 — Per-item API call dalam loop:**
+
+Memanggil `await SHEETS.write()` di dalam `for (const item of toSave)` menghasilkan N API call untuk N siswa. Identik dengan pola yang menyebabkan 429 di `eksekusiImport` (v18/§9).
+
+**Pola wajib sejak v27 — batch identik dengan `eksekusiImport` (§9):**
+
+```javascript
+// Sebelum loop: siapkan akumulator
+const toUpdate     = [];
+const toAppend     = [];
+const nilaiDBLocal = {};
+let _saveSeq       = 0;  // counter ID unik — wajib (bukan Math.random)
+
+for (const item of toSave) {
+  const existIdx = rows.findIndex(...);
+
+  if (item.hapus) {
+    if (existIdx > 1) {
+      toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [Array(11).fill('')]]);
+      rows[existIdx] = Array(11).fill('');
+    }
+    nilaiDBLocal[key] = null;
+    continue;
+  }
+
+  if (existIdx > 1) {
+    row[0] = rows[existIdx][0];
+    toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]]);
+  } else {
+    // Counter _saveSeq wajib — Date.now() identik di semua iterasi loop sinkron
+    row[0] = 'NL' + Date.now().toString(36) + (_saveSeq++).toString(36).padStart(3,'0');
+    toAppend.push(row);
+    rows.push(row); // wajib: cegah duplikat findIndex di iterasi berikutnya
+  }
+  nilaiDBLocal[key] = { slm: item.slm, sas: item.sas };
+}
+
+// Eksekusi batch SETELAH loop — maks 2 API call total
+const CHUNK = 100;
+for (let i = 0; i < toUpdate.length; i += CHUNK) {
+  await SHEETS.valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+}
+if (toAppend.length) {
+  await SHEETS.append('NILAI!A1', toAppend); // A1 anchor wajib (lihat §3)
+}
+
+// Terapkan nilaiDB SETELAH batch berhasil (bukan di dalam loop)
+for (const [key, val] of Object.entries(nilaiDBLocal)) {
+  if (val === null) delete nilaiDB[key];
+  else nilaiDB[key] = val;
+}
+```
+
+**Perbedaan penting dengan `eksekusiImport` (§9):**
+
+| Aspek | `eksekusiImport` (§9) | `simpanTP` (§20) |
+|-------|----------------------|------------------|
+| Scope ID counter | `_importSeq` | `_saveSeq` |
+| Hapus data | Tidak ada | Ada — baris hapus juga masuk `toUpdate` dengan `Array(11).fill('')` |
+| Scope nilaiDB | Langsung di dalam loop | Akumulasi `nilaiDBLocal`, terapkan setelah batch |
+
+**Penanda kode wajib di `penilaian/input-nilai.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| `const toUpdate = []; const toAppend = [];` **sebelum** `for (const item of toSave)` | Akumulator batch — wajib ada sebelum loop |
+| `let _saveSeq = 0;` **sebelum** loop | Counter ID unik — wajib di luar loop |
+| `// ANTIREGRESI §20: pakai append()...` di komentar blok else INSERT | Penanda wajib; mengingatkan alasan pakai append, bukan write |
+| `rows.push(row)` di cabang INSERT (else) | Wajib — cegah duplikat findIndex iterasi berikutnya |
+| `await SHEETS.append('NILAI!A1', toAppend)` **setelah** loop | Anchor A1 wajib; bukan `'NILAI!A:K'` atau tanpa anchor |
+| Tidak ada `await SHEETS.write(...)` di dalam `for (const item of toSave)` | Wajib — per-row write → 400 atau 429 |
+
+**Kapan risiko meningkat:** Setiap kali `simpanTP()` di `penilaian/input-nilai.html` diedit — untuk menambah kolom baru, mengubah logika perhitungan, atau menyesuaikan filter.
+
+**Checklist wajib setelah mengubah `simpanTP()`:**
+- [ ] Pastikan `toUpdate`, `toAppend`, `nilaiDBLocal`, dan `_saveSeq` dideklarasikan **sebelum** loop
+- [ ] Pastikan tidak ada `await SHEETS.write(...)` atau `await SHEETS.append(...)` **di dalam** `for (const item of toSave)`
+- [ ] Pastikan INSERT menggunakan `toAppend.push(row)` bukan `SHEETS.write()` ke nomor baris tertentu
+- [ ] Pastikan `rows.push(row)` ada di cabang INSERT
+- [ ] Pastikan eksekusi `valuesBatchWrite` dan `append('NILAI!A1', ...)` ada **setelah** loop
+- [ ] Pastikan `nilaiDB` diperbarui dari `nilaiDBLocal` setelah batch berhasil, bukan di dalam loop
+- [ ] Uji dengan kelas yang sudah punya banyak data nilai (semester sudah berjalan lama)
+- [ ] Uji simpan SLM saja (tanpa SAS) → harus berhasil
+- [ ] Uji simpan SLM + SAS sekaligus → harus berhasil
+- [ ] Uji hapus nilai (kosongkan SLM) → harus berhasil tanpa error
+
+---
+
 ### Sebelum mengubah `assets/js/sheets.js`:
 - [ ] Catat semua fungsi yang akan ditambah/dihapus/dipindah
 - [ ] Siapkan perubahan blok `return { … }` yang sepadan
@@ -844,8 +958,13 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/preview-ismuba.html` | Komentar `// ANTIREGRESI v26` di atas blok script (read-only, sumber formula) | v26 | Wajib ada. Mengingatkan tidak ada write dan formula harus identik dengan preview-tka.html. Lihat §19. |
 | `ujian-sekolah/preview-ismuba.html` | `getNilaiISMUBA()` identik dengan `preview-tka.html` termasuk alias search v23 | v26 | Jika diubah di satu file, wajib disamakan di keduanya. Lihat §19. |
 | `ujian-sekolah/config-skl.html` | 10 config key Syahadah baru ada di form dan di array `KEYS_TO_SAVE` | v26 | Wajib ada keduanya. Jika hanya di form tapi tidak di array, nilai tidak tersimpan. Lihat §19. |
+| `penilaian/input-nilai.html` | `const toUpdate = []; const toAppend = []; const nilaiDBLocal = {}; let _saveSeq = 0;` **sebelum** `for (const item of toSave)` di `simpanTP()` | v27 | Wajib ada sebelum loop. Jika dihapus, per-row write → error 400 untuk sheet besar atau 429 rate limit. Lihat §20. |
+| `penilaian/input-nilai.html` | `// ANTIREGRESI §20: pakai append()...` di komentar blok INSERT di `simpanTP()` | v27 | Penanda wajib. Menjelaskan alasan append vs write. Jangan hapus. |
+| `penilaian/input-nilai.html` | `toAppend.push(row); rows.push(row)` di cabang INSERT `simpanTP()` — bukan `SHEETS.write()` | v27 | **BERULANG** — Tanpa ini, INSERT kembali ke write() yang gagal 400 saat sheet besar. Lihat §20. |
+| `penilaian/input-nilai.html` | `await SHEETS.append('NILAI!A1', toAppend)` **setelah** loop di `simpanTP()` — anchor A1 wajib | v27 | **BERULANG** — Anchor A1 wajib (lihat §3). Harus di luar loop. Lihat §20. |
+| `penilaian/input-nilai.html` | Tidak ada `await SHEETS.write(...)` atau `await SHEETS.append(...)` di dalam `for (const item of toSave)` di `simpanTP()` | v27 | **BERULANG** — Per-row API call → 400 (sheet besar) atau 429 (rate limit). Lihat §9 & §20. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 28 Mei 2026 (v26). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 29 Mei 2026 (v27). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

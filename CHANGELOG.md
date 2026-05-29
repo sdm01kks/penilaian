@@ -1,3 +1,87 @@
+## [2026-05-29] — v27 · Perbaikan Bug Gagal Simpan SLM & SAS (`input-nilai.html`)
+
+### 🐛 Perbaikan Regresi — Gagal Simpan Nilai SLM/SAS ⚠️ BERULANG
+
+**Gejala:** Guru kelas menekan tombol simpan nilai SLM/SAS, lalu muncul pesan merah:
+> ⛔ Gagal menyimpan · Sheets write error 400: NILAI!A4028:K4028
+
+Gagal terjadi khususnya pada mapel/kelas yang sudah memiliki banyak data nilai (ribuan baris di sheet NILAI). Simpan berhasil di awal semester/tahun ajaran ketika sheet masih baru/kecil, namun mulai gagal seiring bertambahnya data — sehingga tampak seperti bug intermittent yang sulit direproduksi.
+
+**Akar masalah — dua lapisan:**
+
+**Lapisan 1 (bug utama): `write()` dipakai untuk INSERT baris baru**
+
+Fungsi `simpanTP()` di `input-nilai.html` menggunakan `SHEETS.write()` (yang memanggil Google Sheets API `values.update` / HTTP PUT) untuk menulis baris nilai baru:
+
+```javascript
+// ❌ KODE LAMA — SALAH untuk INSERT
+const nextNilaiRow = Math.max(rows.length + 1, 3);
+await SHEETS.write('NILAI!A' + nextNilaiRow + ':K' + nextNilaiRow, [row]);
+```
+
+`values.update` (PUT) hanya bekerja untuk **memperbarui sel yang sudah ada** dalam batas alokasi fisik sheet. Jika `rows.length = 4027` (data sudah banyak), maka `nextNilaiRow = 4028` — dan jika sheet hanya teralokasi hingga baris 4027, API mengembalikan **HTTP 400 Bad Request**. Sheet tidak auto-extend via PUT.
+
+Sebaliknya, `values.append` (yang dipakai `SHEETS.append()`) **otomatis memperluas sheet** jika diperlukan — tidak pernah gagal 400 karena batas baris.
+
+**Lapisan 2: Anti-pattern per-item API call di dalam loop (§9)**
+
+`simpanTP()` memanggil `SHEETS.write()` dan sebelumnya merencanakan banyak API call di dalam loop `for (const item of toSave)`. Ini adalah anti-pattern yang sama persis yang diperbaiki di `eksekusiImport` pada v18, tetapi `simpanTP()` terlewat saat itu. Untuk kelas dengan banyak siswa dan TP yang sedang disimpan bersamaan, ini berpotensi rate limit 429.
+
+**Mengapa bug ini berulang:**
+
+Bug pernah ditemukan sebelumnya tetapi tidak sepenuhnya diperbaiki karena:
+1. Saat v18 memperbaiki `eksekusiImport`, `simpanTP()` tidak ikut diperbaiki — padahal punya pola yang sama
+2. Bug hanya muncul ketika sheet NILAI sudah besar (ribuan baris) — tidak terjadi di awal semester
+3. Tidak ada entri di ANTIREGRESI yang secara eksplisit mencakup `simpanTP()`, hanya `eksekusiImport`
+
+**Perbaikan — pola batch identik dengan `eksekusiImport` (v18) dan `saveNilaiUSBatch` (`sheets.js`):**
+
+```javascript
+// ✅ KODE BARU — pola batch seperti eksekusiImport & saveNilaiUSBatch
+const toUpdate     = [];   // baris existing → valuesBatchWrite
+const toAppend     = [];   // baris baru → append()
+const nilaiDBLocal = {};   // perubahan nilaiDB diterapkan setelah batch berhasil
+let _saveSeq       = 0;    // counter ID unik (bukan Math.random — lihat §9)
+
+for (const item of toSave) {
+  // ... kumpulkan ke toUpdate / toAppend (TANPA await di dalam loop) ...
+  if (existIdx > 1) {
+    toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]]);
+  } else {
+    row[0] = 'NL' + Date.now().toString(36) + (_saveSeq++).toString(36).padStart(3,'0');
+    toAppend.push(row);
+    rows.push(row); // wajib: jaga local rows agar findIndex tidak duplikat
+  }
+}
+
+// Eksekusi batch setelah loop — maks 2 API call total
+const CHUNK = 100;
+for (let i = 0; i < toUpdate.length; i += CHUNK) {
+  await SHEETS.valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+}
+if (toAppend.length) {
+  await SHEETS.append('NILAI!A1', toAppend); // A1 anchor wajib
+}
+```
+
+**Tiga invariant yang sama dengan §9 (eksekusiImport) kini diterapkan di simpanTP:**
+
+| Invariant | Alasan |
+|-----------|--------|
+| `append()` (bukan `write()`) untuk INSERT baris baru | `write()` / PUT gagal 400 jika row melewati batas alokasi sheet; `append()` auto-extend |
+| Counter `_saveSeq` untuk ID baru (bukan `Math.random`) | Loop sinkron: semua `Date.now()` identik dalam satu milidetik; counter menjamin keunikan deterministik |
+| Tidak ada `await SHEETS.write/append` di dalam `for (const item of toSave)` | Per-row call berpotensi 429 untuk kelas besar |
+
+### 📋 File yang Diubah (v27)
+
+| File | Status |
+|------|--------|
+| `penilaian/input-nilai.html` | **Diubah** — `simpanTP()`: ganti per-row `write()` dengan pola batch `toUpdate[]` + `toAppend[]` + `valuesBatchWrite` + `append('NILAI!A1',…)` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §20 (simpanTP batch pattern), penanda kumulatif v27 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v27 ini |
+
+---
+
 ## [2026-05-28] — v26 · Halaman Syahadah ISMUBA (preview-ismuba.html)
 
 ### ✨ Fitur Baru
