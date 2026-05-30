@@ -260,18 +260,18 @@ function isISMUBA(m){ const n=(m.nama||'').toLowerCase(); return ISMUBA_KW.some(
 function isTahsin(m){ const n=(m.nama||'').toLowerCase(); return TAHSIN_KW.some(k=>n.includes(k)); }
 function isForIjazah(m){ return !isISMUBA(m) && !isTahsin(m); }
 
+// ANTIREGRESI §21 — 8 mapel sesuai template SKL 2025/2026.
+// Tanpa grp (tidak ada Kelompok A/B). Urutan dan label harus persis sesuai template.
+// Jangan tambah mapel bing/tik/kka — sudah dihapus dari SKL per aturan baru.
 const LAMP_DEF = [
-  { key:'pai',   label:'Pendidikan Agama Islam dan Budi Pekerti', grp:'A' },
-  { key:'pp',    label:'Pendidikan Pancasila',                    grp:'A' },
-  { key:'bind',  label:'Bahasa Indonesia',                        grp:'A' },
-  { key:'mtk',   label:'Matematika',                             grp:'A' },
-  { key:'ipas',  label:'Ilmu Pengetahuan Alam dan Sosial',        grp:'A' },
-  { key:'sb',    label:'Seni Budaya',                             grp:'A' },
-  { key:'pjok',  label:'Pendidikan Jasmani, Olahraga, dan Kesehatan', grp:'A' },
-  { key:'bing',  label:'Bahasa Inggris',                          grp:'A' },
-  { key:'bsund', label:'Bahasa dan Sastra Sunda',                 grp:'B' },
-  { key:'tik',   label:'Informatika/TIK',                        grp:'B' },
-  { key:'kka',   label:'Koding dan Kecerdasan Artifisial',        grp:'B' },
+  { key:'pai',   label:'Pendidikan Agama dan Budi Pekerti' },
+  { key:'pp',    label:'Pendidikan Pancasila' },
+  { key:'bind',  label:'Bahasa Indonesia' },
+  { key:'mtk',   label:'Matematika' },
+  { key:'ipas',  label:'Ilmu Pengetahuan Alam Sosial' },
+  { key:'sb',    label:'Seni Budaya dan Prakarya' },
+  { key:'pjok',  label:'Pendidikan Jasmani, Olahraga dan Kesehatan' },
+  { key:'bsund', label:'Bahasa Sunda' },
 ];
 
 const BULAN=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -388,11 +388,18 @@ async function loadPreview(){
     const[allRapor,allUS]=await Promise.all([SHEETS.getNilaiRaporRerata({kelas:activeKelas}),SHEETS.getNilaiUS({kelas:activeKelas})]);
     document.getElementById('sklDocs').innerHTML='';
     document.getElementById('emptyState').style.display='none';
-    const noUrutAwal=parseInt(cfg['skl_no_urut_awal']||'101');
+    // ANTIREGRESI §21 — nomor surat format Perwal Depok No.79/2019:
+    // (1)/(2)-(3)/(4)/(5) → kode_klas / no_urut.seq / kode_instansi / bulan_rom / tahun
+    const noKlas  = cfg['skl_no_kode_klas']      || '400.3.11.1';
+    const noBase  = String(parseInt(cfg['skl_no_urut_awal'] || '95')).padStart(3,'0');
+    const noInst  = cfg['skl_no_kode_instansi']  || 'SKet-UPTDSDM01KKS';
+    const noBulan = cfg['skl_no_bulan']           || 'VI';
+    const noTahun = cfg['skl_tahun_skl']          || '2026';
     daftar.forEach((siswa,idx)=>{
-      const noUrut=String(noUrutAwal+idx).padStart(3,'0');
+      const seq    = String(idx+1).padStart(2,'0');
+      const noSurat = `${noKlas}/${noBase}.${seq}/${noInst}/${noBulan}/${noTahun}`;
       document.getElementById('sklDocs').appendChild(
-        buildCard(siswa,allRapor.filter(r=>r.id_siswa===siswa.id),allUS.filter(r=>r.id_siswa===siswa.id),br,bu,noUrut)
+        buildCard(siswa,allRapor.filter(r=>r.id_siswa===siswa.id),allUS.filter(r=>r.id_siswa===siswa.id),br,bu,noSurat)
       );
     });
     document.getElementById('btnPrint').disabled=false;
@@ -433,10 +440,8 @@ function buildKop(tahunajar){
   <div class="kop-sep"></div>`;
 }
 
-function buildCard(siswa,raporRows,usRows,br,bu,noUrut){
+function buildCard(siswa,raporRows,usRows,br,bu,noSurat){
   const{bt,bp}=getBobot();
-  const noSuf=cfg['skl_no_surat_suffix']||'/KET/III.4.AU/A/2025';
-  const noSurat=noUrut+noSuf;
   const noSK=cfg['skl_no_sk']||'';
   const tglRapat=cfg['skl_tgl_rapat']||'\u2026';
   const tglPen=cfg['skl_tgl_penetapan']||'\u2026';
@@ -444,6 +449,7 @@ function buildCard(siswa,raporRows,usRows,br,bu,noUrut){
   const tahunslash=cfg['skl_tahun_ajaran_slash']||tahunajar;
   const kepsNama=cfg['skl_kepsek_nama']||'';
   const kepsNBM=cfg['skl_kepsek_nbm']||'';
+  const kepsNIP=cfg['skl_kepsek_nip']||'-';  // NIP biasanya kosong, tampil sebagai "-"
   const kota=cfg['skl_kota']||'Depok';
   const nama=siswa.nama.toUpperCase();
   const ttl=(siswa.tempat_lahir||'\u2014')+', '+(fmtTgl(siswa.tgl_lahir)||'\u2014');
@@ -488,96 +494,80 @@ function buildCard(siswa,raporRows,usRows,br,bu,noUrut){
     body.appendChild(w);
   }
 
-  // Screen preview table
+  // ANTIREGRESI §21 — Screen preview: tanpa Kelompok A/B, nilai 2 desimal, rata-rata di dalam tabel
   const scrDiv=document.createElement('div');
   scrDiv.className='no-print';
   let scrHtml=`<table class="tbl-screen"><thead><tr>
-    <th style="width:36px;text-align:center;">No.</th><th>Mata Pelajaran</th><th style="width:90px;text-align:center;">Nilai Ijazah</th>
+    <th style="width:36px;text-align:center;">No.</th><th>Mata Pelajaran</th><th style="width:90px;text-align:center;">Nilai</th>
   </tr></thead><tbody>`;
-  let no=1,lastGrp='';
+  let no=1;
   LAMP_DEF.forEach(ml=>{
-    if(ml.grp!==lastGrp){scrHtml+=`<tr class="grp-row"><td colspan="3" style="padding:5px 10px;">Kelompok ${ml.grp}</td></tr>`;lastGrp=ml.grp;}
     const v=nilaiByKey(ml.key);
-    const disp=v!==null?`<strong>${Math.round(v)}</strong>`:(cfg['map_'+ml.key]?'<span class="chip-warn">!</span>':'<span style="color:var(--ink-muted)">—</span>');
+    const dispVal=v!==null?v.toFixed(2).replace('.',','):null;
+    const disp=dispVal!==null?`<strong>${dispVal}</strong>`:(cfg['map_'+ml.key]?'<span class="chip-warn">!</span>':'<span style="color:var(--ink-muted)">—</span>');
     scrHtml+=`<tr><td class="num">${no++}.</td><td>${ml.label}</td><td class="num">${disp}</td></tr>`;
   });
-  scrHtml+=`</tbody></table><div style="text-align:right;font-size:12px;font-weight:700;color:var(--green-dark);padding:4px 8px;">Rata-rata Nilai Ijazah: ${rerata}</div>`;
+  scrHtml+=`<tr style="background:var(--green-pale);font-weight:700;"><td colspan="2" style="padding:6px 10px;text-align:right;">Rata-rata</td><td class="num">${rerata}</td></tr>`;
+  scrHtml+=`</tbody></table>`;
   scrDiv.innerHTML=scrHtml;
   body.appendChild(scrDiv);
 
-  /* ── PRINT: Halaman 1 — Surat Keterangan Kelulusan ── */
-  const pg1=document.createElement('div');
-  pg1.className='skl-page';
-  pg1.innerHTML=buildKop(tahunajar)+`
-    <div class="doc-title">Surat Keterangan Kelulusan</div>
-    <div class="doc-nomor">Nomor: ${noSurat}</div>
-    <p class="body-text">Yang bertanda tangan di bawah ini Kepala Sekolah Dasar Muhammadiyah 01 Kukusan menerangkan bahwa:</p>
-    <table class="biodata-tbl">
-      <tr><td class="col-label">Nama</td><td class="col-sep">:</td><td><strong>${nama}</strong></td></tr>
-      <tr><td class="col-label">Tempat, Tanggal lahir</td><td class="col-sep">:</td><td>${ttl}</td></tr>
-      <tr><td class="col-label">Nama Orang Tua/Wali</td><td class="col-sep">:</td><td>${wali}</td></tr>
-      <tr><td class="col-label">Nomor Induk Siswa</td><td class="col-sep">:</td><td>${nis}</td></tr>
-      <tr><td class="col-label">NISN</td><td class="col-sep">:</td><td>${nisn}</td></tr>
-    </table>
-    <p class="body-text">Berdasarkan Hasil Rapat Dewan Guru tanggal ${tglRapat} tentang Penetapan Kelulusan Peserta Didik Tahun Ajaran ${tahunajar} yang dituangkan dalam Surat Keputusan Kepala Sekolah Dasar Muhammadiyah 01 Kukusan Nomor ${noSK} dan mengacu kepada Permendikbudristek Nomor 5 Tahun 2022 tentang Standar Kompetensi Lulusan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Permendikbudristek Nomor 21 Tahun 2022 tentang Standar Penilaian Pendidikan pada Pendidikan Anak Usia Dini, Jenjang Pendidikan Dasar, dan Jenjang Pendidikan Menengah, dengan ini siswa tersebut di atas dinyatakan:</p>
-    <p class="lulus-text">-------- L U L U S --------</p>
-    <p class="nilai-rerata">dari sekolah dasar dengan rata-rata nilai ijazah = ${rerata}</p>
-    <p class="body-text">Demikian surat keterangan ini dibuat, agar dapat dipergunakan sebagaimana mestinya.</p>
-    <div class="sign-area">
-      <div class="sign-box">
-        <div>Ditetapkan di : ${kota}</div>
-        <div>Pada Tanggal &nbsp;&nbsp;: ${tglPen}</div>
-        <div style="margin-top:1mm;">Kepala SD Muhammadiyah 01 Kukusan,</div>
-        <div class="sign-gap"></div>
-        <div class="sign-name">${kepsNama}</div>
-        <div>NBM. ${kepsNBM}</div>
-      </div>
-    </div>`;
+  // ANTIREGRESI §21 — Halaman 1 (SKK) DIHAPUS per aturan baru 2025/2026.
+  // Hanya ada 1 halaman: Surat Keterangan Lulus (SKL).
+  // Jangan kembalikan pg1 — lihat changelog v28.
 
-  /* ── PRINT: Halaman 2 — Surat Keterangan Lulus + Lampiran ── */
-  let lampRows='',no2=1,lastG2='';
+  /* ── PRINT: Satu halaman — Surat Keterangan Lulus (format Perwal Depok 2025) ── */
+  // ANTIREGRESI §21:
+  // - 4 kriteria (bukan 3): kriteria ke-4 = SK Kepala Sekolah
+  // - Tidak ada kelompok A/B di tabel nilai
+  // - Nilai 2 angka di belakang koma, separator koma Indonesia
+  // - Baris rata-rata DALAM tabel (baris terakhir), header kolom = "Nilai"
+  // - TTD: "Kota Depok, tgl" / "Kepala Sekolah," / NIP (bukan NBM)
+  let lampRows='',no2=1;
   LAMP_DEF.forEach(ml=>{
-    if(ml.grp!==lastG2){lampRows+=`<tr class="grp-lbl"><td></td><td><strong>KELOMPOK ${ml.grp}</strong></td><td></td></tr>`;lastG2=ml.grp;}
     const v=nilaiByKey(ml.key);
-    const disp=v!==null?Math.round(v):'';
+    // Nilai 2 desimal dengan koma (contoh: 86,90) — ANTIREGRESI §21
+    const disp=v!==null?v.toFixed(2).replace('.',','):'';
     lampRows+=`<tr><td class="ctr">${no2++}.</td><td>${ml.label}</td><td class="ctr"><strong>${disp}</strong></td></tr>`;
   });
+  // Baris rata-rata di dalam tabel — wajib sesuai template 2025
+  lampRows+=`<tr><td class="ctr"></td><td style="font-weight:bold;">Rata-rata</td><td class="ctr"><strong>${rerata}</strong></td></tr>`;
 
   const pg2=document.createElement('div');
   pg2.className='skl-page';
   pg2.innerHTML=buildKop(tahunajar)+`
     <div class="doc-title">Surat Keterangan Lulus</div>
     <div class="doc-nomor">Nomor: ${noSurat}</div>
-    <p class="body-text">Kepala Sekolah Dasar Muhammadiyah 01 Kukusan Kecamatan Beji Kota Depok selaku Ketua Penyelenggara Penilaian Sumatif Akhir Jenjang Sekolah Dasar Tahun Pelajaran ${tahunslash} berdasarkan:</p>
-    <p class="body-indent">1. Ketuntasan dari seluruh program pembelajaran pada Kurikulum Merdeka</p>
-    <p class="body-indent">2. Kriteria kelulusan dari Satuan Pendidikan sesuai dengan Peraturan Perundang&#x2011;undangan yang saat ini berlaku</p>
-    <p class="body-indent">3. Rapat Pleno Dewan Guru tentang Kelulusan yang dilaksanakan pada tanggal ${tglRapat}.</p>
-    <p class="body-text" style="margin-top:3px;">Menerangkan bahwa:</p>
+    <p class="body-text">Kepala Sekolah Dasar Muhammadiyah 01 Kukusan Kecamatan Beji Kota Depok selaku Ketua Penyelenggara Penilaian Sumatif Akhir Jenjang Tahun Pelajaran ${tahunslash} berdasarkan:</p>
+    <p class="body-indent">1. Ketuntasan dari seluruh program pembelajaran pada kurikulum satuan pendidikan;</p>
+    <p class="body-indent">2. Kriteria kelulusan dari satuan pendidikan sesuai dengan peraturan perundang&#x2011;undangan;</p>
+    <p class="body-indent">3. Rapat Dewan Guru tentang Kelulusan pada tanggal ${tglRapat}</p>
+    <p class="body-indent">4. Keputusan Kepala Sekolah SD Muhammadiyah 01 Kukusan Nomor: ${noSK} Tanggal ${tglPen}</p>
+    <p class="body-text" style="margin-top:4px;">menerangkan bahwa:</p>
     <table class="biodata-tbl">
       <tr><td class="col-label">Nama</td><td class="col-sep">:</td><td><strong>${nama}</strong></td></tr>
-      <tr><td class="col-label">Tempat dan tanggal lahir</td><td class="col-sep">:</td><td>${ttl}</td></tr>
-      <tr><td class="col-label">Nama orang tua</td><td class="col-sep">:</td><td>${wali}</td></tr>
+      <tr><td class="col-label">Tempat dan Tanggal Lahir</td><td class="col-sep">:</td><td>${ttl}</td></tr>
+      <tr><td class="col-label">Nama Orang Tua</td><td class="col-sep">:</td><td>${wali}</td></tr>
       <tr><td class="col-label">Nomor Induk Siswa</td><td class="col-sep">:</td><td>${nis}</td></tr>
       <tr><td class="col-label">Nomor Induk Siswa Nasional</td><td class="col-sep">:</td><td>${nisn}</td></tr>
     </table>
-    <p class="body-text" style="margin-top:4px;">Dinyatakan <strong>LULUS</strong> dengan nilai sebagai berikut:</p>
+    <p class="body-text" style="margin-top:4px;">Dinyatakan &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>LULUS</strong></p>
+    <p class="body-text" style="margin-top:2px;">dengan nilai sebagai berikut:</p>
     <table class="lamp-tbl">
-      <thead><tr><th style="width:10mm;">No.</th><th>Mata Pelajaran</th><th style="width:28mm;">Nilai Ijazah</th></tr></thead>
+      <thead><tr><th style="width:10mm;">No.</th><th>Mata Pelajaran</th><th style="width:28mm;">Nilai</th></tr></thead>
       <tbody>${lampRows}</tbody>
     </table>
-    <p class="body-text">Demikian surat keterangan ini dibuat dengan sebenar-benarnya, agar dapat dipergunakan sebagaimana mestinya.</p>
+    <p class="body-text" style="margin-top:6px;">Demikian surat keterangan kelulusan ini dibuat, agar dapat dipergunakan sebagaimana mestinya.</p>
     <div class="sign-area">
       <div class="sign-box">
-        <div>Ditetapkan di: Kota ${kota}</div>
-        <div>Pada tanggal: ${tglPen}</div>
-        <div style="margin-top:1mm;">Kepala SD Muhammadiyah 01 Kukusan,</div>
+        <div>Kota ${kota}, ${tglPen}</div>
+        <div style="margin-top:1mm;">Kepala Sekolah,</div>
         <div class="sign-gap"></div>
         <div class="sign-name">${kepsNama}</div>
-        <div>NBM. ${kepsNBM}</div>
+        <div>NIP. ${kepsNIP}</div>
       </div>
     </div>`;
 
-  body.appendChild(pg1);
   body.appendChild(pg2);
   card.appendChild(body);
   return card;

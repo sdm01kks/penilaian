@@ -108,21 +108,35 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
   </div>
   <div id="alertArea"></div>
 
-  <!-- Nomor Surat -->
+  <!-- Nomor Surat — format Perwal Depok No. 79/2019 -->
+  <!-- ANTIREGRESI §21: Format baru: (1)/(2)-(3)/(4)/(5) -->
+  <!-- Contoh: 400.3.11.1/095.01/SKet-UPTDSDM01KKS/VI/2026 -->
   <div class="card">
-    <div class="section-title">⬡ Nomor Surat SKL</div>
+    <div class="section-title">⬡ Nomor Surat SKL <span class="hint">(Perwal Depok No. 79/2019)</span></div>
     <div class="form-grid">
       <div class="form-group">
-        <label>Nomor Urut Awal <span class="hint">(tiga angka pertama, berlanjut per siswa)</span></label>
-        <input type="number" id="skl_no_urut_awal" value="101" min="1" max="999">
+        <label>(1) Kode Klasifikasi <span class="hint">bagian tetap di depan</span></label>
+        <input type="text" id="skl_no_kode_klas" value="400.3.11.1">
       </div>
       <div class="form-group">
-        <label>Suffix Nomor Surat <span class="hint">(bagian tetap setelah nomor urut)</span></label>
-        <input type="text" id="skl_no_surat_suffix" value="/KET/III.4.AU/A/2025">
+        <label>(2) Nomor Urut Dasar <span class="hint">3 digit, berlanjut per siswa dengan .01, .02, …</span></label>
+        <input type="number" id="skl_no_urut_awal" value="95" min="1" max="999">
+      </div>
+      <div class="form-group">
+        <label>(3) Kode Instansi</label>
+        <input type="text" id="skl_no_kode_instansi" value="SKet-UPTDSDM01KKS">
+      </div>
+      <div class="form-group">
+        <label>(4) Bulan Surat <span class="hint">angka Romawi, misal VI</span></label>
+        <input type="text" id="skl_no_bulan" value="VI" placeholder="VI">
+      </div>
+      <div class="form-group">
+        <label>(5) Tahun Surat</label>
+        <input type="text" id="skl_tahun_skl" value="2026" placeholder="2026">
       </div>
       <div class="form-group full">
         <label>Contoh nomor surat siswa pertama:</label>
-        <div class="preview-box" id="previewNoSurat">101/KET/III.4.AU/A/2025</div>
+        <div class="preview-box" id="previewNoSurat">400.3.11.1/095.01/SKet-UPTDSDM01KKS/VI/2026</div>
       </div>
     </div>
   </div>
@@ -159,12 +173,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
         <input type="text" id="skl_kepsek_nama" placeholder="Mudzakkir Walad, S.Pd">
       </div>
       <div class="form-group">
-        <label>NBM Kepala Sekolah</label>
+        <!-- ANTIREGRESI §21: Format baru pakai NIP. Jika tidak punya NIP, isi "-" (tampil "NIP. -") -->
+        <label>NIP Kepala Sekolah <span class="hint">isi "-" jika tidak punya NIP</span></label>
+        <input type="text" id="skl_kepsek_nip" placeholder="-">
+      </div>
+      <div class="form-group">
+        <label>NBM Kepala Sekolah <span class="hint">(legacy, tidak tampil di SKL baru)</span></label>
         <input type="text" id="skl_kepsek_nbm" placeholder="1167327">
       </div>
       <div class="form-group">
-        <label>Nomor SK Kelulusan <span class="hint">(full nomor SK kepala sekolah)</span></label>
-        <input type="text" id="skl_no_sk" placeholder="101/KEP/III.4.AU/A/2025">
+        <label>Nomor SK Kelulusan <span class="hint">(full nomor SK kepala sekolah, untuk kriteria ke-4)</span></label>
+        <input type="text" id="skl_no_sk" placeholder="400.3.11.1/094/SKet-UPTDSDM01KKS/VI/2026">
       </div>
       <div class="form-group">
         <label>Kota Penetapan</label>
@@ -360,11 +379,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
 <script src="../assets/js/sheets.js"></script>
 <script>
 const SKL_KEYS = [
-  'skl_no_urut_awal','skl_no_surat_suffix','skl_tahun_ajaran','skl_tahun_ajaran_slash',
-  'skl_tgl_rapat','skl_tgl_penetapan','skl_kepsek_nama','skl_kepsek_nbm',
+  // ANTIREGRESI §21: format nomor surat 5-bagian (Perwal Depok 79/2019)
+  // skl_no_surat_suffix dihapus, diganti dengan komponen terpisah
+  'skl_no_urut_awal','skl_no_kode_klas','skl_no_kode_instansi','skl_no_bulan','skl_tahun_skl',
+  'skl_tahun_ajaran','skl_tahun_ajaran_slash',
+  'skl_tgl_rapat','skl_tgl_penetapan',
+  'skl_kepsek_nama','skl_kepsek_nip','skl_kepsek_nbm',
   'skl_no_sk','skl_kota',
-  'map_pai','map_pp','map_bind','map_mtk','map_ipas','map_sb','map_pjok',
-  'map_bing','map_bsund','map_tik','map_kka',
+  // 8 mapel SKL (bing/tik/kka dihapus per §21)
+  'map_pai','map_pp','map_bind','map_mtk','map_ipas','map_sb','map_pjok','map_bsund',
   'skl_bobot_rapor','skl_bobot_us','skl_bobot_us_tertulis','skl_bobot_us_praktik',
   // ISMUBA
   'ismuba_no_se','ismuba_tahun_ajaran','ismuba_no_sk_pwm','ismuba_tgl_sk',
@@ -395,13 +418,20 @@ window.addEventListener('load', async () => {
   } catch(e) { showAlert('error','⛔ Gagal memuat',e.message); hideLoading(); }
 });
 
-document.getElementById('skl_no_urut_awal').addEventListener('input', updatePreview);
-document.getElementById('skl_no_surat_suffix').addEventListener('input', updatePreview);
+// ANTIREGRESI §21: listener untuk semua komponen nomor surat 5-bagian
+['skl_no_urut_awal','skl_no_kode_klas','skl_no_kode_instansi','skl_no_bulan','skl_tahun_skl'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updatePreview);
+});
 
 function updatePreview() {
-  const no  = String(document.getElementById('skl_no_urut_awal').value || '101').padStart(3, '0');
-  const sfx = document.getElementById('skl_no_surat_suffix').value || '';
-  document.getElementById('previewNoSurat').textContent = no + sfx;
+  const klas  = document.getElementById('skl_no_kode_klas')?.value    || '400.3.11.1';
+  const base  = String(document.getElementById('skl_no_urut_awal')?.value || '95').padStart(3,'0');
+  const inst  = document.getElementById('skl_no_kode_instansi')?.value || 'SKet-UPTDSDM01KKS';
+  const bulan = document.getElementById('skl_no_bulan')?.value         || 'VI';
+  const tahun = document.getElementById('skl_tahun_skl')?.value        || '2026';
+  document.getElementById('previewNoSurat').textContent =
+    `${klas}/${base}.01/${inst}/${bulan}/${tahun}`;
 }
 
 async function simpanConfig() {
