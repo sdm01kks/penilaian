@@ -1,3 +1,192 @@
+## [2026-05-29] — v30 · Perbaikan Nomor Urut Surat SKL Tidak Bertambah
+
+### 🐛 Perbaikan Regresi — Seq Nomor Surat Selalu `.01` ⚠️ BERULANG BERPOTENSI
+
+**Gejala:** Nomor surat siswa kedua, ketiga, dst. tetap `095.01` — tidak berubah menjadi `095.02`, `095.03`, dst.
+
+**Dua bug sekaligus di dua file berbeda:**
+
+---
+
+**Bug 1 — `preview-skl.html`: `seq` berbasis `idx` bukan posisi absolut**
+
+Ketika guru memilih satu siswa untuk preview/cetak, `daftar` hanya berisi satu elemen:
+
+```javascript
+const daftar = sid ? allSiswa.filter(s=>s.id===sid) : allSiswa.slice()...;
+daftar.forEach((siswa, idx) => {
+  const seq = String(idx+1).padStart(2,'0'); // ← idx selalu 0 → seq selalu '01'
+```
+
+`idx` dalam `forEach` adalah posisi dalam `daftar` (yang berisi satu siswa), bukan posisi dalam daftar lengkap seluruh siswa kelas. Sehingga siswa ke-5 pun mendapat `seq = '01'`.
+
+**Perbaikan:**
+
+```javascript
+// ANTIREGRESI §21: seq HARUS dari posisi absolut di allSiswa (sudah terurut),
+// bukan dari idx dalam daftar filter.
+const posisi  = allSiswa.findIndex(s => s.id === siswa.id);
+const seq     = String((posisi >= 0 ? posisi : idx) + 1).padStart(2,'0');
+```
+
+`allSiswa` sudah terurut secara nama (di-sort saat inisialisasi). `findIndex` memberi posisi absolut yang konsisten — siswa ke-5 selalu mendapat `seq = '05'`, baik saat preview semua siswa maupun preview satu siswa.
+
+---
+
+**Bug 2 — `generate-skl.html`: Belum diperbarui ke format 5-bagian (v29 terlewat)**
+
+`generate-skl.html` masih menggunakan format nomor surat lama sepenuhnya — tidak ikut diperbarui saat v29:
+
+```javascript
+// ❌ KODE LAMA — masih ada di generate-skl.html setelah v29
+const noUrutAwal = parseInt(cfg['skl_no_urut_awal']||'101');
+const suffix     = cfg['skl_no_surat_suffix'] || '/KET/III.4.AU/A/2025';
+// ...
+const noUrut  = String(noUrutAwal + i).padStart(3, '0');  // increment BASE, bukan seq
+const noSurat = noUrut + suffix;                           // format lama
+```
+
+Tiga masalah sekaligus:
+1. `skl_no_surat_suffix` sudah **dihapus** dari `KEYS_TO_SAVE` di v29 → nilai selalu kosong → fallback ke `/KET/III.4.AU/A/2025` (format salah)
+2. `noUrutAwal + i` men-increment **angka dasar** (95→96→97), bukan seq (095.01→095.02→095.03)
+3. Validation check masih referensikan `cfg['skl_no_surat_suffix']` → selalu gagal → warning tidak akurat
+
+**Perbaikan — disamakan dengan `preview-skl.html`:**
+
+```javascript
+// ✅ KODE BARU
+const noKlas  = cfg['skl_no_kode_klas']      || '400.3.11.1';
+const noBase  = String(parseInt(cfg['skl_no_urut_awal'] || '95')).padStart(3,'0');
+const noInst  = cfg['skl_no_kode_instansi']  || 'SKet-UPTDSDM01KKS';
+const noBulan = cfg['skl_no_bulan']           || 'VI';
+const noTahun = cfg['skl_tahun_skl']          || '2026';
+// ...
+// Seq dari posisi absolut di allSiswa (terurut), bukan i dalam siswaTampil
+const posisi  = allSiswa.findIndex(ss => ss.id === s.id);
+const seq     = String((posisi >= 0 ? posisi : i) + 1).padStart(2,'0');
+const noSurat = `${noKlas}/${noBase}.${seq}/${noInst}/${noBulan}/${noTahun}`;
+```
+
+Selain itu, `mapelFields` dan `lampData` juga diperbarui: `map_bing`, `map_tik`, `map_kka` dihapus (terlewat di v29). Nama file zip pun diperbarui dari `SKL_095_Nama.docx` ke `SKL_095.01_Nama.docx`.
+
+### 📋 File yang Diubah (v30)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-skl.html` | **Diubah** — `forEach` dalam `loadPreview`: seq dari `allSiswa.findIndex` (posisi absolut), bukan `idx` |
+| `ujian-sekolah/generate-skl.html` | **Diubah** — format nomor surat 5-bagian, `kepsekNIP`, hapus `noUrutAwal`/`suffix` lama, `mapelFields` 8 mapel, `lampData` 8 mapel, filename zip diperbarui |
+| `ANTIREGRESI.md` | **Diubah** — perbarui §21 dengan peringatan dua-file, penanda kumulatif v30 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v30 ini |
+
+---
+
+## [2026-05-29] — v29 · Penyesuaian Format SKL 2025/2026 (preview-skl, config-skl)
+
+### ✨ Perubahan Format SKL — Sesuai Aturan Baru 2025/2026
+
+**Latar belakang:** Template SKL resmi yang baru hanya terdiri dari 1 halaman (SKL saja) dengan perubahan struktural signifikan dibanding tahun sebelumnya.
+
+#### Perubahan `ujian-sekolah/preview-skl.html`
+
+| Aspek | Sebelumnya | Sekarang |
+|-------|-----------|---------|
+| Jumlah halaman cetak | 2 (SKK + SKL) | **1 halaman** (SKL saja) |
+| Kriteria kelulusan | 3 poin | **4 poin** (ditambah: SK Kepala Sekolah) |
+| Teks kriteria 1 | "Ketuntasan … Kurikulum Merdeka" | "Ketuntasan … kurikulum satuan pendidikan;" |
+| Teks kriteria 3 | "Rapat Pleno Dewan Guru … dilaksanakan" | "Rapat Dewan Guru tentang Kelulusan" |
+| Teks kriteria 4 | *(tidak ada)* | "Keputusan Kepala Sekolah … Nomor: [noSK] Tanggal [tglPen]" |
+| Format "Dinyatakan" | `Dinyatakan **LULUS** dengan nilai` (bold center) | `Dinyatakan …: LULUS` (style tabel biodata) |
+| Pengelompokan mapel | Kelompok A & B | **Tidak ada kelompok** |
+| Jumlah mapel | 11 (termasuk Bing, TIK, KKA) | **8 mapel** (Bing/TIK/KKA dihapus) |
+| Nama mapel | PAI dan Budi Pekerti, IPAS, Seni Budaya, Bahasa dan Sastra Sunda | PAI dan Budi Pekerti (tanpa "Islam"), Ilmu Pengetahuan Alam Sosial, Seni Budaya dan Prakarya, Bahasa Sunda |
+| Header kolom nilai | "Nilai Ijazah" | **"Nilai"** |
+| Format angka nilai | Bilangan bulat (Math.round) | **2 angka di belakang koma, separator koma** (mis. `86,90`) |
+| Baris rata-rata | Di luar tabel, di bawah tabel | **Di dalam tabel** (baris terakhir) |
+| Format TTD | `Ditetapkan di: Kota Depok / Pada tanggal: …` | **`Kota Depok, [tanggal]`** |
+| Label TTD | `Kepala SD Muhammadiyah 01 Kukusan,` | **`Kepala Sekolah,`** |
+| Identifier TTD | `NBM. [nbm]` | **`NIP. [nip]`** (NIP kosong ditampilkan sebagai `-`) |
+| Nomor surat | Format 2-bagian lama | **Format 5-bagian Perwal Depok No.79/2019** |
+
+#### Perubahan `ujian-sekolah/config-skl.html`
+
+**Format nomor surat baru — Perwal Depok No. 79 Tahun 2019:**
+
+Format: `(1)/(2)-(3)/(4)/(5)` → `400.3.11.1/095.01/SKet-UPTDSDM01KKS/VI/2026`
+
+Komponen field baru:
+- `skl_no_kode_klas` — kode klasifikasi surat (default: `400.3.11.1`)
+- `skl_no_urut_awal` — nomor urut dasar 3 digit (default: `95`; per siswa: `.01`, `.02`, …)
+- `skl_no_kode_instansi` — kode instansi (default: `SKet-UPTDSDM01KKS`)
+- `skl_no_bulan` — bulan surat dalam angka Romawi (default: `VI`)
+- `skl_tahun_skl` — tahun surat (default: `2026`)
+- `skl_kepsek_nip` — NIP kepala sekolah (isi `-` jika tidak punya NIP)
+- `skl_no_surat_suffix` — **dihapus** dari `KEYS_TO_SAVE`, diganti 5 field di atas
+- `map_bing`, `map_tik`, `map_kka` — **dihapus** dari `KEYS_TO_SAVE` (mapel tidak ada di SKL baru)
+
+### 📋 File yang Diubah (v29)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-skl.html` | **Diubah** — halaman 1 (SKK) dihapus, satu halaman SKL diformat ulang total sesuai template 2025 |
+| `ujian-sekolah/config-skl.html` | **Diubah** — field nomor surat 5-bagian, field NIP, hapus field lama |
+| `ANTIREGRESI.md` | **Diubah** — tambah §21 (format SKL 2025), penanda kumulatif v29 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v29 ini |
+
+---
+
+## [2026-05-29] — v28 · Perbaikan Bug Gagal Simpan SLM & SAS (`input-nilai.html`)
+
+### 🐛 Perbaikan Regresi — Gagal Simpan Nilai SLM/SAS ⚠️ BERULANG
+
+**Gejala:** Guru kelas menekan tombol simpan nilai SLM/SAS, lalu muncul pesan merah:
+> ⛔ Gagal menyimpan · Sheets write error 400: NILAI!A4028:K4028
+
+Gagal terjadi khususnya pada mapel/kelas yang sudah memiliki banyak data nilai (ribuan baris di sheet NILAI). Simpan berhasil di awal semester/tahun ajaran ketika sheet masih baru/kecil, namun mulai gagal seiring bertambahnya data — sehingga tampak seperti bug intermittent yang sulit direproduksi.
+
+**Akar masalah — dua lapisan:**
+
+**Lapisan 1 (bug utama): `write()` dipakai untuk INSERT baris baru**
+
+Fungsi `simpanTP()` di `input-nilai.html` menggunakan `SHEETS.write()` (yang memanggil Google Sheets API `values.update` / HTTP PUT) untuk menulis baris nilai baru:
+
+```javascript
+// ❌ KODE LAMA — SALAH untuk INSERT
+const nextNilaiRow = Math.max(rows.length + 1, 3);
+await SHEETS.write('NILAI!A' + nextNilaiRow + ':K' + nextNilaiRow, [row]);
+```
+
+`values.update` (PUT) hanya bekerja untuk **memperbarui sel yang sudah ada** dalam batas alokasi fisik sheet. Jika sheet hanya teralokasi hingga baris 4027, API mengembalikan **HTTP 400 Bad Request** untuk baris 4028. Sheet tidak auto-extend via PUT.
+
+Sebaliknya, `values.append` (yang dipakai `SHEETS.append()`) **otomatis memperluas sheet** — tidak pernah gagal 400.
+
+**Lapisan 2: Anti-pattern per-item API call di dalam loop (§9)**
+
+`simpanTP()` memanggil `SHEETS.write()` di dalam loop `for (const item of toSave)` — anti-pattern yang sama persis yang diperbaiki di `eksekusiImport` pada v18, tetapi `simpanTP()` terlewat saat itu.
+
+**Perbaikan — pola batch identik dengan `eksekusiImport` (v18) dan `saveNilaiUSBatch`:**
+
+```javascript
+// ✅ KODE BARU
+const toUpdate = []; const toAppend = []; const nilaiDBLocal = {}; let _saveSeq = 0;
+for (const item of toSave) {
+  if (existIdx > 1) { toUpdate.push([...]) }
+  else { row[0]='NL'+Date.now().toString(36)+(_saveSeq++).toString(36).padStart(3,'0'); toAppend.push(row); rows.push(row); }
+}
+// Eksekusi batch setelah loop — maks 2 API call total
+await SHEETS.valuesBatchWrite(toUpdate);
+if (toAppend.length) await SHEETS.append('NILAI!A1', toAppend);
+```
+
+### 📋 File yang Diubah (v28)
+
+| File | Status |
+|------|--------|
+| `penilaian/input-nilai.html` | **Diubah** — `simpanTP()`: ganti per-row `write()` dengan pola batch `toUpdate[]` + `toAppend[]` + `valuesBatchWrite` + `append('NILAI!A1',…)` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §20 (simpanTP batch pattern), penanda kumulatif v28 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v28 ini |
+
+---
+
 ## [2026-05-30] — v27 · Penyempurnaan Visual Syahadah ISMUBA
 
 ### 🎨 Perubahan Visual

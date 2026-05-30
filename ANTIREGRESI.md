@@ -8,6 +8,9 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v30 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/generate-skl.html` | Seq nomor surat selalu `.01` untuk semua siswa | preview-skl: `idx` selalu 0 saat filter satu siswa. generate-skl: masih pakai format lama (`noUrutAwal+i`, `skl_no_surat_suffix`). Lihat §21. |
+| v29 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/config-skl.html` | Format SKL salah: halaman lama (SKK), mapel lama (11), nilai bulat, NBM | Format berubah total per aturan 2025/2026. Lihat §21. |
+| v27 | `penilaian/input-nilai.html` | `simpanTP()` — gagal simpan SLM/SAS error 400 | `write()` / values.update (PUT) dipakai untuk INSERT baris baru; gagal 400 jika nomor baris melewati batas alokasi fisik sheet. Per-item API call dalam loop (`eksekusiImport` diperbaiki v18 tapi `simpanTP` terlewat). |
 | v21 | `siswa/edit-siswa-kelas.html` *(baru)* | Tombol simpan gagal dengan error 403 | `simpanSemua()` memanggil `SHEETS.read()` ulang di dalam fungsi save — request read kedua dalam sesi aktif memicu 403. Diperbaiki dengan cache-first pattern (§14). |
 | v20 | `dashboard/guru-mapel.html` | Menu SAJ tidak muncul untuk guru PAI/B.Arab/KMH yang juga mengajar TT | Kondisi `!isTTGuru` terlalu luas — memblokir semua guru TT, termasuk yang juga mengajar mapel lain di kelas 6 |
 | v19 | `ujian-sekolah/config-skl.html`, `dashboard/guru-kelas.html`, `ujian-sekolah/input-nilai-us.html` | Akses Konfigurasi SKL guru kelas 6 + sinkronisasi bobot | `requireLogin` hanya mengizinkan `admin`; menu tidak ada di dashboard; input bobot editable di halaman yang salah; `updateBobot()` tidak dipanggil setelah config dimuat |
@@ -761,28 +764,186 @@ Semua key ini disimpan dan dibaca via `SHEETS.getConfig()` / `SHEETS.saveConfig(
 | `// ANTIREGRESI v23` di `getNilaiISMUBA()` | Alias search Al-Islam wajib dipertahankan |
 | `border:none;box-shadow:none` pada `.cert-page` | Tidak ada frame halaman |
 
-**Catatan v27 — aset visual yang embedded (jangan diganti tanpa alasan):**
-
-| Konstanta | Aset | Keterangan |
-|-----------|------|------------|
-| `LOGO_MUH` | `Logo_Muhammadiyah.jpg` | Logo emas Muhammadiyah — satu-satunya logo di Syahadah |
-| `LOGO_SALAM` | `Salam.jpg` | Kaligrafi Bismillah — menggantikan teks Unicode Arab |
-| `LOGO_BARCODE` | `Barcode.png` | QR code di bawah jabatan ketua majelis |
-
-**Data tanda tangan ketua majelis hardcoded (tidak dari config):**
-- Nama: *Drs. Nur Komarudin, M.M.Pd.*
-- NBM: *555.835*
-- Instansi: *Pimpinan Wilayah Muhammadiyah Jawa Barat*
-
-Jika nama ketua majelis berganti, edit langsung di dua tempat dalam `buildCard()`:
-`shd-sign` (halaman 1) dan `dnilai-sign` (halaman 2).
-
 **Checklist jika mengubah `preview-ismuba.html` di masa depan:**
 - [ ] Pastikan `getNilaiISMUBA()` tetap identik dengan `preview-tka.html`
 - [ ] Pastikan tidak ada `SHEETS.write/append/valuesBatchWrite` di halaman ini
 - [ ] Pastikan `border:none;box-shadow:none` pada `.cert-page` tidak dihapus
 - [ ] Jika ada config key baru, tambahkan juga ke array `KEYS_TO_SAVE` di `config-skl.html`
-- [ ] Jika logo diganti, update ketiga konstanta `LOGO_MUH`, `LOGO_SALAM`, `LOGO_BARCODE`
+
+---
+
+### 20. `simpanTP()` di `input-nilai.html` — Pakai Batch, Bukan Per-Row Write ⚠️ BERULANG
+
+**Mengapa berisiko:** `simpanTP()` adalah fungsi simpan utama untuk nilai SLM & SAS. Bug 400 ini pernah muncul, tampak sembuh sendiri (karena dicoba di sheet yang kecil), lalu muncul kembali saat sheet NILAI sudah besar (ribuan baris). Kodenya hampir identik dengan anti-pattern yang diperbaiki di `eksekusiImport` (v18/§9), namun terlewat saat itu.
+
+**Dua lapisan masalah yang saling terkait:**
+
+**Lapisan 1 — `write()` untuk INSERT baris baru:**
+
+Google Sheets API `values.update` (HTTP PUT) hanya bekerja pada sel/baris yang **sudah teralokasi** di dalam sheet. Jika sheet NILAI hanya punya 4027 baris teralokasi, menulis ke baris 4028 via PUT → **HTTP 400 Bad Request**. Bug ini laten: tidak muncul di awal semester (sheet kecil), muncul setelah berbulan-bulan penggunaan.
+
+`values.append` (HTTP POST, dipakai `SHEETS.append()`) **otomatis memperluas sheet** — tidak pernah 400 karena batas baris.
+
+```javascript
+// ❌ SALAH — KODE LAMA yang menyebabkan error 400
+const nextNilaiRow = Math.max(rows.length + 1, 3);
+await SHEETS.write('NILAI!A' + nextNilaiRow + ':K' + nextNilaiRow, [row]);
+// Error: "Sheets write error 400: NILAI!A4028:K4028"
+// Terjadi karena sheet tidak memiliki baris 4028 teralokasi.
+
+// ✅ BENAR — pakai append() untuk baris baru (ANTIREGRESI §20)
+toAppend.push(row);
+// ...setelah loop:
+await SHEETS.append('NILAI!A1', toAppend); // auto-extend sheet, tidak pernah 400
+```
+
+**Lapisan 2 — Per-item API call dalam loop:**
+
+Memanggil `await SHEETS.write()` di dalam `for (const item of toSave)` menghasilkan N API call untuk N siswa. Identik dengan pola yang menyebabkan 429 di `eksekusiImport` (v18/§9).
+
+**Pola wajib sejak v27 — batch identik dengan `eksekusiImport` (§9):**
+
+```javascript
+// Sebelum loop: siapkan akumulator
+const toUpdate     = [];
+const toAppend     = [];
+const nilaiDBLocal = {};
+let _saveSeq       = 0;  // counter ID unik — wajib (bukan Math.random)
+
+for (const item of toSave) {
+  const existIdx = rows.findIndex(...);
+
+  if (item.hapus) {
+    if (existIdx > 1) {
+      toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [Array(11).fill('')]]);
+      rows[existIdx] = Array(11).fill('');
+    }
+    nilaiDBLocal[key] = null;
+    continue;
+  }
+
+  if (existIdx > 1) {
+    row[0] = rows[existIdx][0];
+    toUpdate.push(['NILAI!A' + (existIdx+1) + ':K' + (existIdx+1), [row]]);
+  } else {
+    // Counter _saveSeq wajib — Date.now() identik di semua iterasi loop sinkron
+    row[0] = 'NL' + Date.now().toString(36) + (_saveSeq++).toString(36).padStart(3,'0');
+    toAppend.push(row);
+    rows.push(row); // wajib: cegah duplikat findIndex di iterasi berikutnya
+  }
+  nilaiDBLocal[key] = { slm: item.slm, sas: item.sas };
+}
+
+// Eksekusi batch SETELAH loop — maks 2 API call total
+const CHUNK = 100;
+for (let i = 0; i < toUpdate.length; i += CHUNK) {
+  await SHEETS.valuesBatchWrite(toUpdate.slice(i, i + CHUNK));
+}
+if (toAppend.length) {
+  await SHEETS.append('NILAI!A1', toAppend); // A1 anchor wajib (lihat §3)
+}
+
+// Terapkan nilaiDB SETELAH batch berhasil (bukan di dalam loop)
+for (const [key, val] of Object.entries(nilaiDBLocal)) {
+  if (val === null) delete nilaiDB[key];
+  else nilaiDB[key] = val;
+}
+```
+
+**Perbedaan penting dengan `eksekusiImport` (§9):**
+
+| Aspek | `eksekusiImport` (§9) | `simpanTP` (§20) |
+|-------|----------------------|------------------|
+| Scope ID counter | `_importSeq` | `_saveSeq` |
+| Hapus data | Tidak ada | Ada — baris hapus juga masuk `toUpdate` dengan `Array(11).fill('')` |
+| Scope nilaiDB | Langsung di dalam loop | Akumulasi `nilaiDBLocal`, terapkan setelah batch |
+
+**Penanda kode wajib di `penilaian/input-nilai.html`:**
+
+| Penanda | Keterangan |
+|---------|------------|
+| `const toUpdate = []; const toAppend = [];` **sebelum** `for (const item of toSave)` | Akumulator batch — wajib ada sebelum loop |
+| `let _saveSeq = 0;` **sebelum** loop | Counter ID unik — wajib di luar loop |
+| `// ANTIREGRESI §20: pakai append()...` di komentar blok else INSERT | Penanda wajib; mengingatkan alasan pakai append, bukan write |
+| `rows.push(row)` di cabang INSERT (else) | Wajib — cegah duplikat findIndex iterasi berikutnya |
+| `await SHEETS.append('NILAI!A1', toAppend)` **setelah** loop | Anchor A1 wajib; bukan `'NILAI!A:K'` atau tanpa anchor |
+| Tidak ada `await SHEETS.write(...)` di dalam `for (const item of toSave)` | Wajib — per-row write → 400 atau 429 |
+
+**Kapan risiko meningkat:** Setiap kali `simpanTP()` di `penilaian/input-nilai.html` diedit — untuk menambah kolom baru, mengubah logika perhitungan, atau menyesuaikan filter.
+
+**Checklist wajib setelah mengubah `simpanTP()`:**
+- [ ] Pastikan `toUpdate`, `toAppend`, `nilaiDBLocal`, dan `_saveSeq` dideklarasikan **sebelum** loop
+- [ ] Pastikan tidak ada `await SHEETS.write(...)` atau `await SHEETS.append(...)` **di dalam** `for (const item of toSave)`
+- [ ] Pastikan INSERT menggunakan `toAppend.push(row)` bukan `SHEETS.write()` ke nomor baris tertentu
+- [ ] Pastikan `rows.push(row)` ada di cabang INSERT
+- [ ] Pastikan eksekusi `valuesBatchWrite` dan `append('NILAI!A1', ...)` ada **setelah** loop
+- [ ] Pastikan `nilaiDB` diperbarui dari `nilaiDBLocal` setelah batch berhasil, bukan di dalam loop
+- [ ] Uji dengan kelas yang sudah punya banyak data nilai (semester sudah berjalan lama)
+- [ ] Uji simpan SLM saja (tanpa SAS) → harus berhasil
+- [ ] Uji simpan SLM + SAS sekaligus → harus berhasil
+- [ ] Uji hapus nilai (kosongkan SLM) → harus berhasil tanpa error
+
+---
+
+### 21. Format SKL 2025/2026 — 1 Halaman, 8 Mapel, Nilai 2 Desimal, NIP, Nomor Surat 5-Bagian
+
+**Mengapa berisiko:** Formatnya berubah total dari tahun sebelumnya. Bug nomor surat ini terjadi DUA KALI (v29 dan v30) karena:
+1. `generate-skl.html` tidak ikut diperbarui saat format berubah di v29
+2. `seq` di `preview-skl.html` berbasis `idx` dalam daftar filter, bukan posisi absolut
+
+**Dua file yang HARUS selalu diperbarui bersamaan:**
+
+| File | Fungsi kritis |
+|------|---------------|
+| `ujian-sekolah/preview-skl.html` | `loadPreview()` — nomor surat + format halaman cetak |
+| `ujian-sekolah/generate-skl.html` | `generate()` — nomor surat + config reading + mapelFields |
+
+**Invariant wajib sejak v30 — nomor surat:**
+
+| Invariant | Alasan |
+|-----------|--------|
+| `seq` dari `allSiswa.findIndex(s => s.id === siswa.id)` **bukan** `idx` | `idx` selalu 0 saat preview/generate satu siswa → seq selalu `01` |
+| `allSiswa` sudah terurut nama saat inisialisasi | Posisi absolut konsisten dengan urutan di dokumen resmi |
+| `const noSurat = \`\${noKlas}/\${noBase}.\${seq}/\${noInst}/\${noBulan}/\${noTahun}\`` | Format 5-bagian Perwal Depok No.79/2019 — di **kedua** file |
+| `skl_no_surat_suffix` **tidak boleh** diakses lagi (sudah dihapus dari KEYS_TO_SAVE) | Nilainya selalu kosong/undefined → fallback ke format lama yang salah |
+| `skl_no_urut_awal` dibaca sebagai **base 3-digit tetap** (mis. `095`), bukan diincrement | `noUrutAwal + i` menghasilkan `096`, `097` — bukan `095.02`, `095.03` |
+
+**Invariant wajib sejak v29 — format halaman:**
+
+| Invariant | Alasan |
+|-----------|--------|
+| **Hanya 1 halaman cetak** (`pg2`, bukan `pg1+pg2`) | Halaman SKK (pg1) dihapus total per aturan 2025/2026 |
+| **4 kriteria** di pembukaan SKL | Kriteria ke-4 = SK Kepala Sekolah wajib ada |
+| **8 mapel saja** (PAI, PP, Bind, MTK, IPAS, SB, PJOK, BSund) | Bahasa Inggris/TIK/KKA sudah dihapus dari SKL |
+| **Tanpa Kelompok A/B** di tabel nilai | Tidak ada pengelompokan per aturan baru |
+| **Nilai 2 desimal dengan koma** (`v.toFixed(2).replace('.',',')`) | Format `86,90` bukan `87` |
+| **Baris rata-rata di dalam tabel** (baris terakhir) | Bukan di luar tabel |
+| **Header kolom = "Nilai"** (bukan "Nilai Ijazah") | Sesuai template resmi 2025 |
+| **TTD: `Kota Depok, [tgl]`** (bukan `Ditetapkan di/Pada tanggal`) | Format resmi baru |
+| **`NIP. [nip]`** (bukan `NBM. [nbm]`) | NIP kosong tampil sebagai `NIP. -` |
+
+**Checklist wajib setelah mengubah nomor surat di SKL:**
+- [ ] Perbarui `preview-skl.html` DAN `generate-skl.html` — tidak cukup satu file saja
+- [ ] Di kedua file: `seq` harus dari `allSiswa.findIndex(s => s.id === ...)`, bukan `idx` atau `i`
+- [ ] Di kedua file: tidak ada `skl_no_surat_suffix`, tidak ada `noUrutAwal + i`
+- [ ] Uji preview **satu siswa** (siswa ke-3 misalnya) → nomor surat harus `095.03`, bukan `095.01`
+- [ ] Uji preview **semua siswa** → nomor surat berurutan `095.01`, `095.02`, dst.
+- [ ] Uji generate ZIP untuk **subset** siswa → nomor surat tetap berdasarkan posisi absolut
+
+**Checklist wajib setelah mengubah format halaman cetak `preview-skl.html`:**
+- [ ] Tidak ada `pg1` yang di-`appendChild` ke body (hanya `pg2`)
+- [ ] 4 poin kriteria ada di pembukaan SKL
+- [ ] Tidak ada `ml.grp` atau `lastGrp` atau `lastG2` di loop LAMP_DEF
+- [ ] Nilai gunakan `.toFixed(2).replace('.',',')` bukan `Math.round()`
+- [ ] Baris rata-rata (`lampRows`) ada sebagai `<tr>` terakhir setelah loop LAMP_DEF
+- [ ] Header tabel = "Nilai" bukan "Nilai Ijazah"
+- [ ] TTD menggunakan `kepsNIP` dengan prefix `NIP.`, bukan `kepsNBM`
+
+**Checklist wajib setelah mengubah `config-skl.html`:**
+- [ ] `KEYS_TO_SAVE` tidak mengandung `skl_no_surat_suffix`, `map_bing`, `map_tik`, `map_kka`
+- [ ] `KEYS_TO_SAVE` mengandung `skl_no_kode_klas`, `skl_no_kode_instansi`, `skl_no_bulan`, `skl_tahun_skl`, `skl_kepsek_nip`
+- [ ] `updatePreview()` membaca 5 komponen baru (bukan `no + sfx`)
+- [ ] Field `skl_kepsek_nip` ada di form HTML
 
 ---
 
@@ -861,11 +1022,18 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/preview-ismuba.html` | Komentar `// ANTIREGRESI v26` di atas blok script (read-only, sumber formula) | v26 | Wajib ada. Mengingatkan tidak ada write dan formula harus identik dengan preview-tka.html. Lihat §19. |
 | `ujian-sekolah/preview-ismuba.html` | `getNilaiISMUBA()` identik dengan `preview-tka.html` termasuk alias search v23 | v26 | Jika diubah di satu file, wajib disamakan di keduanya. Lihat §19. |
 | `ujian-sekolah/config-skl.html` | 10 config key Syahadah baru ada di form dan di array `KEYS_TO_SAVE` | v26 | Wajib ada keduanya. Jika hanya di form tapi tidak di array, nilai tidak tersimpan. Lihat §19. |
-| `ujian-sekolah/preview-ismuba.html` | `const LOGO_MUH`, `LOGO_SALAM`, `LOGO_BARCODE` — tidak boleh diganti kembali ke `LOGO_PP`/`LOGO_SDM` | v27 | Tiga aset visual Syahadah embedded. Lihat §19 catatan v27. |
-| `ujian-sekolah/preview-ismuba.html` | `Drs. Nur Komarudin, M.M.Pd.` dan `NBM. 555.835` hardcoded di dua tempat (shd-sign + dnilai-sign) | v27 | Data tanda tangan ketua majelis PWM — tidak diambil dari config. Lihat §19. |
-| `ujian-sekolah/preview-ismuba.html` | Default `tglHijri = '7 Dzulhijjah 1447 H'` dan `tglMasehi = '2 Juni 2026 M'` | v27 | Tanggal Syahadah 2026. Update via config `ismuba_tgl_ttd_hijri` / `ismuba_tgl_ttd_masehi`. |
+| `penilaian/input-nilai.html` | `const toUpdate = []; const toAppend = []; const nilaiDBLocal = {}; let _saveSeq = 0;` **sebelum** `for (const item of toSave)` di `simpanTP()` | v27 | Wajib ada sebelum loop. Jika dihapus, per-row write → error 400 untuk sheet besar atau 429 rate limit. Lihat §20. |
+| `penilaian/input-nilai.html` | `// ANTIREGRESI §20: pakai append()...` di komentar blok INSERT di `simpanTP()` | v27 | Penanda wajib. Menjelaskan alasan append vs write. Jangan hapus. |
+| `penilaian/input-nilai.html` | `toAppend.push(row); rows.push(row)` di cabang INSERT `simpanTP()` — bukan `SHEETS.write()` | v27 | **BERULANG** — Tanpa ini, INSERT kembali ke write() yang gagal 400 saat sheet besar. Lihat §20. |
+| `penilaian/input-nilai.html` | `await SHEETS.append('NILAI!A1', toAppend)` **setelah** loop di `simpanTP()` — anchor A1 wajib | v27 | **BERULANG** — Anchor A1 wajib (lihat §3). Harus di luar loop. Lihat §20. |
+| `penilaian/input-nilai.html` | Tidak ada `await SHEETS.write(...)` atau `await SHEETS.append(...)` di dalam `for (const item of toSave)` di `simpanTP()` | v27 | **BERULANG** — Per-row API call → 400 (sheet besar) atau 429 (rate limit). Lihat §9 & §20. |
+| `ujian-sekolah/preview-skl.html` | `allSiswa.findIndex(s => s.id === siswa.id)` untuk `seq` di `loadPreview` — bukan `idx` | v30 | **BERULANG** — `idx` selalu 0 saat preview satu siswa → seq selalu `01`. Lihat §21. |
+| `ujian-sekolah/generate-skl.html` | `noKlas`, `noBase`, `noInst`, `noBulan`, `noTahun` dari config (format 5-bagian Perwal Depok 79/2019) | v30 | Wajib. Tanpa ini, format nomor surat lama tetap dipakai. Lihat §21. |
+| `ujian-sekolah/generate-skl.html` | `allSiswa.findIndex(ss => ss.id === s.id)` untuk `seq` — bukan `noUrutAwal + i` | v30 | **BERULANG** — `noUrutAwal + i` increment base number, bukan seq. Lihat §21. |
+| `ujian-sekolah/generate-skl.html` | `mapelFields` hanya 8 key (pai/pp/bind/mtk/ipas/sb/pjok/bsund) — tanpa bing/tik/kka | v30 | Wajib. bing/tik/kka sudah dihapus dari SKL 2025/2026. Lihat §21. |
+| `ujian-sekolah/generate-skl.html` | Validasi config pakai `cfg['skl_no_urut_awal']` — bukan `cfg['skl_no_surat_suffix']` | v30 | `skl_no_surat_suffix` sudah dihapus → selalu undefined → warning selalu muncul. Lihat §21. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 30 Mei 2026 (v27). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 29 Mei 2026 (v30). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
