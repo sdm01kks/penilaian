@@ -396,7 +396,11 @@ async function loadPreview(){
     const noBulan = cfg['skl_no_bulan']           || 'VI';
     const noTahun = cfg['skl_tahun_skl']          || '2026';
     daftar.forEach((siswa,idx)=>{
-      const seq    = String(idx+1).padStart(2,'0');
+      // ANTIREGRESI §21: seq HARUS dari posisi absolut di allSiswa (sudah terurut),
+      // bukan dari idx dalam daftar filter. Jika preview satu siswa, idx selalu 0
+      // sehingga seq selalu '01' — SALAH. allSiswa.findIndex memberi posisi yang benar.
+      const posisi  = allSiswa.findIndex(s => s.id === siswa.id);
+      const seq     = String((posisi >= 0 ? posisi : idx) + 1).padStart(2,'0');
       const noSurat = `${noKlas}/${noBase}.${seq}/${noInst}/${noBulan}/${noTahun}`;
       document.getElementById('sklDocs').appendChild(
         buildCard(siswa,allRapor.filter(r=>r.id_siswa===siswa.id),allUS.filter(r=>r.id_siswa===siswa.id),br,bu,noSurat)

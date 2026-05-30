@@ -236,7 +236,7 @@ window.addEventListener('load', async () => {
     });
 
     // Warn if config missing
-    if (!cfg['skl_no_surat_suffix'] || !cfg['skl_kepsek_nama']) {
+    if (!cfg['skl_no_urut_awal'] || !cfg['skl_kepsek_nama']) {
       showAlert('warning','⚠️ Konfigurasi SKL belum lengkap',
         'Beberapa data statis SKL belum diisi. Silakan lengkapi di halaman <a href="config-skl.html">Konfigurasi SKL</a> terlebih dahulu.');
     }
@@ -418,14 +418,20 @@ async function generateDocs() {
   if (!genSKL && !genLamp) { showAlert('warning','⚠️','Pilih minimal satu jenis dokumen.'); return; }
 
   // Load config values
-  const noUrutAwal  = parseInt(cfg['skl_no_urut_awal']||'101');
-  const suffix      = cfg['skl_no_surat_suffix']    || '/KET/III.4.AU/A/2025';
+  // ANTIREGRESI §21: format nomor surat 5-bagian (Perwal Depok No.79/2019)
+  // skl_no_surat_suffix DIHAPUS — jangan kembalikan
+  const noKlas      = cfg['skl_no_kode_klas']       || '400.3.11.1';
+  const noBase      = String(parseInt(cfg['skl_no_urut_awal'] || '95')).padStart(3,'0');
+  const noInst      = cfg['skl_no_kode_instansi']   || 'SKet-UPTDSDM01KKS';
+  const noBulan     = cfg['skl_no_bulan']            || 'VI';
+  const noTahun     = cfg['skl_tahun_skl']           || '2026';
   const tahunAjaran = cfg['skl_tahun_ajaran']        || '2024-2025';
   const tahunSlash  = cfg['skl_tahun_ajaran_slash']  || '2024/2025';
   const tglRapat    = cfg['skl_tgl_rapat']            || '';
   const tglPenetapan= cfg['skl_tgl_penetapan']        || '';
   const kepsekNama  = cfg['skl_kepsek_nama']          || '';
   const kepsekNBM   = cfg['skl_kepsek_nbm']           || '';
+  const kepsekNIP   = cfg['skl_kepsek_nip']           || '-'; // NIP kosong → tampil "-"
   const noSK        = cfg['skl_no_sk']                || '';
   const kota        = cfg['skl_kota']                 || 'Depok';
   const bRapor      = parseFloat(cfg['skl_bobot_rapor']||'60');
@@ -434,11 +440,11 @@ async function generateDocs() {
   const bUP         = parseFloat(cfg['skl_bobot_us_praktik']||'40');
 
   // Mapel → field mapping
+  // ANTIREGRESI §21: 8 mapel sesuai format SKL 2025/2026. bing/tik/kka dihapus.
   const mapelFields = {
     pai: cfg['map_pai']||'', pp: cfg['map_pp']||'', bind: cfg['map_bind']||'',
     mtk: cfg['map_mtk']||'', ipas: cfg['map_ipas']||'', sb: cfg['map_sb']||'',
-    pjok: cfg['map_pjok']||'', bing: cfg['map_bing']||'',
-    bsund: cfg['map_bsund']||'', tik: cfg['map_tik']||'', kka: cfg['map_kka']||''
+    pjok: cfg['map_pjok']||'', bsund: cfg['map_bsund']||'',
   };
 
   // Show progress area
@@ -483,8 +489,11 @@ async function generateDocs() {
 
   for (let i = 0; i < siswaTampil.length; i++) {
     const s = siswaTampil[i];
-    const noUrut  = String(noUrutAwal + i).padStart(3, '0');
-    const noSurat = noUrut + suffix;
+    // ANTIREGRESI §21: seq dari posisi absolut di allSiswa (terurut secara nama),
+    // bukan i dalam siswaTampil — agar nomor surat konsisten meski hanya sebagian siswa dipilih.
+    const posisi  = allSiswa.findIndex(ss => ss.id === s.id);
+    const seq     = String((posisi >= 0 ? posisi : i) + 1).padStart(2,'0');
+    const noSurat = `${noKlas}/${noBase}.${seq}/${noInst}/${noBulan}/${noTahun}`;
 
     const siswaRapor = allRapor.filter(r => r.id_siswa === s.id);
     const siswaUS    = allUS.filter(r => r.id_siswa === s.id);
@@ -539,7 +548,7 @@ async function generateDocs() {
       try {
         const sklData = { ...dataDasar, rerata };
         const buf = fillDocx(tplSKL, sklData);
-        generatedZip.file(`SKL_${noUrut}_${s.nama.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_')}.docx`, buf);
+        generatedZip.file(`SKL_${noBase}.${seq}_${s.nama.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_')}.docx`, buf);
         document.getElementById(`skl_${s.id}`).textContent  = '✅ OK';
         document.getElementById(`skl_${s.id}`).className    = 'status-badge done';
       } catch(e) {
@@ -565,13 +574,10 @@ async function generateDocs() {
           ipas:  getMapelNilai('ipas', true),
           sb:    getMapelNilai('sb',   true),
           pjok:  getMapelNilai('pjok', true),
-          bing:  getMapelNilai('bing', true),
           bsund: getMapelNilai('bsund',true),
-          tik:   getMapelNilai('tik',  true),
-          kka:   getMapelNilai('kka',  true),
         };
         const buf = fillDocx(tplLamp, lampData);
-        generatedZip.file(`Lampiran_${noUrut}_${s.nama.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_')}.docx`, buf);
+        generatedZip.file(`Lampiran_${noBase}.${seq}_${s.nama.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_')}.docx`, buf);
         document.getElementById(`lamp_${s.id}`).textContent = '✅ OK';
         document.getElementById(`lamp_${s.id}`).className   = 'status-badge done';
       } catch(e) {
