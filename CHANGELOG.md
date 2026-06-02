@@ -1,3 +1,60 @@
+## [2026-06-02] — v31 · Perbaikan Ekskul Pilihan Tidak Muncul di Preview & Cetak Rapor
+
+### 🐛 Perbaikan Bug — Ekskul Level Cakap/Mahir Tidak Tampil di Rapor
+
+**Gejala:** Guru kelas 2B yang menginput capaian ekskul Angklung untuk siswanya tidak dapat melihat nilai ekskul tersebut di preview maupun cetak rapor. Yang tampil di rapor hanya ekskul wajib (kokurikuler) yaitu Hizbul Wathan dan Tapak Suci — ekskul pilihan yang sudah diinput tidak muncul sama sekali.
+
+**Akar masalah — kondisi level ekskul yang terlalu sempit:**
+
+Fungsi `buildSeksiEkskul` di `rapor/preview.html` memiliki logika berbeda untuk dua jenis ekskul:
+- **Kokurikuler (wajib):** selalu ditampilkan untuk semua siswa — benar ✅
+- **Ekstrakurikuler (pilihan):** hanya ditampilkan jika siswa "mengikuti" — di sinilah bug-nya ❌
+
+Untuk ekstrakurikuler pilihan, kondisi yang dipakai adalah:
+```javascript
+// ❌ KODE LAMA — hanya mencocokkan level 1 (Layak)
+const row = eksSiswa.find(r => r[3] === e.id &&
+  (r[4]==='1' || r[4]===1 || String(r[4]).toLowerCase()==='true'));
+```
+
+Sistem level ekskul di `input-ekskul.html` menyimpan integer:
+- `0` — belum diisi (tidak tampil)
+- `1` — Layak (tampil) ← satu-satunya yang lolos kondisi lama
+- `2` — Cakap (tampil) ← **tidak lolos kondisi lama → bug**
+- `3` — Mahir (tampil) ← **tidak lolos kondisi lama → bug**
+- `4` — Tidak Ikut (tidak tampil)
+
+Kondisi `r[4]==='1'` tampak seperti cek "truthy" tapi sebenarnya adalah cek persamaan string — ia **hanya** mencocokkan level Layak. Guru kelas 2B yang memasukkan level Cakap (2) atau Mahir (3) untuk Angklung tidak bisa melihat hasilnya di rapor karena kondisi gagal.
+
+**Perbaikan:**
+
+```javascript
+// ✅ KODE BARU
+// ⚠️ ANTIREGRESI §22: level disimpan sebagai integer 1–3 (ikut) atau 4 (Tidak Ikut) atau 0 (belum diisi).
+// Jangan kembalikan ke cek r[4]==='1' — itu hanya mencocokkan Layak, melewatkan Cakap dan Mahir.
+const row = eksSiswa.find(r => r[3] === e.id &&
+  parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3);
+```
+
+Dengan perbaikan ini:
+- Level 1 (Layak) → muncul di rapor ✅
+- Level 2 (Cakap) → muncul di rapor ✅ (sebelumnya tidak muncul)
+- Level 3 (Mahir) → muncul di rapor ✅ (sebelumnya tidak muncul)
+- Level 4 (Tidak Ikut) → tidak muncul di rapor ✅
+- Level 0 / belum diisi → tidak muncul di rapor ✅
+
+Perbaikan berlaku untuk tampilan **screen** (preview di browser) maupun **cetak** (print/PDF), karena keduanya menggunakan `sectionD` yang dihasilkan oleh `buildSeksiEkskul` yang sama.
+
+### 📋 File yang Diubah (v31)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — `buildSeksiEkskul()`: ganti `r[4]==='1'\|\|r[4]===1\|\|...` dengan `parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3`; tambah komentar penanda ANTIREGRESI §22 |
+| `ANTIREGRESI.md` | **Diubah** — tambah §22 (level ekskul integer bukan boolean), tambah baris v31 di tabel riwayat, perbarui penanda kumulatif |
+| `CHANGELOG.md` | **Diubah** — tambah entri v31 ini |
+
+---
+
 ## [2026-05-29] — v30 · Perbaikan Nomor Urut Surat SKL Tidak Bertambah
 
 ### 🐛 Perbaikan Regresi — Seq Nomor Surat Selalu `.01` ⚠️ BERULANG BERPOTENSI

@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v31 | `rapor/preview.html` | Ekskul pilihan level Cakap/Mahir tidak muncul di rapor | `buildSeksiEkskul` mencocokkan `r[4]==='1'` — hanya Layak yang muncul; Cakap (2) & Mahir (3) diabaikan. Lihat §22. |
 | v30 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/generate-skl.html` | Seq nomor surat selalu `.01` untuk semua siswa | preview-skl: `idx` selalu 0 saat filter satu siswa. generate-skl: masih pakai format lama (`noUrutAwal+i`, `skl_no_surat_suffix`). Lihat §21. |
 | v29 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/config-skl.html` | Format SKL salah: halaman lama (SKK), mapel lama (11), nilai bulat, NBM | Format berubah total per aturan 2025/2026. Lihat §21. |
 | v27 | `penilaian/input-nilai.html` | `simpanTP()` — gagal simpan SLM/SAS error 400 | `write()` / values.update (PUT) dipakai untuk INSERT baris baru; gagal 400 jika nomor baris melewati batas alokasi fisik sheet. Per-item API call dalam loop (`eksekusiImport` diperbaiki v18 tapi `simpanTP` terlewat). |
@@ -968,6 +969,57 @@ for (const [key, val] of Object.entries(nilaiDBLocal)) {
 
 ---
 
+### 22. Level Ekskul di `buildSeksiEkskul` — Bukan Cek String `==='1'` ⚠️
+
+**Mengapa berisiko:** Sistem ekskul menggunakan level integer 1–4 untuk mencatat capaian siswa:
+
+| Level | Arti | Muncul di rapor? |
+|-------|------|-----------------|
+| 0 | Belum diisi | ❌ Tidak |
+| 1 | Layak | ✅ Ya |
+| 2 | Cakap | ✅ Ya |
+| 3 | Mahir | ✅ Ya |
+| 4 | Tidak Ikut | ❌ Tidak (eksplisit tidak mengikuti) |
+
+**Akar masalah (v31):** Kondisi lama `r[4]==='1' || r[4]===1 || String(r[4]).toLowerCase()==='true'` hanya mencocokkan level Layak. Guru kelas 2B yang memasukkan capaian Angklung dengan level Cakap (2) atau Mahir (3) tidak bisa melihat ekskul tersebut di preview maupun cetak rapor. Kondisi ini tampak "masuk akal" secara sekilas (cek boolean/truthy), tapi sistem levelnya bukan boolean — ia integer 1–4.
+
+**Pola yang salah (sering kembali):**
+```javascript
+// ❌ SALAH — hanya mencocokkan level 1 (Layak), melewatkan 2 dan 3
+const row = eksSiswa.find(r => r[3] === e.id &&
+  (r[4]==='1' || r[4]===1 || String(r[4]).toLowerCase()==='true'));
+```
+
+**Pola wajib sejak v31:**
+```javascript
+// ✅ BENAR — mencocokkan semua level "ikut" (Layak/Cakap/Mahir = 1/2/3)
+// ⚠️ ANTIREGRESI §22: level disimpan sebagai integer 1–3 (ikut) atau 4 (Tidak Ikut) atau 0 (belum diisi).
+// Jangan kembalikan ke cek r[4]==='1' — itu hanya mencocokkan Layak, melewatkan Cakap dan Mahir.
+const row = eksSiswa.find(r => r[3] === e.id &&
+  parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3);
+```
+
+**Kapan risiko meningkat:** Setiap kali `buildSeksiEkskul` di `rapor/preview.html` diedit — untuk menambah logika filter, mengubah format tampilan, atau menyesuaikan aturan jenis ekskul.
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/preview.html` | `parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3` di blok ekstrakurikuler `buildSeksiEkskul` |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §22` tepat sebelum filter level |
+
+**Checklist wajib setelah mengubah `buildSeksiEkskul` di `rapor/preview.html`:**
+- [ ] Pastikan kondisi level ekstrakurikuler menggunakan `parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3`
+- [ ] Pastikan tidak ada cek `r[4]==='1'` atau `r[4]===1` atau `String(r[4])...==='true'`
+- [ ] Uji dengan siswa yang memiliki ekskul pilihan di level Layak (1) → harus muncul di rapor
+- [ ] Uji dengan siswa yang memiliki ekskul pilihan di level Cakap (2) → harus muncul di rapor
+- [ ] Uji dengan siswa yang memiliki ekskul pilihan di level Mahir (3) → harus muncul di rapor
+- [ ] Uji dengan siswa yang memiliki ekskul pilihan di level Tidak Ikut (4) → **tidak boleh** muncul di rapor
+- [ ] Uji dengan siswa yang ekskul-nya belum diisi (level 0) → **tidak boleh** muncul di rapor
+- [ ] Pastikan ekskul kokurikuler (Hizbul Wathan, Tapak Suci) tetap muncul untuk semua siswa, terlepas dari level
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1032,8 +1084,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/generate-skl.html` | `allSiswa.findIndex(ss => ss.id === s.id)` untuk `seq` — bukan `noUrutAwal + i` | v30 | **BERULANG** — `noUrutAwal + i` increment base number, bukan seq. Lihat §21. |
 | `ujian-sekolah/generate-skl.html` | `mapelFields` hanya 8 key (pai/pp/bind/mtk/ipas/sb/pjok/bsund) — tanpa bing/tik/kka | v30 | Wajib. bing/tik/kka sudah dihapus dari SKL 2025/2026. Lihat §21. |
 | `ujian-sekolah/generate-skl.html` | Validasi config pakai `cfg['skl_no_urut_awal']` — bukan `cfg['skl_no_surat_suffix']` | v30 | `skl_no_surat_suffix` sudah dihapus → selalu undefined → warning selalu muncul. Lihat §21. |
+| `rapor/preview.html` | `parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3` di `buildSeksiEkskul` — bukan `r[4]==='1'` | v31 | **Wajib.** Tanpa ini hanya level Layak yang tampil di rapor; Cakap (2) dan Mahir (3) tidak muncul. Lihat §22. |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §22` di dalam `buildSeksiEkskul` — blok ekstrakurikuler | v31 | Penanda wajib agar kondisi level tidak dikembalikan ke cek string `==='1'`. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 29 Mei 2026 (v30). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v31). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
