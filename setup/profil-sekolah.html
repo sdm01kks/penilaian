@@ -468,9 +468,15 @@ textarea { resize: vertical; min-height: 72px; }
         </div>
 
         <div class="form-group">
-          <label>Tanggal Penerimaan Rapor</label>
+          <label>Tanggal Penerimaan Rapor — Kelas 6 &amp; Sem. I (Semua Kelas) <span class="required">*</span></label>
           <input type="text" id="tgl_rapor" placeholder="22 Desember 2025">
-          <span class="input-note">Tanggal yang tercetak di rapor</span>
+          <span class="input-note">Digunakan: rapor Sem. I semua kelas, dan rapor Sem. II Kelas 6. Juga dipakai pada SKL/Ijazah Kelas 6.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Tanggal Penerimaan Rapor Kelas 1–5 (Sem. II) <span class="hint">(opsional)</span></label>
+          <input type="text" id="tgl_rapor_1_5" placeholder="21 Juni 2026">
+          <span class="input-note">Khusus rapor Sem. II Kelas 1–5. Jika dikosongkan, otomatis menggunakan tanggal di atas.</span>
         </div>
 
         <div class="form-group">
@@ -656,6 +662,7 @@ async function muatSemuaData() {
   setValue('nbm_kepsek',     config['nbm_kepsek']);
   setValue('tahun_pelajaran',config['tahun_pelajaran']);
   setValue('tgl_rapor',      config['tgl_rapor']);
+  setValue('tgl_rapor_1_5', config['tgl_rapor_1_5']);
   setValue('kota_rapor',     config['kota_rapor'] || 'Depok');
 
   if (config['semester_aktif'])       pilihSemester(config['semester_aktif']);
@@ -710,6 +717,7 @@ async function simpanSeksi(seksi) {
         'seni_semester_ganjil': seniGanjil,
         'seni_semester_genap':  seniGenap,
         'tgl_rapor':            getValue('tgl_rapor'),
+        'tgl_rapor_1_5':        getValue('tgl_rapor_1_5'),
         'kota_rapor':           getValue('kota_rapor'),
       });
       setStatus('semester', true, '✅ Tersimpan');
