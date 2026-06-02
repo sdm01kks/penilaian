@@ -349,7 +349,7 @@ async function muatRapor(siswa) {
       alamat:     config['alamat_sekolah'] || '',
       kepsek:     config['nama_kepsek']    || '',
       nbm_kepsek: config['nbm_kepsek']     || '',
-      tgl_rapor:  config['tgl_rapor']      || '',
+      tgl_rapor:  pilihTglRapor(config, activeKelas, sem),
       kota_rapor: config['kota_rapor']     || 'Depok',
       wali_kelas: wali.nama,
       nbm_wali:   wali.nbm,
@@ -382,6 +382,20 @@ async function muatRapor(siswa) {
     showAlert('error','⛔ Gagal menyusun rapor', e.message);
     hideLoading();
   }
+}
+
+/* ════════════════════════════════════════════════════════
+   HELPER — PILIH TANGGAL RAPOR
+   ⚠️ ANTIREGRESI §24: Sem I semua kelas & Sem II Kelas 6 → tgl_rapor.
+   Sem II Kelas 1–5 → tgl_rapor_1_5 (fallback tgl_rapor jika kosong).
+   Jangan hardcode satu config key; gunakan fungsi ini di semua titik cetak.
+════════════════════════════════════════════════════════ */
+function pilihTglRapor(cfg, kelas, semester) {
+  const tingkatan = parseInt(String(kelas).replace(/[^0-9]/g, ''));
+  if (semester === 'II' && tingkatan >= 1 && tingkatan <= 5) {
+    return cfg['tgl_rapor_1_5'] || cfg['tgl_rapor'] || '';
+  }
+  return cfg['tgl_rapor'] || '';
 }
 
 /* ════════════════════════════════════════════════════════

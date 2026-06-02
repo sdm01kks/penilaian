@@ -848,6 +848,19 @@ function namaPredikat(v) {
 }
 
 /* ════════════════════════════════════════════════════
+   HELPER — PILIH TANGGAL RAPOR
+   ⚠️ ANTIREGRESI §24: Sem I semua kelas & Sem II Kelas 6 → tgl_rapor.
+   Sem II Kelas 1–5 → tgl_rapor_1_5 (fallback tgl_rapor jika kosong).
+════════════════════════════════════════════════════ */
+function pilihTglRapor(cfg, kelas, semester) {
+  const tingkatan = parseInt(String(kelas).replace(/[^0-9]/g, ''));
+  if (semester === 'II' && tingkatan >= 1 && tingkatan <= 5) {
+    return cfg['tgl_rapor_1_5'] || cfg['tgl_rapor'] || '';
+  }
+  return cfg['tgl_rapor'] || '';
+}
+
+/* ════════════════════════════════════════════════════
    CETAK PDF
 ════════════════════════════════════════════════════ */
 function cetakSatuPDF() {
@@ -879,7 +892,8 @@ function bukaJendelaCetak(bodyHTML, namaSiswa) {
   const guruTT    = config['_nama_guru_tt']  || '—';
   const nbmGuruTT = config['_nbm_guru_tt']   || '';
   const kota    = config['kota_rapor']     || 'Depok';
-  const tglRapor= config['tgl_rapor']      || '……………………';
+  // ⚠️ ANTIREGRESI §24: gunakan pilihTglRapor — jangan langsung config['tgl_rapor']
+  const tglRapor= pilihTglRapor(config, kelas, sem)  || '……………………';
   const tanda   = kota + ', ' + tglRapor;
 
   // Nama file PDF default
