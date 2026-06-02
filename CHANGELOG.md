@@ -1,3 +1,52 @@
+## [2026-06-02] — v32 · Perbaikan Form Edit Guru Selalu Kosong
+
+### 🐛 Perbaikan Bug — Kelas & Mapel Tidak Terpopulasi Saat Buka Form Edit
+
+**Gejala:** Admin membuka form edit guru (klik tombol ✏️ Edit), namun pilihan kelas dan mata pelajaran selalu tampak kosong — tidak ada checkbox yang tercentang. Admin harus mengisi ulang tugas guru dari awal setiap kali mengedit data apapun (nama, NBM, status, dll.), padahal data kelas/mapel sudah tersimpan dengan benar di sheet.
+
+**Akar masalah — argumen `fromEdit` yang tidak diteruskan:**
+
+`pilihRole` memiliki parameter `fromEdit` yang secara eksplisit dirancang untuk membedakan dua konteks pemanggilan:
+
+```javascript
+function pilihRole(role, fromEdit = false) {
+  if (!fromEdit) {
+    // Dipanggil oleh klik user dari UI → bersihkan state lama
+    kelasDipilih      = [];
+    kelasMapelDipilih = [];
+    mapelDipilih      = [];
+  }
+  // ... render checkbox
+}
+```
+
+`bukaEdit` menyiapkan ketiga array dari data guru, lalu memanggil `pilihRole(u.role)` — **tanpa** argumen `fromEdit=true`. Akibatnya `pilihRole` mengosongkan semua array yang baru saja diisi. `_forceRestoreCheckboxes()` yang dipanggil sesudahnya beroperasi pada array kosong — tidak ada yang bisa di-restore.
+
+**Perbaikan:**
+
+```javascript
+// ❌ SEBELUM — fromEdit default ke false → array dikosongkan
+pilihRole(u.role);
+
+// ✅ SESUDAH — fromEdit=true → array tidak dikosongkan, render menggunakan data guru
+// ⚠️ ANTIREGRESI §23: wajib fromEdit=true — tanpa ini pilihRole akan clear ketiga array
+// (kelasDipilih/kelasMapelDipilih/mapelDipilih) yang baru saja diisi dari data guru,
+// menyebabkan form edit selalu kosong.
+pilihRole(u.role, true);
+```
+
+Satu argumen `true` — itulah seluruh perbaikan. Parameter `fromEdit` sudah ada dan dirancang dengan tepat; ia hanya tidak pernah diteruskan dari `bukaEdit`.
+
+### 📋 File yang Diubah (v32)
+
+| File | Status |
+|------|--------|
+| `setup/kelola-guru.html` | **Diubah** — `bukaEdit()`: `pilihRole(u.role)` → `pilihRole(u.role, true)`; tambah komentar penanda ANTIREGRESI §23 |
+| `ANTIREGRESI.md` | **Diubah** — tambah §23, baris v32 di tabel riwayat, dua baris penanda kumulatif |
+| `CHANGELOG.md` | **Diubah** — tambah entri v32 ini |
+
+---
+
 ## [2026-06-02] — v31 · Perbaikan Ekskul Pilihan Tidak Muncul di Preview & Cetak Rapor
 
 ### 🐛 Perbaikan Bug — Ekskul Level Cakap/Mahir Tidak Tampil di Rapor

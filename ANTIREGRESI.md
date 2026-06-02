@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v32 | `setup/kelola-guru.html` | Form edit guru selalu kosong — kelas/mapel tidak terpopulasi | `bukaEdit` memanggil `pilihRole(u.role)` tanpa `fromEdit=true` → `pilihRole` mengosongkan semua array yang baru diisi. Lihat §23. |
 | v31 | `rapor/preview.html` | Ekskul pilihan level Cakap/Mahir tidak muncul di rapor | `buildSeksiEkskul` mencocokkan `r[4]==='1'` — hanya Layak yang muncul; Cakap (2) & Mahir (3) diabaikan. Lihat §22. |
 | v30 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/generate-skl.html` | Seq nomor surat selalu `.01` untuk semua siswa | preview-skl: `idx` selalu 0 saat filter satu siswa. generate-skl: masih pakai format lama (`noUrutAwal+i`, `skl_no_surat_suffix`). Lihat §21. |
 | v29 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/config-skl.html` | Format SKL salah: halaman lama (SKK), mapel lama (11), nilai bulat, NBM | Format berubah total per aturan 2025/2026. Lihat §21. |
@@ -963,6 +964,80 @@ for (const [key, val] of Object.entries(nilaiDBLocal)) {
 - [ ] Uji dengan akun `guru_mapel` yang mengampu lebih dari satu mapel/kelas
 - [ ] Jika menyentuh `eksekusiImport` di `input-nilai.html`: pastikan tidak ada API call (`SHEETS.write`/`SHEETS.append`) di dalam loop — harus pakai pola batch `toUpdate`/`toAppend`. Lihat §9.
 
+### 23. `bukaEdit` Wajib Memanggil `pilihRole(u.role, true)` — Bukan `pilihRole(u.role)` ⚠️
+
+**Mengapa berisiko:** `pilihRole` memiliki dua mode eksekusi yang dikendalikan oleh parameter `fromEdit`:
+
+```javascript
+function pilihRole(role, fromEdit = false) {
+  if (!fromEdit) {
+    // Mode "klik user dari UI": bersihkan semua state pilihan lama
+    kelasDipilih      = [];
+    kelasMapelDipilih = [];
+    mapelDipilih      = [];
+  }
+  // ... render checkbox menggunakan array di atas
+}
+```
+
+**Akar masalah (v32):** `bukaEdit` menyiapkan tiga array state dari data guru, lalu memanggil `pilihRole(u.role)` tanpa argumen kedua. Karena `fromEdit` default ke `false`, `pilihRole` mengosongkan kembali semua array — termasuk yang baru saja diisi. `_forceRestoreCheckboxes()` yang dipanggil sesudahnya beroperasi pada array kosong sehingga tidak ada checkbox yang tercentang. Form edit guru selalu tampak kosong.
+
+**Urutan bug (sebelum perbaikan):**
+```
+bukaEdit() sets kelasDipilih = ['2B']
+bukaEdit() sets kelasMapelDipilih = []
+bukaEdit() sets mapelDipilih = ['PAI','MTK']
+pilihRole(u.role)  ← fromEdit=false → CLEAR semua array!
+                     kelasDipilih = []  ← data hilang
+                     mapelDipilih = []  ← data hilang
+renderKelasCheckbox()  ← render dari array kosong → tidak ada yang dicentang
+_forceRestoreCheckboxes()  ← loop dari array kosong → tidak ada yang di-restore
+```
+
+**Urutan benar (setelah perbaikan):**
+```
+bukaEdit() sets kelasDipilih = ['2B']
+bukaEdit() sets mapelDipilih = ['PAI','MTK']
+pilihRole(u.role, true)  ← fromEdit=true → TIDAK clear array
+renderKelasCheckbox()  ← render dari kelasDipilih=['2B'] → '2B' tercentang ✅
+_forceRestoreCheckboxes()  ← safety net whitespace → memperkuat centang ✅
+```
+
+**Pola yang salah (sering kembali):**
+```javascript
+// ❌ SALAH — pilihRole mengosongkan semua state yang baru diisi
+pilihRole(u.role);
+```
+
+**Pola wajib sejak v32:**
+```javascript
+// ✅ BENAR
+// ⚠️ ANTIREGRESI §23: wajib fromEdit=true — tanpa ini pilihRole akan clear ketiga array
+// (kelasDipilih/kelasMapelDipilih/mapelDipilih) yang baru saja diisi dari data guru,
+// menyebabkan form edit selalu kosong.
+pilihRole(u.role, true);
+```
+
+**Kapan risiko meningkat:** Setiap kali `bukaEdit` di `setup/kelola-guru.html` diedit — untuk menambah field baru, mengubah urutan inisialisasi, atau ketika fungsi `pilihRole` direfactor.
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `setup/kelola-guru.html` | `pilihRole(u.role, true)` di dalam `bukaEdit` — bukan `pilihRole(u.role)` |
+| `setup/kelola-guru.html` | Komentar `// ⚠️ ANTIREGRESI §23` di atas baris tersebut |
+
+**Checklist wajib setelah mengubah `bukaEdit` atau `pilihRole` di `setup/kelola-guru.html`:**
+- [ ] Pastikan `bukaEdit` memanggil `pilihRole(u.role, true)` — ada argumen `true`
+- [ ] Pastikan komentar `⚠️ ANTIREGRESI §23` masih ada di atasnya
+- [ ] Uji edit guru `guru_kelas` — kelas utama dan kelas tambahan harus tercentang sesuai data
+- [ ] Uji edit guru `guru_mapel` — kelas yang diampu dan mapel harus tercentang sesuai data
+- [ ] Uji edit guru `admin` — form nama/email/status terisi, tidak ada error
+- [ ] Simpan tanpa mengubah apapun — data yang tersimpan harus identik dengan data sebelum edit
+- [ ] Edit hanya nama/NBM/status (tidak ubah kelas/mapel) → kelas & mapel harus tetap tersimpan benar
+
+---
+
 ### Umum:
 - [ ] Perubahan apapun di `sheets.js` → update `CHANGELOG.md` dengan penanda kode di bagian 🔍
 - [ ] Jika menemukan pola regresi baru → tambahkan ke dokumen ini
@@ -1086,8 +1161,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `ujian-sekolah/generate-skl.html` | Validasi config pakai `cfg['skl_no_urut_awal']` — bukan `cfg['skl_no_surat_suffix']` | v30 | `skl_no_surat_suffix` sudah dihapus → selalu undefined → warning selalu muncul. Lihat §21. |
 | `rapor/preview.html` | `parseInt(r[4]) >= 1 && parseInt(r[4]) <= 3` di `buildSeksiEkskul` — bukan `r[4]==='1'` | v31 | **Wajib.** Tanpa ini hanya level Layak yang tampil di rapor; Cakap (2) dan Mahir (3) tidak muncul. Lihat §22. |
 | `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §22` di dalam `buildSeksiEkskul` — blok ekstrakurikuler | v31 | Penanda wajib agar kondisi level tidak dikembalikan ke cek string `==='1'`. |
+| `setup/kelola-guru.html` | `pilihRole(u.role, true)` di dalam `bukaEdit` — bukan `pilihRole(u.role)` | v32 | **Wajib.** Tanpa `true`, `pilihRole` mengosongkan semua array state sebelum render. Lihat §23. |
+| `setup/kelola-guru.html` | Komentar `// ⚠️ ANTIREGRESI §23` di atas `pilihRole(u.role, true)` dalam `bukaEdit` | v32 | Penanda wajib agar argumen `true` tidak hilang saat refactor. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v31). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v32). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
