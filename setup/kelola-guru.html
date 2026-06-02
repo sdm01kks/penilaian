@@ -697,7 +697,10 @@ function bukaEdit(id) {
   document.getElementById('f_status').value = u.status || 'aktif';
 
   // pilihRole memanggil render* dengan state di atas
-  pilihRole(u.role);
+  // ⚠️ ANTIREGRESI §23: wajib fromEdit=true — tanpa ini pilihRole akan clear ketiga array
+  // (kelasDipilih/kelasMapelDipilih/mapelDipilih) yang baru saja diisi dari data guru,
+  // menyebabkan form edit selalu kosong.
+  pilihRole(u.role, true);
 
   // Force-apply state ke DOM: lebih aman dari pure template karena menghindari
   // mismatch whitespace antara data sheet dan allKelas
