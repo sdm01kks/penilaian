@@ -1,3 +1,54 @@
+## [2026-06-02] — v33 · Tanggal Penerimaan Rapor Kelas 1–5 Sem. II Dipisahkan dari Kelas 6
+
+### ✨ Perubahan Aturan — Dua Tanggal Penerimaan Rapor Semester II
+
+**Latar belakang:** Mulai semester genap ini, tanggal penerimaan rapor Semester II tidak lagi seragam untuk semua kelas. Kelas 6 menerima rapor lebih awal karena keperluan PPDB (Penerimaan Peserta Didik Baru) di jenjang SMP. Kelas 1–5 menerima rapor pada tanggal yang berbeda.
+
+Sebelumnya, satu field `tgl_rapor` digunakan untuk semua kelas di semua semester. Field ini juga dipakai oleh dokumen SKL/Ijazah Kelas 6. Karena itu `tgl_rapor` **tetap dipertahankan** dan **tidak diubah maknanya** — ia masih menjadi tanggal utama untuk Kelas 6 dan untuk semua kelas di Semester I. Yang ditambahkan adalah field baru `tgl_rapor_1_5` khusus Kelas 1–5 Semester II.
+
+**Matriks tanggal yang berlaku sejak v33:**
+
+| Kondisi | Field yang dipakai | Catatan |
+|---------|-------------------|---------|
+| Semester I — semua kelas | `tgl_rapor` | Tidak berubah |
+| Semester II — Kelas 6 | `tgl_rapor` | Tidak berubah; dipakai juga SKL/Ijazah |
+| Semester II — Kelas 1–5 | `tgl_rapor_1_5` | **Baru.** Fallback ke `tgl_rapor` jika kosong |
+
+**Perubahan teknis:**
+
+**`setup/profil-sekolah.html`** — Seksi C (Konfigurasi Semester Aktif):
+- Label `tgl_rapor` diperbarui menjadi: *"Tanggal Penerimaan Rapor — Kelas 6 & Sem. I (Semua Kelas)"* agar tidak membingungkan admin
+- Ditambah field baru `tgl_rapor_1_5` dengan label: *"Tanggal Penerimaan Rapor Kelas 1–5 (Sem. II)"* — bersifat opsional; jika dikosongkan, sistem otomatis fallback ke `tgl_rapor`
+- `setValue` dan `simpanBatch` diperbarui untuk membaca dan menyimpan `tgl_rapor_1_5`
+
+**`rapor/preview.html`** dan **`rapor/laporan-tt.html`** — ditambah helper function identik:
+```javascript
+function pilihTglRapor(cfg, kelas, semester) {
+  const tingkatan = parseInt(String(kelas).replace(/[^0-9]/g, ''));
+  if (semester === 'II' && tingkatan >= 1 && tingkatan <= 5) {
+    return cfg['tgl_rapor_1_5'] || cfg['tgl_rapor'] || '';
+  }
+  return cfg['tgl_rapor'] || '';
+}
+```
+Semua titik yang sebelumnya membaca `config['tgl_rapor']` langsung digantikan dengan pemanggilan `pilihTglRapor()`.
+
+**Tidak ada perubahan di:**
+- `assets/js/sheets.js` — CONFIG sudah key-value generic, tidak perlu diubah
+- `ujian-sekolah/*` — SKL/Ijazah Kelas 6 tetap menggunakan `tgl_rapor` (tanggal lebih awal), sudah benar
+
+### 📋 File yang Diubah (v33)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `setup/profil-sekolah.html` | **Diubah** | Rename label `tgl_rapor`; tambah field, `setValue`, `simpanBatch` untuk `tgl_rapor_1_5` |
+| `rapor/preview.html` | **Diubah** | Tambah `pilihTglRapor()`; `raporData.tgl_rapor` pakai fungsi tersebut |
+| `rapor/laporan-tt.html` | **Diubah** | Tambah `pilihTglRapor()`; `bukaJendelaCetak` pakai fungsi tersebut |
+| `ANTIREGRESI.md` | **Diubah** | Tambah §24, baris v33 di tabel riwayat, penanda kumulatif |
+| `CHANGELOG.md` | **Diubah** | Tambah entri v33 ini |
+
+---
+
 ## [2026-06-02] — v32 · Perbaikan Form Edit Guru Selalu Kosong
 
 ### 🐛 Perbaikan Bug — Kelas & Mapel Tidak Terpopulasi Saat Buka Form Edit

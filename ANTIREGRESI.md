@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v33 | `setup/profil-sekolah.html`, `rapor/preview.html`, `rapor/laporan-tt.html` | Tanggal rapor Sem. II Kelas 1–5 berbeda dengan Kelas 6 — satu field tidak cukup | Tambah `tgl_rapor_1_5`; helper `pilihTglRapor()` memilih key berdasarkan semester + tingkatan. Lihat §24. |
 | v32 | `setup/kelola-guru.html` | Form edit guru selalu kosong — kelas/mapel tidak terpopulasi | `bukaEdit` memanggil `pilihRole(u.role)` tanpa `fromEdit=true` → `pilihRole` mengosongkan semua array yang baru diisi. Lihat §23. |
 | v31 | `rapor/preview.html` | Ekskul pilihan level Cakap/Mahir tidak muncul di rapor | `buildSeksiEkskul` mencocokkan `r[4]==='1'` — hanya Layak yang muncul; Cakap (2) & Mahir (3) diabaikan. Lihat §22. |
 | v30 | `ujian-sekolah/preview-skl.html`, `ujian-sekolah/generate-skl.html` | Seq nomor surat selalu `.01` untuk semua siswa | preview-skl: `idx` selalu 0 saat filter satu siswa. generate-skl: masih pakai format lama (`noUrutAwal+i`, `skl_no_surat_suffix`). Lihat §21. |
@@ -1038,6 +1039,73 @@ pilihRole(u.role, true);
 
 ---
 
+### 24. Tanggal Rapor Berbasis Semester + Tingkatan Kelas — Gunakan `pilihTglRapor()` ⚠️
+
+**Konteks:** Mulai v33, sistem mengenal dua tanggal penerimaan rapor yang berbeda untuk Semester II:
+
+| Kondisi | Config key yang dipakai | Keterangan |
+|---------|------------------------|------------|
+| Semester I — semua kelas (1–6) | `tgl_rapor` | Seragam, tidak ada perkecualian |
+| Semester II — Kelas 6 | `tgl_rapor` | Kelas 6 menerima rapor lebih awal (keperluan PPDB) |
+| Semester II — Kelas 1–5 | `tgl_rapor_1_5` | Tanggal berbeda; fallback ke `tgl_rapor` jika kosong |
+
+**Akar risiko:** Sebelum v33 hanya ada satu key `tgl_rapor`. Setelah v33, ada dua key. Jika kode yang mengambil tanggal **tidak memanggil `pilihTglRapor()`** dan langsung membaca `config['tgl_rapor']`, rapor Kelas 1–5 Semester II akan mencetak tanggal yang salah (tanggal milik Kelas 6).
+
+**Fungsi wajib — identik di kedua file:**
+```javascript
+// ⚠️ ANTIREGRESI §24: Sem I semua kelas & Sem II Kelas 6 → tgl_rapor.
+// Sem II Kelas 1–5 → tgl_rapor_1_5 (fallback tgl_rapor jika kosong).
+// Jangan hardcode config['tgl_rapor'] langsung di titik cetak — gunakan fungsi ini.
+function pilihTglRapor(cfg, kelas, semester) {
+  const tingkatan = parseInt(String(kelas).replace(/[^0-9]/g, ''));
+  if (semester === 'II' && tingkatan >= 1 && tingkatan <= 5) {
+    return cfg['tgl_rapor_1_5'] || cfg['tgl_rapor'] || '';
+  }
+  return cfg['tgl_rapor'] || '';
+}
+```
+
+**Pola yang salah (mudah kembali saat edit):**
+```javascript
+// ❌ SALAH — selalu pakai tanggal Kelas 6, Kelas 1–5 salah di Sem II
+const tglRapor = config['tgl_rapor'] || '……………………';
+```
+
+**Pola wajib sejak v33:**
+```javascript
+// ✅ BENAR
+// ⚠️ ANTIREGRESI §24: gunakan pilihTglRapor — jangan langsung config['tgl_rapor']
+const tglRapor = pilihTglRapor(config, kelas, semester) || '……………………';
+```
+
+**Kapan risiko meningkat:**
+- Setiap kali blok tanda tangan di `rapor/preview.html` atau `rapor/laporan-tt.html` diedit
+- Jika ada file cetak baru yang ditambahkan (laporan naratif, rekap, dll.) dan mengambil tanggal dari config
+- Jika `profil-sekolah.html` direfactor — pastikan `setValue`/`simpanBatch` untuk `tgl_rapor_1_5` tidak hilang
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/preview.html` | Fungsi `pilihTglRapor(cfg, kelas, semester)` dengan komentar §24 |
+| `rapor/preview.html` | `pilihTglRapor(config, activeKelas, sem)` di assignment `tgl_rapor` pada `raporData` |
+| `rapor/laporan-tt.html` | Fungsi `pilihTglRapor(cfg, kelas, semester)` dengan komentar §24 |
+| `rapor/laporan-tt.html` | `pilihTglRapor(config, kelas, sem)` di `bukaJendelaCetak` |
+| `setup/profil-sekolah.html` | `setValue('tgl_rapor_1_5', ...)` di blok load config |
+| `setup/profil-sekolah.html` | `'tgl_rapor_1_5': getValue('tgl_rapor_1_5')` di `simpanBatch` semester |
+
+**Checklist wajib setelah mengubah logika tanggal rapor:**
+- [ ] Pastikan `pilihTglRapor` ada dan tidak diubah logika kondisinya tanpa alasan
+- [ ] Uji Kelas 6, Sem. I → harus mencetak nilai `tgl_rapor`
+- [ ] Uji Kelas 6, Sem. II → harus mencetak nilai `tgl_rapor`
+- [ ] Uji Kelas 1 s.d. 5, Sem. I → harus mencetak nilai `tgl_rapor`
+- [ ] Uji Kelas 1 s.d. 5, Sem. II, `tgl_rapor_1_5` terisi → harus mencetak nilai `tgl_rapor_1_5`
+- [ ] Uji Kelas 1 s.d. 5, Sem. II, `tgl_rapor_1_5` **kosong** → harus fallback ke nilai `tgl_rapor`
+- [ ] Uji preview rapor dan cetak rapor — keduanya harus menggunakan tanggal yang sama
+- [ ] Uji laporan-tt — harus menggunakan tanggal yang sama dengan preview rapor untuk kelas yang sama
+
+---
+
 ### Umum:
 - [ ] Perubahan apapun di `sheets.js` → update `CHANGELOG.md` dengan penanda kode di bagian 🔍
 - [ ] Jika menemukan pola regresi baru → tambahkan ke dokumen ini
@@ -1163,8 +1231,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §22` di dalam `buildSeksiEkskul` — blok ekstrakurikuler | v31 | Penanda wajib agar kondisi level tidak dikembalikan ke cek string `==='1'`. |
 | `setup/kelola-guru.html` | `pilihRole(u.role, true)` di dalam `bukaEdit` — bukan `pilihRole(u.role)` | v32 | **Wajib.** Tanpa `true`, `pilihRole` mengosongkan semua array state sebelum render. Lihat §23. |
 | `setup/kelola-guru.html` | Komentar `// ⚠️ ANTIREGRESI §23` di atas `pilihRole(u.role, true)` dalam `bukaEdit` | v32 | Penanda wajib agar argumen `true` tidak hilang saat refactor. |
+| `rapor/preview.html`, `rapor/laporan-tt.html` | Fungsi `pilihTglRapor(cfg, kelas, semester)` — tidak boleh diinline dengan `config['tgl_rapor']` | v33 | **Wajib.** Tanpa fungsi ini Kelas 1–5 Sem. II selalu mencetak tanggal Kelas 6. Lihat §24. |
+| `rapor/preview.html`, `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §24` di setiap titik pemanggilan `pilihTglRapor` | v33 | Penanda wajib agar tidak dikembalikan ke `config['tgl_rapor']` langsung. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v32). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v33). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
