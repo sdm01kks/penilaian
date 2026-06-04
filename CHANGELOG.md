@@ -1,4 +1,55 @@
-## [2026-06-04] — v35 · Penyempurnaan `cariGuruTT` — Filter Status + Format Mapel Pendek
+## [2026-06-05] — v36 · Nama Guru TT Tidak Muncul untuk Guru Kelas yang Merangkap TT
+
+### 🐛 Perbaikan Bug — `cariGuruTT` Tidak Mengenali Kelas TT dari `kelasMapelList`
+
+**Gejala:** Setelah v35 di-deploy, nama guru TT kelas 2B (Nisya El Salsabila) tetap tidak muncul di tanda tangan laporan Tahsin-Tahfizh — tampil `—`. v34 dan v35 berhasil menghilangkan nama Tisandi yang salah, tetapi nama Nisya tidak kunjung muncul sebagai penggantinya.
+
+**Akar masalah — satu bug yang terlewat:**
+
+Nisya adalah **guru_kelas kelas 2C** yang merangkap mengajar Tahsin-Tahfizh di **kelas 2B**. Dalam skema data USERS:
+
+| Kolom | Field | Nilai Nisya |
+|-------|-------|-------------|
+| E | `kelas` | `2C` (kelas utama sebagai wali kelas) |
+| F | `mapel` | ID mapel TT (mis. `mp_tt01`) |
+| K | `kelas_mapel` | `2B` (kelas tambahan sebagai guru mapel TT) |
+
+`cariGuruTT` (v35) mengecek kelas dengan:
+```javascript
+return (u.kelasList || []).includes(kelas);
+```
+`u.kelasList` dibangun hanya dari kolom E → `["2C"]`. Ketika admin mencetak laporan kelas 2B, fungsi mencari `["2C"].includes("2B")` = **false** → Nisya tidak ditemukan → tanda tangan `—`.
+
+Kelas TT Nisya (`2B`) ada di `u.kelasMapelList` (kolom K), yang sama sekali tidak dicek oleh `cariGuruTT`.
+
+**Perbaikan (v36):**
+
+```javascript
+// ⚠️ ANTIREGRESI §25-B: cek kelasList (kolom E) DAN kelasMapelList (kolom K).
+// guru_kelas yang merangkap TT di kelas lain → kelas TT ada di kolom K, bukan kolom E.
+const allKelasGuru = [
+  ...(u.kelasList      || []),
+  ...(u.kelasMapelList || []),
+];
+return allKelasGuru.includes(kelas);
+```
+
+**Mengapa v34/v35 tidak menangkap ini:**
+v34 menambah filter kelas (sebelumnya tidak ada filter sama sekali). v35 menambah filter status nonaktif dan melengkapi kondisi `hasTT`. Keduanya mengasumsikan kelas TT guru ada di kolom E (`kelasList`), yang benar untuk `guru_mapel` murni. Kasus `guru_kelas` merangkap TT di kelas berbeda belum pernah diuji.
+
+**Tidak ada dampak regresi:** `kelasMapelList` kosong untuk `guru_mapel` murni dan `guru_mapel` biasa, sehingga spread `[...kelasList, ...kelasMapelList]` identik dengan `kelasList` saja untuk kasus-kasus yang sudah bekerja sebelumnya.
+
+### 📋 File yang Diubah (v36)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `rapor/laporan-tt.html` | **Diubah** | `cariGuruTT`: ganti `(u.kelasList\|\|[]).includes(kelas)` dengan spread `[...kelasList,...kelasMapelList].includes(kelas)`; update komentar §25-B |
+| `ANTIREGRESI.md` | **Diubah** | Tambah baris v36 di tabel riwayat; update §25 dengan kode terkini dan §25-B; tambah risiko & checklist baru |
+| `CHANGELOG.md` | **Diubah** — tambah entri v36 ini |
+
+---
+
+
 
 ### 🐛 Perbaikan Lanjutan — Dua Kasus Yang Terlewat di v34
 

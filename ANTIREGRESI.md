@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v36 | `rapor/laporan-tt.html` | Nama guru TT tidak muncul (tampil `—`) untuk guru_kelas yang merangkap TT di kelas lain (kelas TT ≠ kelas utama) | `cariGuruTT` hanya mengecek `u.kelasList` (kolom E = kelas utama); kelas TT ada di `u.kelasMapelList` (kolom K). Contoh: wali kelas 2C yang mengajar TT di 2B → `kelasList=["2C"]`, `includes("2B")=false`. Lihat §25-B. |
 | v35 | `rapor/laporan-tt.html` | `cariGuruTT` masih menampilkan guru nonaktif; mapel format pendek ("tt", "tt_01") tidak dikenali | `hasTT` tidak konsisten dengan `isTTGuru` (kurang `=== 'tt'` dan `startsWith('tt_')`); tidak ada filter `status !== 'nonaktif'`. Lihat §25. |
 | v34 | `rapor/laporan-tt.html` | Nama guru TT di tanda tangan selalu menampilkan guru pertama di sheet (Tisandi), bukan guru kelas yang dicetak (Nisya) | `find()` di init time tidak memfilter kelas; cache global `config['_nama_guru_tt']` dipakai untuk semua kelas. Lihat §25. |
 | v33 | `setup/profil-sekolah.html`, `rapor/preview.html`, `rapor/laporan-tt.html` | Tanggal rapor Sem. II Kelas 1–5 berbeda dengan Kelas 6 — satu field tidak cukup | Tambah `tgl_rapor_1_5`; helper `pilihTglRapor()` memilih key berdasarkan semester + tingkatan. Lihat §24. |
@@ -1143,7 +1144,7 @@ allUsersGlobal = allUsersCache;
 // TIDAK lagi set config['_nama_guru_tt'] di sini
 
 // Helper function:
-// ⚠️ ANTIREGRESI §25: filter status nonaktif + mapel (identik isTTGuru) + kelasList
+// ⚠️ ANTIREGRESI §25 + §25-B: filter status nonaktif + mapel (identik isTTGuru) + kelasList/kelasMapelList
 function cariGuruTT(allUsers, kelas) {
   return allUsers.find(u => {
     if ((u.status || '').toLowerCase() === 'nonaktif') return false;  // ← WAJIB
@@ -1155,7 +1156,12 @@ function cariGuruTT(allUsers, kelas) {
     });
     if (!hasTT) return false;
     if (!kelas) return true;  // fallback jika belum ada kelas terpilih
-    return (u.kelasList || []).includes(kelas);
+    // ⚠️ §25-B (v36): cek kelasList (kolom E) DAN kelasMapelList (kolom K).
+    // guru_kelas yang merangkap TT di kelas lain → kelas TT ada di kolom K, bukan kolom E.
+    // Contoh: wali kelas 2C (kelas=2C) yang mengajar TT di 2B → kelas_mapel=2B.
+    // Sebelumnya hanya kelasList yang dicek → guru merangkap tidak pernah cocok.
+    const allKelasGuru = [...(u.kelasList || []), ...(u.kelasMapelList || [])];
+    return allKelasGuru.includes(kelas);  // ← WAJIB: spread dua kolom
   }) || null;
 }
 
@@ -1171,6 +1177,7 @@ const nbmGuruTT = guruTTUser?.nbm   || '';
 - Setiap kali bagian `bukaJendelaCetak` diedit — mudah tergoda kembali ke `config['_nama_guru_tt']` yang terlihat "lebih simpel"
 - Jika ada refactor init yang menghapus `allUsersGlobal = allUsersCache`
 - Jika `cariGuruTT` dipindah atau diganti dengan `find` inline tanpa filter kelas
+- **Jika lookup kelas di `cariGuruTT` dikembalikan ke hanya `kelasList`** — guru_kelas merangkap (kelas TT di kolom K) tidak akan ditemukan lagi
 
 **Penanda kode wajib:**
 
@@ -1178,15 +1185,16 @@ const nbmGuruTT = guruTTUser?.nbm   || '';
 |------|---------|
 | `rapor/laporan-tt.html` | `let allUsersGlobal = []` di level modul, komentar `⚠️ ANTIREGRESI §25` |
 | `rapor/laporan-tt.html` | `allUsersGlobal = allUsersCache` di init (TANPA set `config['_nama_guru_tt']`) |
-| `rapor/laporan-tt.html` | Fungsi `cariGuruTT(allUsers, kelas)` dengan komentar §25 |
+| `rapor/laporan-tt.html` | Fungsi `cariGuruTT(allUsers, kelas)` dengan komentar §25 dan §25-B |
 | `rapor/laporan-tt.html` | `cariGuruTT(allUsersGlobal, kelas)` di `bukaJendelaCetak`, komentar `⚠️ ANTIREGRESI §25` |
 
 **Checklist wajib setelah mengubah logika guru TT di `laporan-tt.html`:**
 - [ ] Pastikan `allUsersGlobal` dideklarasi di level modul dan diisi di init
 - [ ] Pastikan `config['_nama_guru_tt']` **tidak** di-set di mana pun
-- [ ] Pastikan `cariGuruTT` menerima `kelas` sebagai parameter dan memfilter `u.kelasList`
+- [ ] Pastikan `cariGuruTT` menerima `kelas` sebagai parameter dan memfilter `u.kelasList` **DAN** `u.kelasMapelList`
 - [ ] Pastikan `bukaJendelaCetak` memanggil `cariGuruTT(allUsersGlobal, kelas)` — bukan `config['_nama_guru_tt']`
 - [ ] Uji dengan dua guru TT yang mengajar kelas berbeda (A dan B): cetak kelas A → nama guru A; cetak kelas B → nama guru B
+- [ ] Uji guru_kelas yang merangkap TT di kelas lain (kelas utama ≠ kelas TT): nama harus muncul sesuai kelas TT
 - [ ] Uji setelah admin mengubah kelas salah satu guru (tanpa reload) → nama harus sesuai kelas terpilih
 - [ ] Uji dengan kelas tanpa guru TT terdaftar → harus muncul '—' (tidak crash)
 
