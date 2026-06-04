@@ -859,11 +859,15 @@ function pilihTglRapor(cfg, kelas, semester) {
 
 /* ════════════════════════════════════════════════════
    HELPER — CARI GURU TT UNTUK KELAS TERTENTU
-   ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList DAN status.
+   ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList/kelasMapelList DAN status.
    Jangan pakai config['_nama_guru_tt'] global — ia tidak membedakan kelas.
    Jika dua guru TT mengajar di kelas berbeda, cache global selalu menampilkan
    yang pertama di sheet, bukan yang mengajar kelas yang sedang dicetak.
    hasTT harus identik dengan isTTGuru() — jangan kurangi kondisi.
+   ⚠️ ANTIREGRESI §25-B (v36): cek JUGA kelasMapelList (kolom K) — guru_kelas yang
+   merangkap TT di kelas lain menyimpan kelas TT-nya di kolom K, bukan kolom E.
+   Contoh: wali kelas 2C (kelas=2C) yang mengajar TT di 2B → kelas_mapel=2B.
+   kelasList hanya berisi ["2C"], sehingga includes("2B") = false → tidak ditemukan.
 ════════════════════════════════════════════════════ */
 function cariGuruTT(allUsers, kelas) {
   return allUsers.find(u => {
@@ -879,8 +883,14 @@ function cariGuruTT(allUsers, kelas) {
     if (!hasTT) return false;
     // Jika belum ada kelas terpilih, kembalikan yang pertama ditemukan (fallback)
     if (!kelas) return true;
-    // Harus terdaftar mengajar di kelas ini (via kelasList)
-    return (u.kelasList || []).includes(kelas);
+    // ⚠️ ANTIREGRESI §25-B: cek kelasList (kolom E) DAN kelasMapelList (kolom K).
+    // guru_kelas yang merangkap TT di kelas lain menyimpan kelas TT di kolom K.
+    // Sebelumnya hanya kelasList yang dicek → guru merangkap tidak pernah cocok.
+    const allKelasGuru = [
+      ...(u.kelasList      || []),
+      ...(u.kelasMapelList || []),
+    ];
+    return allKelasGuru.includes(kelas);
   }) || null;
 }
 
