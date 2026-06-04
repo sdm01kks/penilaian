@@ -1,3 +1,61 @@
+## [2026-06-02] — v34 · Perbaikan Nama Guru TT di Tanda Tangan Laporan Salah
+
+### 🐛 Perbaikan Bug — Nama Guru TT di TTD Tidak Sesuai Kelas
+
+**Gejala:** Guru TT kelas 2B (Nisya El Salsabila) tidak muncul di bagian tanda tangan saat admin mencetak laporan Tahsin-Tahfizh kelas 2B. Yang muncul adalah nama guru TT lain (Tisandi) yang juga terdaftar di sistem. Setelah admin menghapus Tisandi dari kelas 2B melalui kelola guru, nama Tisandi tetap muncul di tanda tangan laporan.
+
+**Akar masalah — dua bug berlapis:**
+
+**Bug 1 — Cache global tanpa filter kelas:**
+Di init time, kode lama mencari guru TT pertama dari seluruh USERS sheet tanpa mempertimbangkan kelas:
+```javascript
+// ❌ LAMA — find() tanpa filter kelas
+const guruTTUser = allUsersCache.find(u => {
+  const m = (u.mapel || '').toLowerCase().split(',').map(s=>s.trim());
+  return m.some(x => x.includes('tahsin') || ...);
+});
+config['_nama_guru_tt'] = guruTTUser.nama;  // ← cache global, salah kelas
+```
+Karena Tisandi muncul lebih awal di USERS sheet dari Nisya, Tisandi selalu "menang" meskipun Nisya yang mengajar kelas 2B.
+
+**Bug 2 — Cache stale setelah perubahan:**
+`config['_nama_guru_tt']` di-set sekali saat halaman dimuat. Setelah admin mengubah kelas Tisandi, nilai cache tidak berubah — Tisandi tetap muncul di tanda tangan sampai halaman di-reload penuh.
+
+**Perbaikan:**
+
+1. Variabel `allUsersGlobal` ditambahkan di level modul dan diisi dari `allUsersCache` saat init (menggantikan cache `config['_nama_guru_tt']` yang misleading)
+2. Fungsi `cariGuruTT(allUsers, kelas)` yang memfilter berdasarkan mapel **DAN** `kelasList`:
+```javascript
+function cariGuruTT(allUsers, kelas) {
+  return allUsers.find(u => {
+    const hasTT = (u.mapelList || []).some(x => {
+      const lower = x.toLowerCase();
+      return lower.includes('tahsin') || lower.includes('tahfizh') ||
+             lower === 'mp_tt' || lower.endsWith('_tt');
+    });
+    if (!hasTT) return false;
+    if (!kelas) return true;
+    return (u.kelasList || []).includes(kelas);
+  }) || null;
+}
+```
+3. `bukaJendelaCetak` kini memanggil `cariGuruTT(allUsersGlobal, kelas)` setiap kali cetak, sesuai kelas yang sedang ditampilkan
+
+Dengan perbaikan ini:
+- Kelas 2B → Nisya El Salsabila (yang memiliki kelas 2B di kelasList) ✅
+- Kelas lain → guru TT kelas tersebut ✅
+- Setelah admin mengubah kelas guru → lookup fresh per kelas berikutnya ✅
+
+### 📋 File yang Diubah (v34)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `rapor/laporan-tt.html` | **Diubah** | Tambah `allUsersGlobal` modul; hapus `config['_nama_guru_tt']` cache; tambah `cariGuruTT()`; `bukaJendelaCetak` pakai fungsi tersebut |
+| `ANTIREGRESI.md` | **Diubah** | Tambah §25, baris v34 di tabel riwayat, tiga baris penanda kumulatif |
+| `CHANGELOG.md` | **Diubah** — tambah entri v34 ini |
+
+---
+
 ## [2026-06-02] — v33 · Tanggal Penerimaan Rapor Kelas 1–5 Sem. II Dipisahkan dari Kelas 6
 
 ### ✨ Perubahan Aturan — Dua Tanggal Penerimaan Rapor Semester II

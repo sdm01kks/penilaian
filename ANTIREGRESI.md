@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v34 | `rapor/laporan-tt.html` | Nama guru TT di tanda tangan selalu menampilkan guru pertama di sheet (Tisandi), bukan guru kelas yang dicetak (Nisya) | `find()` di init time tidak memfilter kelas; cache global `config['_nama_guru_tt']` dipakai untuk semua kelas. Lihat §25. |
 | v33 | `setup/profil-sekolah.html`, `rapor/preview.html`, `rapor/laporan-tt.html` | Tanggal rapor Sem. II Kelas 1–5 berbeda dengan Kelas 6 — satu field tidak cukup | Tambah `tgl_rapor_1_5`; helper `pilihTglRapor()` memilih key berdasarkan semester + tingkatan. Lihat §24. |
 | v32 | `setup/kelola-guru.html` | Form edit guru selalu kosong — kelas/mapel tidak terpopulasi | `bukaEdit` memanggil `pilihRole(u.role)` tanpa `fromEdit=true` → `pilihRole` mengosongkan semua array yang baru diisi. Lihat §23. |
 | v31 | `rapor/preview.html` | Ekskul pilihan level Cakap/Mahir tidak muncul di rapor | `buildSeksiEkskul` mencocokkan `r[4]==='1'` — hanya Layak yang muncul; Cakap (2) & Mahir (3) diabaikan. Lihat §22. |
@@ -1106,6 +1107,88 @@ const tglRapor = pilihTglRapor(config, kelas, semester) || '………………�
 
 ---
 
+### 25. Guru TT di Tanda Tangan Wajib Difilter per Kelas — Gunakan `cariGuruTT()` ⚠️
+
+**Konteks:** Sekolah memiliki lebih dari satu guru Tahsin-Tahfizh (TT), masing-masing mengajar kelas yang berbeda. Tanda tangan pada laporan TT harus menampilkan nama guru yang **mengajar kelas yang sedang dicetak**, bukan guru TT mana pun yang pertama ditemukan di sheet.
+
+**Akar masalah (v34):** Kode lama melakukan `allUsersCache.find(u => ...)` satu kali di init time, mencari guru dengan mapel TT tanpa memeriksa kelas. Hasilnya disimpan ke `config['_nama_guru_tt']` — satu nilai global yang dipakai untuk semua kelas. Guru pertama di USERS sheet yang punya mapel TT selalu menang, apapun kelasnya.
+
+Dua bug berlapis:
+1. **Filter tidak ada:** `find` tidak memfilter `u.kelasList`, sehingga guru TT kelas lain (yang terdaftar lebih awal di sheet) selalu muncul
+2. **Cache global stale:** `config['_nama_guru_tt']` di-set satu kali di init. Setelah admin mengubah kelas guru, nilai cache tidak berubah sampai halaman di-reload penuh
+
+**Pola yang salah (mudah kembali):**
+```javascript
+// ❌ SALAH — cache global, tidak tahu kelas mana sedang dicetak
+const guruTTUser = allUsersCache.find(u => {
+  const m = (u.mapel || '').toLowerCase().split(',').map(s=>s.trim());
+  return m.some(x => x.includes('tahsin') || ...);
+});
+config['_nama_guru_tt'] = guruTTUser.nama;  // cache global ← BUG
+
+// ... lalu di bukaJendelaCetak ...
+const guruTT = config['_nama_guru_tt'] || '—';  // ← pakai cache global tanpa tahu kelas
+```
+
+**Pola wajib sejak v34:**
+
+```javascript
+// Di level modul:
+// ⚠️ ANTIREGRESI §25: wajib dijaga agar lookup cariGuruTT bisa filter per kelas
+let allUsersGlobal = [];  // diisi saat init, dipakai oleh cariGuruTT()
+
+// Saat init — simpan seluruh user ke modul:
+allUsersGlobal = allUsersCache;
+// TIDAK lagi set config['_nama_guru_tt'] di sini
+
+// Helper function:
+// ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList
+function cariGuruTT(allUsers, kelas) {
+  return allUsers.find(u => {
+    const hasTT = (u.mapelList || []).some(x => {
+      const lower = x.toLowerCase();
+      return lower.includes('tahsin') || lower.includes('tahfizh') ||
+             lower === 'mp_tt' || lower.endsWith('_tt');
+    });
+    if (!hasTT) return false;
+    if (!kelas) return true;  // fallback jika belum ada kelas terpilih
+    return (u.kelasList || []).includes(kelas);
+  }) || null;
+}
+
+// Di bukaJendelaCetak — lookup per kelas saat cetak:
+// ⚠️ ANTIREGRESI §25: cariGuruTT filter berdasarkan mapel+kelas —
+// jangan config['_nama_guru_tt'] yang global tanpa filter kelas.
+const guruTTUser = cariGuruTT(allUsersGlobal, kelas);
+const guruTT    = guruTTUser?.nama  || '—';
+const nbmGuruTT = guruTTUser?.nbm   || '';
+```
+
+**Kapan risiko meningkat:**
+- Setiap kali bagian `bukaJendelaCetak` diedit — mudah tergoda kembali ke `config['_nama_guru_tt']` yang terlihat "lebih simpel"
+- Jika ada refactor init yang menghapus `allUsersGlobal = allUsersCache`
+- Jika `cariGuruTT` dipindah atau diganti dengan `find` inline tanpa filter kelas
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | `let allUsersGlobal = []` di level modul, komentar `⚠️ ANTIREGRESI §25` |
+| `rapor/laporan-tt.html` | `allUsersGlobal = allUsersCache` di init (TANPA set `config['_nama_guru_tt']`) |
+| `rapor/laporan-tt.html` | Fungsi `cariGuruTT(allUsers, kelas)` dengan komentar §25 |
+| `rapor/laporan-tt.html` | `cariGuruTT(allUsersGlobal, kelas)` di `bukaJendelaCetak`, komentar `⚠️ ANTIREGRESI §25` |
+
+**Checklist wajib setelah mengubah logika guru TT di `laporan-tt.html`:**
+- [ ] Pastikan `allUsersGlobal` dideklarasi di level modul dan diisi di init
+- [ ] Pastikan `config['_nama_guru_tt']` **tidak** di-set di mana pun
+- [ ] Pastikan `cariGuruTT` menerima `kelas` sebagai parameter dan memfilter `u.kelasList`
+- [ ] Pastikan `bukaJendelaCetak` memanggil `cariGuruTT(allUsersGlobal, kelas)` — bukan `config['_nama_guru_tt']`
+- [ ] Uji dengan dua guru TT yang mengajar kelas berbeda (A dan B): cetak kelas A → nama guru A; cetak kelas B → nama guru B
+- [ ] Uji setelah admin mengubah kelas salah satu guru (tanpa reload) → nama harus sesuai kelas terpilih
+- [ ] Uji dengan kelas tanpa guru TT terdaftar → harus muncul '—' (tidak crash)
+
+---
+
 ### Umum:
 - [ ] Perubahan apapun di `sheets.js` → update `CHANGELOG.md` dengan penanda kode di bagian 🔍
 - [ ] Jika menemukan pola regresi baru → tambahkan ke dokumen ini
@@ -1232,9 +1315,11 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `setup/kelola-guru.html` | `pilihRole(u.role, true)` di dalam `bukaEdit` — bukan `pilihRole(u.role)` | v32 | **Wajib.** Tanpa `true`, `pilihRole` mengosongkan semua array state sebelum render. Lihat §23. |
 | `setup/kelola-guru.html` | Komentar `// ⚠️ ANTIREGRESI §23` di atas `pilihRole(u.role, true)` dalam `bukaEdit` | v32 | Penanda wajib agar argumen `true` tidak hilang saat refactor. |
 | `rapor/preview.html`, `rapor/laporan-tt.html` | Fungsi `pilihTglRapor(cfg, kelas, semester)` — tidak boleh diinline dengan `config['tgl_rapor']` | v33 | **Wajib.** Tanpa fungsi ini Kelas 1–5 Sem. II selalu mencetak tanggal Kelas 6. Lihat §24. |
-| `rapor/preview.html`, `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §24` di setiap titik pemanggilan `pilihTglRapor` | v33 | Penanda wajib agar tidak dikembalikan ke `config['tgl_rapor']` langsung. |
+| `rapor/laporan-tt.html` | Fungsi `cariGuruTT(allUsers, kelas)` — tidak boleh diganti `config['_nama_guru_tt']` | v34 | **Wajib.** Tanpa filter kelas, guru TT pertama di sheet selalu muncul untuk semua kelas. Lihat §25. |
+| `rapor/laporan-tt.html` | `let allUsersGlobal = []` di level modul + diisi di init | v34 | Wajib agar `cariGuruTT` bisa diakses di luar init. Lihat §25. |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §25` di deklarasi `allUsersGlobal` dan di `bukaJendelaCetak` | v34 | Penanda wajib agar refactor tidak menghapus filter kelas. |
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v33). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v34). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
