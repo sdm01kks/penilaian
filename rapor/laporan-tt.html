@@ -859,18 +859,22 @@ function pilihTglRapor(cfg, kelas, semester) {
 
 /* ════════════════════════════════════════════════════
    HELPER — CARI GURU TT UNTUK KELAS TERTENTU
-   ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList.
+   ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList DAN status.
    Jangan pakai config['_nama_guru_tt'] global — ia tidak membedakan kelas.
    Jika dua guru TT mengajar di kelas berbeda, cache global selalu menampilkan
    yang pertama di sheet, bukan yang mengajar kelas yang sedang dicetak.
+   hasTT harus identik dengan isTTGuru() — jangan kurangi kondisi.
 ════════════════════════════════════════════════════ */
 function cariGuruTT(allUsers, kelas) {
   return allUsers.find(u => {
-    // Harus punya mapel TT
+    // Lewati yang nonaktif — admin mungkin menonaktifkan (bukan menghapus) guru lama
+    if ((u.status || '').toLowerCase() === 'nonaktif') return false;
+    // Harus punya mapel TT — identik dengan kondisi di isTTGuru()
     const hasTT = (u.mapelList || []).some(x => {
       const lower = x.toLowerCase();
       return lower.includes('tahsin') || lower.includes('tahfizh') ||
-             lower === 'mp_tt' || lower.endsWith('_tt');
+             lower === 'tt' || lower === 'mp_tt' ||
+             lower.endsWith('_tt') || lower.startsWith('tt_');
     });
     if (!hasTT) return false;
     // Jika belum ada kelas terpilih, kembalikan yang pertama ditemukan (fallback)
