@@ -1,3 +1,62 @@
+## [2026-06-04] — v35 · Penyempurnaan `cariGuruTT` — Filter Status + Format Mapel Pendek
+
+### 🐛 Perbaikan Lanjutan — Dua Kasus Yang Terlewat di v34
+
+**Gejala:** Setelah v34 di-deploy, laporan kelas 2B masih menampilkan "Tisandi, S.Pd" di tanda tangan.
+
+**Dua akar masalah yang tersisa:**
+
+**Masalah 1 — Tidak ada filter status `nonaktif`:**
+Admin kemungkinan besar menonaktifkan Tisandi (`status = 'nonaktif'`) sebagai cara "menghapus" dari aktif, bukan menghapus baris secara penuh. Namun `getUsers()` di `sheets.js` **tidak menyaring** berdasarkan status — ia mengembalikan semua user termasuk yang nonaktif. `cariGuruTT` tidak mengecek status, sehingga Tisandi yang sudah nonaktif tetap ditemukan dan muncul di tanda tangan.
+
+**Masalah 2 — `hasTT` tidak konsisten dengan `isTTGuru`:**
+`isTTGuru()` (fungsi yang menentukan apakah user yang login adalah guru TT) menggunakan kondisi:
+```javascript
+m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_')
+```
+Tetapi `cariGuruTT` (v34) hanya mengecek:
+```javascript
+lower === 'mp_tt' || lower.endsWith('_tt')
+```
+Jika mapel disimpan sebagai `"TT"`, `"tt"`, atau `"tt_01"`, `isTTGuru` mengenalinya sebagai guru TT tetapi `cariGuruTT` tidak. Akibatnya guru TT yang mapelnya dalam format pendek tidak akan ditemukan oleh pencarian, dan tanda tangan menampilkan `'—'`.
+
+**Perbaikan (v35):**
+```javascript
+function cariGuruTT(allUsers, kelas) {
+  return allUsers.find(u => {
+    // Lewati yang nonaktif
+    if ((u.status || '').toLowerCase() === 'nonaktif') return false;
+    // hasTT identik dengan isTTGuru() — semua format mapel didukung
+    const hasTT = (u.mapelList || []).some(x => {
+      const lower = x.toLowerCase();
+      return lower.includes('tahsin') || lower.includes('tahfizh') ||
+             lower === 'tt' || lower === 'mp_tt' ||
+             lower.endsWith('_tt') || lower.startsWith('tt_');
+    });
+    if (!hasTT) return false;
+    if (!kelas) return true;
+    return (u.kelasList || []).includes(kelas);
+  }) || null;
+}
+```
+
+**Catatan untuk admin:** Jika laporan masih menampilkan Tisandi setelah deploy v35, berarti Tisandi masih berstatus `aktif` dan masih terdaftar di kelas 2B di sheet USERS. Langkah yang harus dilakukan:
+1. Buka **Kelola Guru** (sekarang berfungsi benar setelah v32)
+2. Edit profil Tisandi
+3. Hapus centang kelas 2B dari daftar kelas yang diampu
+4. Simpan — atau ubah status Tisandi menjadi **Nonaktif**
+5. Reload halaman laporan TT dan cetak ulang
+
+### 📋 File yang Diubah (v35)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `rapor/laporan-tt.html` | **Diubah** | `cariGuruTT`: tambah filter `status !== 'nonaktif'`; lengkapi `hasTT` dengan `=== 'tt'` dan `startsWith('tt_')` |
+| `ANTIREGRESI.md` | **Diubah** | Update §25 dengan kode yang disempurnakan; tambah baris v35 di tabel riwayat |
+| `CHANGELOG.md` | **Diubah** — tambah entri v35 ini |
+
+---
+
 ## [2026-06-02] — v34 · Perbaikan Nama Guru TT di Tanda Tangan Laporan Salah
 
 ### 🐛 Perbaikan Bug — Nama Guru TT di TTD Tidak Sesuai Kelas

@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v35 | `rapor/laporan-tt.html` | `cariGuruTT` masih menampilkan guru nonaktif; mapel format pendek ("tt", "tt_01") tidak dikenali | `hasTT` tidak konsisten dengan `isTTGuru` (kurang `=== 'tt'` dan `startsWith('tt_')`); tidak ada filter `status !== 'nonaktif'`. Lihat §25. |
 | v34 | `rapor/laporan-tt.html` | Nama guru TT di tanda tangan selalu menampilkan guru pertama di sheet (Tisandi), bukan guru kelas yang dicetak (Nisya) | `find()` di init time tidak memfilter kelas; cache global `config['_nama_guru_tt']` dipakai untuk semua kelas. Lihat §25. |
 | v33 | `setup/profil-sekolah.html`, `rapor/preview.html`, `rapor/laporan-tt.html` | Tanggal rapor Sem. II Kelas 1–5 berbeda dengan Kelas 6 — satu field tidak cukup | Tambah `tgl_rapor_1_5`; helper `pilihTglRapor()` memilih key berdasarkan semester + tingkatan. Lihat §24. |
 | v32 | `setup/kelola-guru.html` | Form edit guru selalu kosong — kelas/mapel tidak terpopulasi | `bukaEdit` memanggil `pilihRole(u.role)` tanpa `fromEdit=true` → `pilihRole` mengosongkan semua array yang baru diisi. Lihat §23. |
@@ -1130,7 +1131,7 @@ config['_nama_guru_tt'] = guruTTUser.nama;  // cache global ← BUG
 const guruTT = config['_nama_guru_tt'] || '—';  // ← pakai cache global tanpa tahu kelas
 ```
 
-**Pola wajib sejak v34:**
+**Pola wajib sejak v35 (penyempurnaan dari v34):**
 
 ```javascript
 // Di level modul:
@@ -1142,13 +1143,15 @@ allUsersGlobal = allUsersCache;
 // TIDAK lagi set config['_nama_guru_tt'] di sini
 
 // Helper function:
-// ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList
+// ⚠️ ANTIREGRESI §25: filter status nonaktif + mapel (identik isTTGuru) + kelasList
 function cariGuruTT(allUsers, kelas) {
   return allUsers.find(u => {
+    if ((u.status || '').toLowerCase() === 'nonaktif') return false;  // ← WAJIB
     const hasTT = (u.mapelList || []).some(x => {
       const lower = x.toLowerCase();
       return lower.includes('tahsin') || lower.includes('tahfizh') ||
-             lower === 'mp_tt' || lower.endsWith('_tt');
+             lower === 'tt' || lower === 'mp_tt' ||            // ← WAJIB: === 'tt'
+             lower.endsWith('_tt') || lower.startsWith('tt_'); // ← WAJIB: startsWith
     });
     if (!hasTT) return false;
     if (!kelas) return true;  // fallback jika belum ada kelas terpilih
@@ -1321,5 +1324,5 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v34). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v35). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
