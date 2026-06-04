@@ -320,6 +320,8 @@ let allSiswa     = [];
 let setoranData  = [];
 let kktpConfig   = { iqro: null, quran: null };
 let targetConfig = {};
+// ⚠️ ANTIREGRESI §25: wajib dijaga agar lookup cariGuruTT bisa filter per kelas
+let allUsersGlobal = [];  // diisi saat init, dipakai oleh cariGuruTT()
 let activeSiswaIdx = 0;
 let laporanBuildCache = {}; // id_siswa → HTML
 
@@ -345,18 +347,13 @@ window.addEventListener('load', async () => {
       [config, allKelas, allUsersCache] = await Promise.all([
         SHEETS.getConfig(), SHEETS.getKelas(), SHEETS.getUsers()
       ]);
+      allUsersGlobal = allUsersCache;  // simpan ke modul agar cariGuruTT() bisa pakai
       // Refresh mapel dari sheet (hindari session cache lama)
       const freshUser = allUsersCache.find(u => u.email === currentUser.email);
       if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
-      // Cache guru TT name for TTD
-      const guruTTUser = allUsersCache.find(u => {
-        const m = (u.mapel || '').toLowerCase().split(',').map(s=>s.trim());
-        return m.some(x => x.includes('tahsin')||x.includes('tahfizh')||x==='mp_tt'||x.endsWith('_tt'));
-      });
-      if (guruTTUser) {
-        config['_nama_guru_tt']  = guruTTUser.nama;
-        config['_nbm_guru_tt']   = guruTTUser.nbm || '';
-      }
+      // ⚠️ ANTIREGRESI §25: TIDAK lagi cache config['_nama_guru_tt'] secara global di sini.
+      // Guru TT ditentukan per kelas saat cetak via cariGuruTT(allUsersGlobal, kelas).
+      // Cache global menyebabkan guru kelas lain (urutan pertama di sheet) selalu muncul.
     } catch(e) {
       // fallback: muat satu per satu
       [config, allKelas] = await Promise.all([SHEETS.getConfig(), SHEETS.getKelas()]);
@@ -453,8 +450,8 @@ async function muatLaporan() {
   try {
     setoranData = await SHEETS.getSetoranTT({ kelas, semester: sem, tahun });
 
-    // Identitas TTD sudah dimuat saat init (config['_nama_guru_tt'])
-    // Tidak perlu load ulang getUsers di sini
+    // Identitas guru TT untuk TTD ditentukan per kelas saat cetak (cariGuruTT di bukaJendelaCetak)
+    // allUsersGlobal sudah dimuat saat init — tidak perlu load ulang getUsers di sini
 
     const tingkat = parseInt(kelas.replace(/[^0-9]/g,''));
     const cfgKey  = `tahsin_target_${tingkat}_${sem}_${tahun}`;
@@ -861,6 +858,29 @@ function pilihTglRapor(cfg, kelas, semester) {
 }
 
 /* ════════════════════════════════════════════════════
+   HELPER — CARI GURU TT UNTUK KELAS TERTENTU
+   ⚠️ ANTIREGRESI §25: filter berdasarkan mapel (TT) DAN kelasList.
+   Jangan pakai config['_nama_guru_tt'] global — ia tidak membedakan kelas.
+   Jika dua guru TT mengajar di kelas berbeda, cache global selalu menampilkan
+   yang pertama di sheet, bukan yang mengajar kelas yang sedang dicetak.
+════════════════════════════════════════════════════ */
+function cariGuruTT(allUsers, kelas) {
+  return allUsers.find(u => {
+    // Harus punya mapel TT
+    const hasTT = (u.mapelList || []).some(x => {
+      const lower = x.toLowerCase();
+      return lower.includes('tahsin') || lower.includes('tahfizh') ||
+             lower === 'mp_tt' || lower.endsWith('_tt');
+    });
+    if (!hasTT) return false;
+    // Jika belum ada kelas terpilih, kembalikan yang pertama ditemukan (fallback)
+    if (!kelas) return true;
+    // Harus terdaftar mengajar di kelas ini (via kelasList)
+    return (u.kelasList || []).includes(kelas);
+  }) || null;
+}
+
+/* ════════════════════════════════════════════════════
    CETAK PDF
 ════════════════════════════════════════════════════ */
 function cetakSatuPDF() {
@@ -889,8 +909,11 @@ function bukaJendelaCetak(bodyHTML, namaSiswa) {
   const sekolah = config['nama_sekolah']    || 'SD Muhammadiyah 01 Kukusan';
   const kepsek  = config['nama_kepsek']     || '—';
   const nbmKepsek = config['nbm_kepsek']   || '';
-  const guruTT    = config['_nama_guru_tt']  || '—';
-  const nbmGuruTT = config['_nbm_guru_tt']   || '';
+  // ⚠️ ANTIREGRESI §25: cariGuruTT filter berdasarkan mapel+kelas —
+  // jangan config['_nama_guru_tt'] yang global tanpa filter kelas.
+  const guruTTUser = cariGuruTT(allUsersGlobal, kelas);
+  const guruTT    = guruTTUser?.nama  || '—';
+  const nbmGuruTT = guruTTUser?.nbm   || '';
   const kota    = config['kota_rapor']     || 'Depok';
   // ⚠️ ANTIREGRESI §24: gunakan pilihTglRapor — jangan langsung config['tgl_rapor']
   const tglRapor= pilihTglRapor(config, kelas, sem)  || '……………………';
