@@ -1,3 +1,37 @@
+## [2026-06-09] — v38 · Perbaikan Urutan Siswa Tidak Abjad Setelah Tambah Baru
+
+### 🐛 Perbaikan Bug — `getSiswa()` Tidak Mengurutkan Hasil Secara Abjad
+
+**Gejala:** Siswa yang baru ditambahkan (via form tambah manual di `data-siswa.html` maupun via persetujuan mutasi masuk di `verifikasi-mutasi.html`) muncul di posisi paling akhir daftar — atau posisi acak — bukan di urutan abjad yang seharusnya.
+
+**Akar masalah:**
+`getSiswa()` di `sheets.js` tidak pernah mengurutkan hasilnya. Urutan yang dikembalikan mengikuti urutan fisik baris di Google Sheets. Karena `append('SISWA!A1', [row])` selalu menulis baris baru di akhir sheet, siswa baru selalu muncul di posisi terakhir. Tidak ada halaman yang secara konsisten melakukan sort sendiri — kecuali `leger-kelas.html` yang kebetulan sudah menambahkan `.sort()` manual.
+
+**Perbaikan (v38):**
+Tambah `sort` abjad satu baris di `getSiswa()` di `sheets.js`, setelah deduplikasi dan sebelum `return`:
+
+```javascript
+// FIX v38: urutkan berdasarkan nama (abjad A–Z)
+siswa.sort((a, b) => (a[1] || '').localeCompare(b[1] || '', 'id'));
+return siswa.map(r => ({ ... }));
+```
+
+Dengan ini, semua halaman yang memanggil `getSiswa()` — dashboard guru, input nilai, input absensi, input ekskul, input setoran TT, leger, rapor, mutasi — otomatis mendapat daftar siswa terurut abjad tanpa perlu perubahan di masing-masing halaman.
+
+**Tidak ada dampak regresi:**
+- `leger-kelas.html` yang sudah punya `.sort()` sendiri: sort ganda tidak merusak, hasilnya sama.
+- Nomor urut tampilan di tabel (kolom `#`) digenerate dari index array di `renderTabel` — bukan dari data sheet — sehingga langsung mencerminkan urutan abjad yang baru.
+
+### 📋 File yang Diubah (v38)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `assets/js/sheets.js` | **Diubah** | `getSiswa`: tambah `siswa.sort((a, b) => (a[1]\|\|'').localeCompare(b[1]\|\|'', 'id'))` setelah deduplikasi, sebelum `return` |
+| `ANTIREGRESI.md` | **Diubah** | Tambah baris v38 di tabel riwayat; tambah §27; tambah penanda kumulatif v38 |
+| `CHANGELOG.md` | **Diubah** | Tambah entri v38 ini |
+
+---
+
 ## [2026-06-09] — v37 · Perbaikan Siswa Baru Tidak Muncul di Daftar Kelas (addSiswa & getSiswa)
 
 ### 🐛 Perbaikan Bug — `addSiswa` Tanpa Anchor `!A1` dan Kolom P Tidak Disimpan/Dibaca

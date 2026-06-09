@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v38 | `assets/js/sheets.js` | Siswa baru selalu muncul di posisi acak (biasanya akhir atau awal) di daftar siswa kelas — urutan tidak abjad | `getSiswa()` tidak mengurutkan hasil; siswa baru yang di-`append` ke baris terakhir sheet muncul di posisi sheet-nya. Lihat §27. |
 | v37 | `assets/js/sheets.js` | Siswa baru (via tambah manual \& mutasi masuk disetujui) tidak muncul di daftar siswa kelas | (1) `addSiswa` menggunakan `append('SISWA', [row])` tanpa anchor `!A1` → data baru ditulis ke kolom acak, tidak terbaca `getSiswa`. (2) `addSiswa` tidak menyimpan field `no_peserta_ismuba` (kolom P). (3) `getSiswa` hanya membaca `SISWA!A:O` sehingga kolom P tidak pernah dipopulasi. Lihat §3 dan §26. |
 | v36 | `rapor/laporan-tt.html` | Nama guru TT tidak muncul (tampil `—`) untuk guru_kelas yang merangkap TT di kelas lain (kelas TT ≠ kelas utama) | `cariGuruTT` hanya mengecek `u.kelasList` (kolom E = kelas utama); kelas TT ada di `u.kelasMapelList` (kolom K). Contoh: wali kelas 2C yang mengajar TT di 2B → `kelasList=["2C"]`, `includes("2B")=false`. Lihat §25-B. |
 | v35 | `rapor/laporan-tt.html` | `cariGuruTT` masih menampilkan guru nonaktif; mapel format pendek ("tt", "tt_01") tidak dikenali | `hasTT` tidak konsisten dengan `isTTGuru` (kurang `=== 'tt'` dan `startsWith('tt_')`); tidak ada filter `status !== 'nonaktif'`. Lihat §25. |
@@ -1315,6 +1316,28 @@ await append('SISWA!A1', [row]);  // anchor A1 wajib (§3)
 
 ---
 
+### 27. `getSiswa()` Harus Mengurutkan Hasil Secara Abjad
+
+**Mengapa berisiko:** `append()` selalu menulis baris baru di akhir sheet. Tanpa sort, urutan tampil mengikuti urutan fisik baris di Google Sheets — siswa yang ditambahkan belakangan (via tambah manual, impor, atau mutasi masuk) muncul di akhir atau awal tergantung dari posisi baris. Ini membingungkan guru yang terbiasa menemukan siswa berdasarkan urutan abjad.
+
+**Aturan:** `getSiswa()` di `sheets.js` selalu mengurutkan hasil dengan `localeCompare('id')` setelah deduplikasi — sebelum `return`.
+
+```javascript
+// ✅ Benar — sort sebelum return
+siswa.sort((a, b) => (a[1] || '').localeCompare(b[1] || '', 'id'));
+return siswa.map(r => ({ ... }));
+```
+
+**Penanda kode yang harus ada:**
+
+| File | Penanda |
+|------|---------|
+| `assets/js/sheets.js` — `getSiswa` | `siswa.sort((a, b) => (a[1] \|\| '').localeCompare(b[1] \|\| '', 'id'))` tepat sebelum `return` |
+
+**Catatan:** `leger-kelas.html` sebelumnya menambahkan `.sort()` sendiri setelah `getSiswa()` — ini menjadi redundan tapi tidak merusak setelah perbaikan ini. Tidak perlu dihapus.
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1393,6 +1416,8 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `assets/js/sheets.js` | `read('SISWA!A:P')` di `getSiswa()` — bukan `A:O` | v37 | Wajib. Tanpa ini kolom P (`no_peserta_ismuba`) tidak terbaca. Lihat §26. |
 | `assets/js/sheets.js` | `r[15]` untuk `no_peserta_ismuba` di return object `getSiswa()` | v37 | Wajib. Sinkron dengan range read A:P. Lihat §26. |
 | `assets/js/sheets.js` | `siswa.no_peserta_ismuba \|\| ''` sebagai elemen ke-16 di `row` di `addSiswa()` | v37 | Wajib. Tanpa ini kolom P selalu kosong saat tambah siswa baru. Lihat §26. |
-| `assets/js/sheets.js` | `append('SISWA!A1', [row])` di `addSiswa()` — anchor `A1` wajib | v37 | Wajib. Tanpa anchor, data siswa baru ditulis ke kolom acak dan tidak terbaca `getSiswa`. Lihat §3 dan §26. |
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 09 Juni 2026 (v37). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+| `assets/js/sheets.js` | `append('SISWA!A1', [row])` di `addSiswa()` — anchor `A1` wajib | v37 |
+| `assets/js/sheets.js` | `siswa.sort((a, b) => (a[1] \|\| '').localeCompare(b[1] \|\| '', 'id'))` di `getSiswa()` — tepat sebelum `return` | v38 | Wajib. Tanpanya urutan siswa mengikuti posisi baris di sheet — siswa baru selalu di akhir atau posisi acak. Lihat §27. |
+ Wajib. Tanpa anchor, data siswa baru ditulis ke kolom acak dan tidak terbaca `getSiswa`. Lihat §3 dan §26. |
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 09 Juni 2026 (v38). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
