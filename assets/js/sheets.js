@@ -258,7 +258,8 @@ const SHEETS = (() => {
    * @returns {Array}
    */
   async function getSiswa(kelas = null) {
-    const rows = await read('SISWA!A:O');
+    // FIX v37: Baca hingga kolom P (bukan A:O) agar no_peserta_ismuba (kolom P) ikut terbaca
+    const rows = await read('SISWA!A:P');
     let siswa  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_siswa');
 
     if (kelas) {
@@ -286,9 +287,10 @@ const SHEETS = (() => {
       pekerjaan_ayah:  r[9]  || '',
       pekerjaan_ibu:   r[10] || '',
       no_hp:           r[11] || '',
-      tempat_lahir:    r[12] || '',
-      tgl_lahir:       r[13] || '',
-      nama_wali:       r[14] || '',
+      tempat_lahir:        r[12] || '',
+      tgl_lahir:           r[13] || '',
+      nama_wali:           r[14] || '',
+      no_peserta_ismuba:   r[15] || '',  // kolom P — FIX v37
     }));
   }
 
@@ -317,11 +319,15 @@ const SHEETS = (() => {
       siswa.pekerjaan_ayah || '',
       siswa.pekerjaan_ibu  || '',
       fmtNum(siswa.no_hp),
-      siswa.tempat_lahir || '',
-      siswa.tgl_lahir    || '',
-      siswa.nama_wali    || '',
+      siswa.tempat_lahir         || '',
+      siswa.tgl_lahir            || '',
+      siswa.nama_wali            || '',
+      siswa.no_peserta_ismuba    || '',  // kolom P — FIX v37
     ];
-    await append('SISWA', [row]);
+    // FIX v37: gunakan anchor !A1 agar Google Sheets API selalu mencari batas tabel
+    // mulai dari kolom A (ANTIREGRESI §3). Tanpa anchor, jika ada data di kolom jauh,
+    // baris baru ditulis di sana dan tidak terbaca oleh getSiswa('SISWA!A:P').
+    await append('SISWA!A1', [row]);
     return id;
   }
 
