@@ -274,6 +274,10 @@ const SHEETS = (() => {
     siswa.forEach((r, i) => { if (r[0]) seenIds.set(r[0], r); });
     siswa = [...seenIds.values()];
 
+    // FIX v38: urutkan berdasarkan nama (abjad A–Z) agar siswa baru yang di-append
+    // ke baris terakhir sheet tidak muncul di posisi acak — urutan konsisten di semua halaman.
+    siswa.sort((a, b) => (a[1] || '').localeCompare(b[1] || '', 'id'));
+
     return siswa.map(r => ({
       id:              r[0]  || '',
       nama:            r[1]  || '',
