@@ -1,3 +1,65 @@
+## [2026-06-09] — v37 · Perbaikan Siswa Baru Tidak Muncul di Daftar Kelas (addSiswa & getSiswa)
+
+### 🐛 Perbaikan Bug — `addSiswa` Tanpa Anchor `!A1` dan Kolom P Tidak Disimpan/Dibaca
+
+**Gejala dua bug sekaligus:**
+- Setelah mutasi masuk disetujui (`verifikasi-mutasi.html`), nama siswa baru tidak muncul otomatis di daftar siswa kelas yang dituju.
+- Setelah admin menambahkan siswa baru via form di `setup/data-siswa.html`, nama siswa baru tidak muncul di tabel.
+
+Kedua alur ini memanggil `SHEETS.addSiswa()`, lalu `muatData()` / `SHEETS.getSiswa()` — namun siswa yang baru ditambahkan tidak ditemukan.
+
+**Akar masalah — tiga kekurangan berlapis di `assets/js/sheets.js`:**
+
+**Masalah 1 — `addSiswa` tidak menggunakan anchor `!A1`:**
+```javascript
+// ❌ LAMA — tanpa anchor
+await append('SISWA', [row]);
+```
+Tanpa anchor `!A1`, Google Sheets API mencari batas tabel terakhir di seluruh sheet. Jika sheet `SISWA` pernah memiliki data di kolom jauh (misalnya sisa formula atau kolom helper), baris baru ditulis di sana — jauh di luar kolom A–P — sehingga `getSiswa('SISWA!A:O')` tidak pernah membacanya. Ini persis pola yang sudah didokumentasikan di ANTIREGRESI §3.
+
+**Masalah 2 — `addSiswa` tidak menyimpan kolom P (`no_peserta_ismuba`):**
+Sheet `SISWA` memiliki 16 kolom (A–P). Kolom P adalah `no_peserta_ismuba` yang ditambahkan di v21 (`edit-siswa-kelas.html`) dan digunakan di `setup/data-siswa.html`. Namun `addSiswa()` di `sheets.js` hanya membentuk `row` dengan 15 elemen — kolom P tidak pernah ditulis saat menambah siswa baru.
+
+**Masalah 3 — `getSiswa` hanya membaca `SISWA!A:O` (15 kolom):**
+Meskipun masalah 2 menyebabkan kolom P selalu kosong untuk siswa baru, `getSiswa()` juga tidak membaca kolom P sama sekali — sehingga field `no_peserta_ismuba` tidak pernah tersedia di objek siswa yang dikembalikan, bahkan untuk siswa lama yang kolom P-nya sudah terisi manual.
+
+**Perbaikan (v37) — hanya `assets/js/sheets.js`:**
+
+```javascript
+// getSiswa: baca A:P (16 kolom)
+const rows = await read('SISWA!A:P');  // ← A:O → A:P
+// ...
+return siswa.map(r => ({
+  // ... semua field lama ...
+  no_peserta_ismuba: r[15] || '',  // ← tambah mapping kolom P
+}));
+
+// addSiswa: 16 elemen + anchor A1
+const row = [
+  id, siswa.nama, fmtNum(siswa.nis), fmtNum(siswa.nisn), siswa.kelas,
+  siswa.agama, siswa.alamat, siswa.nama_ayah, siswa.nama_ibu,
+  siswa.pekerjaan_ayah, siswa.pekerjaan_ibu, fmtNum(siswa.no_hp),
+  siswa.tempat_lahir, siswa.tgl_lahir, siswa.nama_wali,
+  siswa.no_peserta_ismuba || '',  // ← tambah kolom P
+];
+await append('SISWA!A1', [row]);  // ← 'SISWA' → 'SISWA!A1' (anchor A1)
+```
+
+**Tidak ada dampak regresi:**
+- `updateSiswa()` di `setup/data-siswa.html` sudah benar sejak v21 — menulis `SISWA!A${idx+1}:P${idx+1}` dengan 16 elemen. Tidak diubah.
+- `verifikasi-mutasi.html` memanggil `SHEETS.addSiswa({ nama, kelas, agama })` — field `no_peserta_ismuba` tidak dikirim, defaultnya `''`. Ini aman dan konsisten.
+- Semua halaman lain yang memanggil `getSiswa()` mendapat field baru `no_peserta_ismuba` — field ini sudah dikenal oleh `data-siswa.html` (kolom P) dan halaman SKL. Tidak ada halaman yang akan rusak karena tambahan field.
+
+### 📋 File yang Diubah (v37)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `assets/js/sheets.js` | **Diubah** | `getSiswa`: range read `A:O` → `A:P`; tambah `no_peserta_ismuba: r[15]\|\|''` di return. `addSiswa`: tambah `siswa.no_peserta_ismuba\|\|''` di row (elemen ke-16); ganti `append('SISWA', [row])` → `append('SISWA!A1', [row])` |
+| `ANTIREGRESI.md` | **Diubah** | Tambah baris v37 di tabel riwayat; update §3 penanda (tambah `SISWA!A1`); tambah §26 (sinkronisasi kolom sheet SISWA); tambah penanda kumulatif v37 |
+| `CHANGELOG.md` | **Diubah** | Tambah entri v37 ini |
+
+---
+
 ## [2026-06-05] — v36 · Nama Guru TT Tidak Muncul untuk Guru Kelas yang Merangkap TT
 
 ### 🐛 Perbaikan Bug — `cariGuruTT` Tidak Mengenali Kelas TT dari `kelasMapelList`

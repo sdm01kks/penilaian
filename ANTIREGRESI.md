@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v37 | `assets/js/sheets.js` | Siswa baru (via tambah manual \& mutasi masuk disetujui) tidak muncul di daftar siswa kelas | (1) `addSiswa` menggunakan `append('SISWA', [row])` tanpa anchor `!A1` → data baru ditulis ke kolom acak, tidak terbaca `getSiswa`. (2) `addSiswa` tidak menyimpan field `no_peserta_ismuba` (kolom P). (3) `getSiswa` hanya membaca `SISWA!A:O` sehingga kolom P tidak pernah dipopulasi. Lihat §3 dan §26. |
 | v36 | `rapor/laporan-tt.html` | Nama guru TT tidak muncul (tampil `—`) untuk guru_kelas yang merangkap TT di kelas lain (kelas TT ≠ kelas utama) | `cariGuruTT` hanya mengecek `u.kelasList` (kolom E = kelas utama); kelas TT ada di `u.kelasMapelList` (kolom K). Contoh: wali kelas 2C yang mengajar TT di 2B → `kelasList=["2C"]`, `includes("2B")=false`. Lihat §25-B. |
 | v35 | `rapor/laporan-tt.html` | `cariGuruTT` masih menampilkan guru nonaktif; mapel format pendek ("tt", "tt_01") tidak dikenali | `hasTT` tidak konsisten dengan `isTTGuru` (kurang `=== 'tt'` dan `startsWith('tt_')`); tidak ada filter `status !== 'nonaktif'`. Lihat §25. |
 | v34 | `rapor/laporan-tt.html` | Nama guru TT di tanda tangan selalu menampilkan guru pertama di sheet (Tisandi), bukan guru kelas yang dicetak (Nisya) | `find()` di init time tidak memfilter kelas; cache global `config['_nama_guru_tt']` dipakai untuk semua kelas. Lihat §25. |
@@ -116,6 +117,7 @@ await append('NILAI_US', [row]);
 | File | Penanda |
 |------|---------|
 | `sheets.js` | `append('SETORAN_TT!A1', [row])` |
+| `sheets.js` | `append('SISWA!A1', [row])` — FIX v37, sebelumnya `append('SISWA', [row])` tanpa anchor |
 | `sheets.js` | `append('NILAI_US'` — **TIDAK boleh ada** (harus pakai `NILAI_US!A1` atau via `toAppend` batch) |
 
 > Catatan: fungsi `saveNilaiUSBatch` menggunakan `append('NILAI_US', toAppend)` (tanpa anchor) karena merupakan batch append — ini masih berisiko jika sheet pernah memiliki data di kolom jauh. Pertimbangkan mengganti ke `append('NILAI_US!A1', toAppend)` di masa depan.
@@ -1257,6 +1259,62 @@ const row = eksSiswa.find(r => r[3] === e.id &&
 
 ---
 
+### 26. `addSiswa()` dan `getSiswa()` — Anchor `!A1` dan Kolom Sheet SISWA Harus Sinkron
+
+**Mengapa berisiko:** Sheet `SISWA` memiliki kolom A–P (16 kolom), dengan kolom P berisi `no_peserta_ismuba`. Jika `addSiswa()` tidak menggunakan anchor `!A1` pada `append()`, data baru dapat ditulis ke posisi kolom yang acak — tidak pernah terbaca oleh `getSiswa()`. Masalah ini hanya terdeteksi secara operasional (siswa baru tidak muncul di daftar) dan tidak menghasilkan error JavaScript.
+
+**Tiga kondisi yang harus selalu sinkron:**
+
+| Kondisi | Nilai yang Benar |
+|---------|-----------------|
+| Range read di `getSiswa()` | `SISWA!A:P` (16 kolom, A–P) |
+| Jumlah kolom di `row` dalam `addSiswa()` | 16 elemen (termasuk `no_peserta_ismuba` di indeks 15) |
+| Range anchor `append` di `addSiswa()` | `SISWA!A1` — wajib anchor `!A1` (ANTIREGRESI §3) |
+
+**Penyebab bug v37 — tiga kekurangan berlapis:**
+1. `append('SISWA', [row])` tanpa anchor `!A1` → data ditulis ke kolom acak jika sheet punya data di kolom jauh
+2. `row` hanya 15 elemen — kolom P (`no_peserta_ismuba`) tidak ikut disimpan
+3. `getSiswa()` membaca `SISWA!A:O` (15 kolom) — kolom P tidak pernah dipopulasi
+
+**Perbaikan (v37):**
+```javascript
+// getSiswa — baca A:P (bukan A:O)
+const rows = await read('SISWA!A:P');
+// ...
+return siswa.map(r => ({
+  // ... kolom lain ...
+  no_peserta_ismuba: r[15] || '',  // kolom P
+}));
+
+// addSiswa — 16 elemen + anchor A1
+const row = [
+  id, siswa.nama, fmtNum(siswa.nis), fmtNum(siswa.nisn), siswa.kelas,
+  siswa.agama, siswa.alamat, siswa.nama_ayah, siswa.nama_ibu,
+  siswa.pekerjaan_ayah, siswa.pekerjaan_ibu, fmtNum(siswa.no_hp),
+  siswa.tempat_lahir, siswa.tgl_lahir, siswa.nama_wali,
+  siswa.no_peserta_ismuba || '',  // kolom P — wajib ada
+];
+await append('SISWA!A1', [row]);  // anchor A1 wajib (§3)
+```
+
+**Checklist wajib setiap kali schema sheet SISWA ditambah kolom baru:**
+- [ ] Tambah kolom baru di `row` array `addSiswa()` di `sheets.js`
+- [ ] Tambah mapping `r[N]` di return object `getSiswa()` di `sheets.js`
+- [ ] Perbarui range read `getSiswa()` jika melewati kolom yang ada (`A:P` → `A:Q`, dst.)
+- [ ] Perbarui `updateSiswa()` di `setup/data-siswa.html` (range write `SISWA!A${idx+1}:P${idx+1}` harus cocok)
+- [ ] Perbarui hapus-siswa di `setup/data-siswa.html` (range kosongkan baris harus cocok)
+- [ ] Pastikan `append` di `addSiswa()` selalu menggunakan anchor `SISWA!A1`
+
+**Penanda kode yang harus ada:**
+
+| File | Penanda |
+|------|---------|
+| `assets/js/sheets.js` — `getSiswa` | `read('SISWA!A:P')` dan `r[15]` untuk `no_peserta_ismuba` |
+| `assets/js/sheets.js` — `addSiswa` | `siswa.no_peserta_ismuba \|\| ''` sebagai elemen ke-16 di `row` |
+| `assets/js/sheets.js` — `addSiswa` | `append('SISWA!A1', [row])` — anchor `A1` wajib |
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1332,5 +1390,9 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 
 ---
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 02 Juni 2026 (v35). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+| `assets/js/sheets.js` | `read('SISWA!A:P')` di `getSiswa()` — bukan `A:O` | v37 | Wajib. Tanpa ini kolom P (`no_peserta_ismuba`) tidak terbaca. Lihat §26. |
+| `assets/js/sheets.js` | `r[15]` untuk `no_peserta_ismuba` di return object `getSiswa()` | v37 | Wajib. Sinkron dengan range read A:P. Lihat §26. |
+| `assets/js/sheets.js` | `siswa.no_peserta_ismuba \|\| ''` sebagai elemen ke-16 di `row` di `addSiswa()` | v37 | Wajib. Tanpa ini kolom P selalu kosong saat tambah siswa baru. Lihat §26. |
+| `assets/js/sheets.js` | `append('SISWA!A1', [row])` di `addSiswa()` — anchor `A1` wajib | v37 | Wajib. Tanpa anchor, data siswa baru ditulis ke kolom acak dan tidak terbaca `getSiswa`. Lihat §3 dan §26. |
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 09 Juni 2026 (v37). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
