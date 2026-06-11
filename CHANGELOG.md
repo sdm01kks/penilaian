@@ -1,3 +1,22 @@
+## [2026-06-11] — v41 · Peningkatan Laporan TT: Nilai Aspek, Footer, dan Peralihan Halaman
+
+### ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/laporan-tt.html` | **Nilai dan predikat per aspek tahsin.** Bagian "Capaian Aspek Tahsin" kini menampilkan nilai numerik rata-rata dan predikat per aspek (Makharijul Huruf, Penerapan Tajwid, dst.) yang dihitung dari field `nilai_aspek` di setiap setoran. Sebelumnya semua aspek mendapat deskripsi dari nilai rata-rata keseluruhan tanpa menampilkan angkanya. Jika guru belum menginput nilai per aspek (data lama), deskripsi tetap ditampilkan dari `avgNilai` sebagai fallback. |
+| 2 | `rapor/laporan-tt.html` | **Footer halaman diselaraskan dengan rapor akademik (`preview.html`).** `@page` margin diubah dari `1.5cm 1.8cm` menjadi `1.5cm`; font-size dari `8.5pt` menjadi `9pt`; color dari `#777` menjadi `#888`; border-top dari `0.5pt` menjadi `1px`; ditambahkan `vertical-align: top` (penanda §8) dan `padding-top: 2pt`. |
+| 3 | `rapor/laporan-tt.html` | **Peralihan halaman lebih rapi.** Card siswa sebelumnya dibungkus border luar penuh (`1pt solid #bdbdbd`) sehingga border terpotong di tengah halaman saat konten melebihi satu halaman. Solusi: border luar dihapus; pemisah antar siswa (saat cetak banyak) menggunakan garis horizontal hijau tua di atas card berikutnya (`border-top: 1.5pt solid #1e4d3b`). Header card dan section-section di dalamnya kini bebas terpotong tanpa meninggalkan artefak visual. |
+
+### 📋 File yang Diubah (v41)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — (1) `buildLaporanQuran`: aspek section pakai IIFE untuk hitung rata-rata `nilai_aspek` per aspek; (2) `@page`: selaraskan dengan `preview.html`; (3) `.lpr-card` CSS: hapus border, ganti separator; (4) aspek CSS baru: `.aspek-item-header`, `.aspek-score-num`, `.aspek-score-pred` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v41 ini |
+
+---
+
 ## [2026-06-11] — v40 · Perbaikan Progress Hafalan Selalu 0% di Laporan TT
 
 ### 🐛 Perbaikan
