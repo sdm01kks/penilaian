@@ -348,9 +348,18 @@ window.addEventListener('load', async () => {
         SHEETS.getConfig(), SHEETS.getKelas(), SHEETS.getUsers()
       ]);
       allUsersGlobal = allUsersCache;  // simpan ke modul agar cariGuruTT() bisa pakai
-      // Refresh mapel dari sheet (hindari session cache lama)
+      // Refresh mapel + kelasList + kelas_mapel dari sheet (hindari session cache lama).
+      // ⚠️ ANTIREGRESI §28: WAJIB refresh kelasList dan kelas_mapel, bukan hanya mapel.
+      // Tanpa ini, isiDropdownKelas() memakai kelasList dari session (data login lama),
+      // sehingga guru_mapel TT yang kelas ajarnya baru diubah admin tidak mendapat
+      // dropdown kelas yang benar — laporan tidak bisa dibuka.
       const freshUser = allUsersCache.find(u => u.email === currentUser.email);
-      if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+      if (freshUser?.mapel)      currentUser.mapel      = freshUser.mapel;
+      if (freshUser?.kelasList)  currentUser.kelasList  = freshUser.kelasList;
+      if (freshUser?.kelas_mapel !== undefined) {
+        currentUser.kelas_mapel  = freshUser.kelas_mapel;
+        currentUser.kelasMapelList = freshUser.kelasMapelList || [];
+      }
       // ⚠️ ANTIREGRESI §25: TIDAK lagi cache config['_nama_guru_tt'] secara global di sini.
       // Guru TT ditentukan per kelas saat cetak via cariGuruTT(allUsersGlobal, kelas).
       // Cache global menyebabkan guru kelas lain (urutan pertama di sheet) selalu muncul.
@@ -375,10 +384,13 @@ window.addEventListener('load', async () => {
 });
 
 function isTTGuru() {
+  // ⚠️ ANTIREGRESI §28: daftar alias WAJIB identik dengan guru-mapel.html dan cariGuruTT().
+  // Jangan kurangi kondisi — format mapel TT bervariasi di sheet USERS.
   const mapelRaw = (currentUser.mapel || '').toLowerCase();
-  return mapelRaw.split(',').map(s => s.trim()).some(m =>
+  return mapelRaw.split(',').map(s => s.trim()).filter(Boolean).some(m =>
     m.includes('tahsin') || m.includes('tahfizh') ||
-    m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_')
+    m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_') ||
+    m === 'tahsin-tahfizh' || m.replace(/[^a-z]/g,'').includes('tahsin')
   );
 }
 
