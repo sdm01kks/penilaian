@@ -1,3 +1,21 @@
+## [2026-06-11] — v42 · Logo Sekolah di Avatar Siswa + Perbaikan Tampilan Aspek Dashboard
+
+### ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/laporan-tt.html` | **Logo Muhammadiyah di avatar siswa.** Inisial huruf (mis. "A") di kartu siswa diganti dengan logo sekolah (embedded base64). Berlaku di tampilan dashboard (screen) maupun cetakan PDF. Ke depannya posisi ini akan digunakan untuk foto siswa. CSS `.lpr-avatar` disesuaikan untuk menampilkan gambar (background dihapus, `overflow: hidden` ditambahkan). |
+| 2 | `rapor/laporan-tt.html` | **Tampilan aspek tahsin di dashboard diperbaiki.** CSS untuk `.aspek-grid`, `.aspek-item`, `.aspek-item-header`, `.aspek-score-num`, `.aspek-score-pred`, dan `.aspek-item-desc` sebelumnya hanya ada di dalam `printHTML` template (hanya aktif saat cetak). Tampilan screen (dashboard) tidak punya CSS ini sehingga semua elemen aspek tampil tanpa layout — label, angka nilai, predikat, dan deskripsi menyatu dalam satu baris teks berantakan. Fix: tambah CSS screen yang identik (dengan ukuran px/screen yang sesuai) di `<style>` utama dokumen. Cetakan PDF tidak terpengaruh karena sudah punya CSS-nya sendiri di printHTML. |
+
+### 📋 File yang Diubah (v42)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — (1) `.lpr-avatar` screen CSS: hapus background hijau, tambah `overflow:hidden`; (2) avatar HTML di `buildLaporanIqro` dan `buildLaporanQuran`: ganti `charAt(0)` dengan `<img>` logo base64; (3) print `.lpr-avatar` CSS: hapus background, tambah `overflow:hidden`; (4) tambah CSS screen aspek grid lengkap |
+| `CHANGELOG.md` | **Diubah** — tambah entri v42 ini |
+
+---
+
 ## [2026-06-11] — v41 · Peningkatan Laporan TT: Nilai Aspek, Footer, dan Peralihan Halaman
 
 ### ✨ Peningkatan
