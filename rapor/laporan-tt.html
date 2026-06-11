@@ -760,21 +760,38 @@ function buildLaporanQuran(siswa, setoran, jenis, kelas, sem) {
         }
       </div>
 
-      ${aspekData.length > 0 ? `
-      <div class="lpr-section">
-        <div class="lpr-section-title">📝 Capaian Aspek Tahsin</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">
-          ${aspekData.map(a => {
-            const pred = namaPredikat(avgNilai);
-            const deskIdx = avgNilai>=90?4:avgNilai>=80?3:avgNilai>=70?2:avgNilai>=60?1:0;
-            const deskripsi = a.desc?.[deskIdx] || '—';
-            return `<div class="lpr-stat">
-              <div class="lpr-stat-label">${a.nama}</div>
-              <div style="font-size:12px;color:var(--ink);margin-top:4px;line-height:1.5;">${deskripsi}</div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>` : ''}
+      ${aspekData.length > 0 ? (() => {
+        // Hitung rata-rata nilai per aspek dari semua setoran yang lulus
+        // Format nilai_aspek: { "Makharijul Huruf": 90, "Penerapan Tajwid": 88, ... }
+        const aspekSum   = {};
+        const aspekCount = {};
+        setoran.filter(s => s.status_hafalan === 'lulus' && s.nilai_aspek && Object.keys(s.nilai_aspek).length > 0).forEach(s => {
+          Object.entries(s.nilai_aspek).forEach(([nama, val]) => {
+            aspekSum[nama]   = (aspekSum[nama]   || 0) + (parseInt(val) || 0);
+            aspekCount[nama] = (aspekCount[nama] || 0) + 1;
+          });
+        });
+        const aspekRows = aspekData.map(a => {
+          const nilaiAspek = aspekCount[a.nama] ? Math.round(aspekSum[a.nama] / aspekCount[a.nama]) : null;
+          const nilaiUntukDesk = nilaiAspek !== null ? nilaiAspek : avgNilai;
+          const deskIdx = nilaiUntukDesk>=90?4:nilaiUntukDesk>=80?3:nilaiUntukDesk>=70?2:nilaiUntukDesk>=60?1:0;
+          const deskripsi = a.desc?.[deskIdx] || '—';
+          const predAspek = nilaiAspek !== null ? namaPredikat(nilaiAspek) : null;
+          return `<div class="aspek-item">
+            <div class="aspek-item-header">
+              <div class="aspek-item-label">${a.nama}</div>
+              ${nilaiAspek !== null
+                ? `<div class="aspek-item-score"><span class="aspek-score-num">${nilaiAspek}</span><span class="aspek-score-pred">${predAspek}</span></div>`
+                : ''}
+            </div>
+            <div class="aspek-item-desc">${deskripsi}</div>
+          </div>`;
+        }).join('');
+        return `<div class="lpr-section">
+          <div class="lpr-section-title">📝 Capaian Aspek Tahsin</div>
+          <div class="aspek-grid">${aspekRows}</div>
+        </div>`;
+      })() : ''}
 
       ${jenis === 'akhir' ? `
       <div class="lpr-section">
@@ -977,22 +994,24 @@ function bukaJendelaCetak(bodyHTML, namaSiswa) {
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 @page {
   size: A4;
-  margin: 1.5cm 1.8cm;
+  margin: 1.5cm;
   @bottom-left {
     content: "${footerSiswa}";
     font-family: Arial, sans-serif;
-    font-size: 8.5pt;
-    color: #777;
-    border-top: 0.5pt solid #ccc;
-    padding-top: 3pt;
+    font-size: 9pt;
+    color: #888;
+    border-top: 1px solid #ccc;
+    vertical-align: top;
+    padding-top: 2pt;
   }
   @bottom-right {
     content: "Halaman " counter(page) " dari " counter(pages);
     font-family: Arial, sans-serif;
-    font-size: 8.5pt;
-    color: #777;
-    border-top: 0.5pt solid #ccc;
-    padding-top: 3pt;
+    font-size: 9pt;
+    color: #888;
+    border-top: 1px solid #ccc;
+    vertical-align: top;
+    padding-top: 2pt;
   }
 }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.6; color: #000; background: #fff; }
@@ -1002,15 +1021,15 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 .print-header h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: .3pt; color: #1e4d3b; }
 .print-header p  { font-size: 9.5pt; color: #444; margin-top: 3pt; }
 
-/* ── Card siswa ── */
-.lpr-card { border: 1pt solid #bdbdbd; border-radius: 4pt; margin-bottom: 0; }
-.lpr-card + .lpr-card { margin-top: 14pt; }
-.lpr-card-header { background: #e8f5e9; border-bottom: 1pt solid #bdbdbd; padding: 7pt 10pt; display: flex; align-items: center; gap: 8pt; }
+/* ── Card siswa — tanpa border luar agar page break bersih ── */
+.lpr-card { margin-bottom: 0; }
+.lpr-card + .lpr-card { margin-top: 18pt; border-top: 1.5pt solid #1e4d3b; padding-top: 14pt; }
+.lpr-card-header { background: #e8f5e9; padding: 7pt 10pt; display: flex; align-items: center; gap: 8pt; border-radius: 3pt; margin-bottom: 6pt; }
 .lpr-avatar { width: 28pt; height: 28pt; border-radius: 50%; background: #1e4d3b; display: flex; align-items: center; justify-content: center; font-size: 12pt; font-weight: bold; color: #fff; flex-shrink: 0; text-align: center; line-height: 28pt; }
 .lpr-nama  { font-size: 11pt; font-weight: bold; }
 .lpr-kelas { font-size: 8.5pt; color: #555; }
 .lpr-badge { margin-left: auto; font-size: 8pt; font-weight: bold; padding: 2pt 7pt; border-radius: 8pt; background: #e3f2fd; color: #1565c0; white-space: nowrap; }
-.lpr-body  { padding: 8pt 10pt; }
+.lpr-body  { padding: 0; }
 
 /* ── Sections ── */
 .lpr-section { margin-bottom: 8pt; }
@@ -1054,7 +1073,11 @@ body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height
 /* ── Aspek tahsin ── */
 .aspek-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5pt; }
 .aspek-item { background: #f5f5f5; border: 0.5pt solid #ccc; border-radius: 3pt; padding: 5pt 7pt; page-break-inside: avoid; break-inside: avoid; }
-.aspek-item-label { font-size: 7.5pt; font-weight: bold; text-transform: uppercase; color: #555; margin-bottom: 2pt; }
+.aspek-item-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2pt; }
+.aspek-item-label { font-size: 7.5pt; font-weight: bold; text-transform: uppercase; color: #555; }
+.aspek-item-score { display: flex; align-items: baseline; gap: 3pt; flex-shrink: 0; }
+.aspek-score-num  { font-size: 12pt; font-weight: bold; color: #1e4d3b; line-height: 1; }
+.aspek-score-pred { font-size: 7pt; color: #555; }
 .aspek-item-desc  { font-size: 9.5pt; line-height: 1.55; }
 
 /* ── Alert ── */
