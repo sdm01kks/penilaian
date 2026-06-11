@@ -1,3 +1,23 @@
+## [2026-06-11] — v40 · Perbaikan Progress Hafalan Selalu 0% di Laporan TT
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/laporan-tt.html` | Bagian "Progress Hafalan vs Target" selalu menampilkan `0 / N (0%)` dan semua item "Detail target hafalan" menampilkan `—`, meskipun siswa sudah menyetor dan lulus seluruh target. Contoh konkret: Adila Anissa Kelas 3B sudah menyetor 2 kali dengan 12 materi hafalan yang semuanya lulus, namun laporan tetap menampilkan 0/12. | Akar masalah: `buildLaporanQuran` membangun `materiLulus` dengan `new Set(setoranLulus.map(s => s.materi))`. Satu baris setoran yang mencakup banyak materi sekaligus menyimpan `s.materi` sebagai JSON array (`'["al-nas_1-6","al-falaq_1-5",...]'`), bukan key tunggal. Karena Set tidak di-expand, `materiLulus.has("al-nas_1-6")` selalu `false`. Fix: ganti ke pola `forEach` + `startsWith('[')` expand yang sudah terbukti benar di `input-setoran-tt.html` (penanda §11). |
+
+> **Catatan:** Pola expand JSON array `materi` sudah ada di `input-setoran-tt.html` (v11) tapi tidak diadopsi ke `laporan-tt.html` saat fungsi `buildLaporanQuran` dibuat. Lihat ANTIREGRESI.md §29.
+
+### 📋 File yang Diubah (v40)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — `buildLaporanQuran`: ganti `new Set(setoranLulus.map(s=>s.materi))` dengan `forEach` + expand `startsWith('[')` + komentar `⚠️ ANTIREGRESI §29` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §29, entri riwayat v40, penanda kode kumulatif v40 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v40 ini |
+
+---
+
 ## [2026-06-11] — v39 · Perbaikan Akses Laporan TT untuk Guru Mapel (Muhammad Rizki)
 
 ### 🐛 Perbaikan

@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v40 | `rapor/laporan-tt.html` | Progress hafalan tampil 0/N (0%) dan semua detail target `—`, meski siswa sudah menyetor seluruh target | `buildLaporanQuran` membangun `materiLulus` dengan `.map(s=>s.materi)` tanpa expand JSON array; setoran multi-materi tersimpan sebagai JSON array → `materiLulus.has(k)` selalu false. Lihat §29. |
 | v39 | `rapor/laporan-tt.html`, `dashboard/guru-mapel.html` | Guru `guru_mapel` TT (Muhammad Rizki) tidak mendapat dropdown kelas di laporan TT — kelas yang diampu tidak tampil | Blok `freshUser` hanya me-refresh `currentUser.mapel`; `kelasList` dan `kelas_mapel` tidak ikut di-refresh → `isiDropdownKelas()` memakai data session lama. Lihat §28. |
 | v38 | `assets/js/sheets.js` | Siswa baru selalu muncul di posisi acak (biasanya akhir atau awal) di daftar siswa kelas — urutan tidak abjad | `getSiswa()` tidak mengurutkan hasil; siswa baru yang di-`append` ke baris terakhir sheet muncul di posisi sheet-nya. Lihat §27. |
 | v37 | `assets/js/sheets.js` | Siswa baru (via tambah manual \& mutasi masuk disetujui) tidak muncul di daftar siswa kelas | (1) `addSiswa` menggunakan `append('SISWA', [row])` tanpa anchor `!A1` → data baru ditulis ke kolom acak, tidak terbaca `getSiswa`. (2) `addSiswa` tidak menyimpan field `no_peserta_ismuba` (kolom P). (3) `getSiswa` hanya membaca `SISWA!A:O` sehingga kolom P tidak pernah dipopulasi. Lihat §3 dan §26. |
@@ -1397,6 +1398,55 @@ if (freshUser?.kelas_mapel !== undefined) {
 
 ---
 
+### 29. `materiLulus` di `buildLaporanQuran` Wajib Expand JSON Array — Bukan `.map(s=>s.materi)` ⚠️ BERULANG
+
+**Konteks:** Satu baris setoran TT dapat menyimpan banyak materi hafalan sekaligus. Format kolom `materi` di sheet SETORAN_TT bisa berupa key tunggal (`"al-nas_1-6"`) **atau** JSON array (`'["al-nas_1-6","al-falaq_1-5","al-masad_1-5",...]'`). Satu setoran dengan banyak materi terjadi ketika guru mencentang beberapa materi sekaligus di `input-setoran-tt.html`.
+
+**Akar masalah (v40):** `buildLaporanQuran` di `rapor/laporan-tt.html` membangun `materiLulus` dengan:
+```javascript
+// ❌ SALAH — tidak expand JSON array
+const setoranLulus = setoran.filter(s => s.status_hafalan === 'lulus');
+const materiLulus  = new Set(setoranLulus.map(s => s.materi));
+```
+Jika `s.materi = '["al-nas_1-6","al-falaq_1-5",...]'`, maka Set berisi **string JSON mentah**, bukan key individual. Akibatnya `materiLulus.has("al-nas_1-6")` selalu `false` → `targetDicapai = []` → progress hafalan 0/N (0%) → semua detail target tampil `—`, meski siswa sudah menyetor seluruh target.
+
+**Pola yang sudah benar di `input-setoran-tt.html`** (penanda §11 — lihat juga baris 739–749):
+```javascript
+// ✅ BENAR — expand JSON array, identik dengan input-setoran-tt.html
+const materiLulus = new Set();
+setoran.filter(s => s.status_hafalan === 'lulus').forEach(s => {
+  const m = s.materi || '';
+  if (m.startsWith('[')) {
+    try { JSON.parse(m).forEach(k => materiLulus.add(k)); } catch(e) { materiLulus.add(m); }
+  } else if (m) {
+    materiLulus.add(m);
+  }
+});
+```
+
+**Dampak visual:** Progress hafalan menampilkan `0 / N (0%)` dan semua item di "Detail target hafalan" menampilkan `—`, meski siswa sudah menyetor dan lulus seluruh target semester.
+
+**Kapan risiko meningkat:**
+- Setiap kali ada refactor `buildLaporanQuran` — pola `.map(s=>s.materi)` lebih "simpel" dan mudah kembali dipakai
+- Jika ada copy-paste dari bagian `buildLaporanIqro` yang tidak membutuhkan expand (Iqro tidak punya target hafalan)
+- Jika format penyimpanan materi di `input-setoran-tt.html` berubah di masa depan, logika expand di sini harus ikut disesuaikan
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | `materiLulus` dibangun dengan `forEach` + expand `startsWith('[')`, komentar `// ⚠️ ANTIREGRESI §29` |
+| `rapor/laporan-tt.html` | Tidak ada `new Set(setoranLulus.map(s => s.materi))` di `buildLaporanQuran` |
+
+**Checklist wajib setelah mengubah logika materiLulus:**
+- [ ] Pastikan expand `startsWith('[')` ada sebelum `materiLulus.add(m)`
+- [ ] Pastikan `targetDicapai` dihitung dari `materiLulus` hasil expand, bukan dari `setoranLulus.map`
+- [ ] Uji dengan setoran multi-materi (satu baris setoran berisi banyak materi) → progress harus terhitung benar
+- [ ] Uji dengan setoran single-materi → tetap benar (tidak rusak)
+- [ ] Uji kelas tanpa setoran sama sekali → harus tampil 0/N (0%) tanpa error
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1484,5 +1534,7 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/laporan-tt.html` | `isTTGuru()` — alias lengkap: `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` | v39 | Wajib identik dengan `guru-mapel.html`. Format mapel bervariasi di sheet. Lihat §28. |
 | `dashboard/guru-mapel.html` | Refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, `currentUser.kelasMapelList` dari `freshUser` | v39 | Wajib. Tanpa ini `hasKelas6` (menu SAJ) pakai data session lama. Lihat §28. |
 | `dashboard/guru-mapel.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib. |
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 11 Juni 2026 (v39). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+| `rapor/laporan-tt.html` | `materiLulus` dibangun dengan `forEach` + expand `startsWith('[')` — bukan `new Set(setoranLulus.map(s=>s.materi))` | v40 | **Wajib.** Tanpa expand, setoran multi-materi (JSON array) tidak dikenali → progress 0% dan semua detail `—`. Lihat §29. |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §29` di blok `materiLulus` di `buildLaporanQuran` | v40 | Penanda wajib agar pola expand tidak diganti kembali ke `.map`. |
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 11 Juni 2026 (v40). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
