@@ -422,7 +422,13 @@ window.addEventListener('load', async () => {
   try {
     const allUsers  = await SHEETS.getUsers();
     const freshUser = allUsers.find(u => u.email === currentUser.email);
-    if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+    if (freshUser?.mapel)      currentUser.mapel      = freshUser.mapel;
+    // ⚠️ ANTIREGRESI §28: refresh kelasList + kelas_mapel agar cek hasKelas6 (SAJ) pakai data terkini
+    if (freshUser?.kelasList)  currentUser.kelasList  = freshUser.kelasList;
+    if (freshUser?.kelas_mapel !== undefined) {
+      currentUser.kelas_mapel    = freshUser.kelas_mapel;
+      currentUser.kelasMapelList = freshUser.kelasMapelList || [];
+    }
   } catch(e) { /* fallback ke session */ }
 
   // Tampilkan menu Tahsin-Tahfizh jika guru ini mengampu mapel TT
