@@ -662,9 +662,22 @@ function buildLaporanQuran(siswa, setoran, jenis, kelas, sem) {
   const predNilai     = namaPredikat(avgNilai);
 
   // Target vs capaian hafalan
+  // ⚠️ ANTIREGRESI §29: materiLulus WAJIB expand JSON array materi.
+  // Satu baris setoran bisa menyimpan banyak materi sekaligus sebagai JSON array
+  // (misal: '["al-nas_1-6","al-falaq_1-5",...]'). Jika hanya pakai .map(s=>s.materi)
+  // tanpa expand, Set berisi string JSON mentah → includes(k) selalu false →
+  // targetDicapai=0, pctTarget=0%, semua item detail tampil '—'. Pola expand identik
+  // dengan input-setoran-tt.html (lulusSet, penanda kode §11).
   const targetKeys    = targetConfig.keys || [];
-  const setoranLulus  = setoran.filter(s => s.status_hafalan === 'lulus');
-  const materiLulus   = new Set(setoranLulus.map(s => s.materi));
+  const materiLulus   = new Set();
+  setoran.filter(s => s.status_hafalan === 'lulus').forEach(s => {
+    const m = s.materi || '';
+    if (m.startsWith('[')) {
+      try { JSON.parse(m).forEach(k => materiLulus.add(k)); } catch(e) { materiLulus.add(m); }
+    } else if (m) {
+      materiLulus.add(m);
+    }
+  });
   const targetDicapai = targetKeys.filter(k => materiLulus.has(k));
   const pctTarget     = targetKeys.length ? Math.round(targetDicapai.length/targetKeys.length*100) : 0;
 
