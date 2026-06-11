@@ -1,3 +1,26 @@
+## [2026-06-11] — v39 · Perbaikan Akses Laporan TT untuk Guru Mapel (Muhammad Rizki)
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/laporan-tt.html` | Guru `guru_mapel` TT (contoh: Muhammad Rizki) tidak mendapat dropdown kelas saat membuka halaman laporan — atau mendapat daftar kelas yang tidak sesuai dengan kelas yang sebenarnya diajarnya. Penyebabnya: blok `freshUser` di init hanya me-refresh `currentUser.mapel` dari data sheet terbaru, tapi **tidak** me-refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, dan `currentUser.kelasMapelList`. Fungsi `isiDropdownKelas()` yang dipanggil setelahnya memakai `currentUser.kelasList` dari session login lama — sehingga jika admin mengubah kelas guru sejak guru terakhir login, dropdown tampil kosong atau tidak sesuai. | Tambah tiga baris refresh setelah `currentUser.mapel = freshUser.mapel`: (1) `currentUser.kelasList = freshUser.kelasList`, (2) `currentUser.kelas_mapel = freshUser.kelas_mapel`, (3) `currentUser.kelasMapelList = freshUser.kelasMapelList`. Diberi komentar `⚠️ ANTIREGRESI §28`. Lihat §28. |
+| 2 | `rapor/laporan-tt.html` | Fungsi `isTTGuru()` tidak identik dengan implementasi di `guru-mapel.html` — tidak memiliki alias `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')`. Jika format mapel guru TT di sheet menggunakan format yang hanya dikenali oleh alias tersebut, `isiDropdownKelas()` akan memperlakukan guru sebagai bukan guru TT dan menampilkan dropdown yang salah. | Tambah dua alias yang hilang ke `isTTGuru()` agar identik dengan `guru-mapel.html` dan `cariGuruTT()`. |
+| 3 | `dashboard/guru-mapel.html` | Sama dengan bug #1 — blok `freshUser` di init dashboard hanya me-refresh `mapel`, tidak `kelasList`. Akibatnya `hasKelas6` (yang menentukan apakah menu SAJ tampil) dihitung dari data session lama — guru yang baru ditugaskan ke kelas 6 tidak melihat menu SAJ sampai logout-login ulang. | Tambah refresh `kelasList`, `kelas_mapel`, dan `kelasMapelList` yang identik dengan fix #1. |
+
+> **Catatan:** Bug #1 dan #3 merupakan kekurangan dari pola `freshUser` yang sejak awal hanya dirancang untuk me-refresh `mapel`. Pola yang benar sejak v39: setiap kali `freshUser` dipakai untuk sinkronisasi, **semua field yang mempengaruhi akses wajib di-refresh** — bukan hanya satu field. Lihat ANTIREGRESI.md §28.
+
+### 📋 File yang Diubah (v39)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — (1) blok `freshUser`: tambah refresh `kelasList` + `kelas_mapel` + `kelasMapelList` dengan komentar §28; (2) `isTTGuru()`: tambah alias `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` |
+| `dashboard/guru-mapel.html` | **Diubah** — blok `freshUser`: tambah refresh `kelasList` + `kelas_mapel` + `kelasMapelList` dengan komentar §28 |
+| `ANTIREGRESI.md` | **Diubah** — tambah §28, riwayat regresi v39, penanda kode kumulatif v39 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v39 ini |
+
+---
+
 ## [2026-06-09] — v38 · Perbaikan Urutan Siswa Tidak Abjad Setelah Tambah Baru
 
 ### 🐛 Perbaikan Bug — `getSiswa()` Tidak Mengurutkan Hasil Secara Abjad

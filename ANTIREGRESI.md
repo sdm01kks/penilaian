@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v39 | `rapor/laporan-tt.html`, `dashboard/guru-mapel.html` | Guru `guru_mapel` TT (Muhammad Rizki) tidak mendapat dropdown kelas di laporan TT — kelas yang diampu tidak tampil | Blok `freshUser` hanya me-refresh `currentUser.mapel`; `kelasList` dan `kelas_mapel` tidak ikut di-refresh → `isiDropdownKelas()` memakai data session lama. Lihat §28. |
 | v38 | `assets/js/sheets.js` | Siswa baru selalu muncul di posisi acak (biasanya akhir atau awal) di daftar siswa kelas — urutan tidak abjad | `getSiswa()` tidak mengurutkan hasil; siswa baru yang di-`append` ke baris terakhir sheet muncul di posisi sheet-nya. Lihat §27. |
 | v37 | `assets/js/sheets.js` | Siswa baru (via tambah manual \& mutasi masuk disetujui) tidak muncul di daftar siswa kelas | (1) `addSiswa` menggunakan `append('SISWA', [row])` tanpa anchor `!A1` → data baru ditulis ke kolom acak, tidak terbaca `getSiswa`. (2) `addSiswa` tidak menyimpan field `no_peserta_ismuba` (kolom P). (3) `getSiswa` hanya membaca `SISWA!A:O` sehingga kolom P tidak pernah dipopulasi. Lihat §3 dan §26. |
 | v36 | `rapor/laporan-tt.html` | Nama guru TT tidak muncul (tampil `—`) untuk guru_kelas yang merangkap TT di kelas lain (kelas TT ≠ kelas utama) | `cariGuruTT` hanya mengecek `u.kelasList` (kolom E = kelas utama); kelas TT ada di `u.kelasMapelList` (kolom K). Contoh: wali kelas 2C yang mengajar TT di 2B → `kelasList=["2C"]`, `includes("2B")=false`. Lihat §25-B. |
@@ -1338,6 +1339,64 @@ return siswa.map(r => ({ ... }));
 
 ---
 
+### 28. `freshUser` Wajib Refresh `kelasList` dan `kelas_mapel` — Bukan Hanya `mapel` ⚠️
+
+**Konteks:** Beberapa halaman membaca ulang data user dari sheet USERS saat init (`getUsers()`) untuk menghindari session cache yang basi. Pola ini menggunakan variabel `freshUser` untuk menimpa field `currentUser` dengan nilai terbaru dari sheet.
+
+**Akar masalah (v39):** Pola `if (freshUser?.mapel) currentUser.mapel = freshUser.mapel` hanya me-refresh field `mapel`. Field `kelasList` dan `kelas_mapel` — yang dipakai oleh `isiDropdownKelas()` untuk menentukan kelas mana yang boleh dipilih guru — **tidak ikut di-refresh**. Akibatnya:
+
+- Guru `guru_mapel` TT yang kelas ajarnya baru diubah admin tetap mendapat `kelasList` dari session login lama.
+- `isiDropdownKelas()` memfilter kelas berdasarkan `currentUser.kelasList` yang sudah basi → dropdown kosong atau tidak berisi kelas yang benar → laporan tidak bisa dibuka.
+- Bug ini tidak terdeteksi setelah login pertama (session masih fresh), tapi muncul jika guru sudah login lama dan admin mengubah kelas di sheet USERS tanpa meminta guru logout-login ulang.
+
+**File yang terkena:** `rapor/laporan-tt.html` (dampak utama: dropdown kelas kosong) dan `dashboard/guru-mapel.html` (dampak: `hasKelas6` untuk menu SAJ pakai data lama).
+
+**Pola yang salah:**
+```javascript
+// ❌ SALAH — hanya mapel yang di-refresh, kelasList masih dari session lama
+const freshUser = allUsersCache.find(u => u.email === currentUser.email);
+if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+// isiDropdownKelas() dipanggil setelah ini → pakai currentUser.kelasList LAMA
+```
+
+**Pola wajib sejak v39:**
+```javascript
+// ✅ BENAR — refresh semua field yang dipakai untuk filter akses
+const freshUser = allUsersCache.find(u => u.email === currentUser.email);
+if (freshUser?.mapel)      currentUser.mapel      = freshUser.mapel;
+// ⚠️ ANTIREGRESI §28: WAJIB refresh kelasList dan kelas_mapel, bukan hanya mapel.
+if (freshUser?.kelasList)  currentUser.kelasList  = freshUser.kelasList;
+if (freshUser?.kelas_mapel !== undefined) {
+  currentUser.kelas_mapel    = freshUser.kelas_mapel;
+  currentUser.kelasMapelList = freshUser.kelasMapelList || [];
+}
+```
+
+**Kapan risiko meningkat:**
+- Setiap kali menambah pola `freshUser` di halaman baru — mudah menyalin hanya satu baris refresh
+- Jika ada refactor yang memisahkan init dari `isiDropdownKelas()` / filter akses kelas
+- Jika ditambahkan field baru di USERS sheet yang mempengaruhi akses → harus ikut di-refresh
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | Tiga baris refresh: `currentUser.mapel`, `currentUser.kelasList`, `currentUser.kelas_mapel/kelasMapelList` setelah `freshUser` ditemukan |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh freshUser |
+| `dashboard/guru-mapel.html` | Idem — tiga baris refresh dengan komentar `// ⚠️ ANTIREGRESI §28` |
+
+**Checklist wajib setelah mengubah pola `freshUser`:**
+- [ ] Pastikan `mapel`, `kelasList`, `kelas_mapel`, dan `kelasMapelList` semua di-refresh
+- [ ] Pastikan `isiDropdownKelas()` dipanggil SETELAH blok refresh selesai
+- [ ] Uji: login → admin ubah kelas guru di sheet → buka halaman (tanpa logout-login) → dropdown harus menampilkan kelas terbaru
+- [ ] Uji guru_mapel TT yang baru saja ditambahkan ke kelas baru oleh admin → kelas baru harus tampil di dropdown
+
+---
+
+**Catatan tambahan (v39):** Ditemukan juga ketidakkonsistenan `isTTGuru()` antara `laporan-tt.html` dan `guru-mapel.html`. `laporan-tt.html` tidak memiliki alias `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` yang ada di `guru-mapel.html`. Meski tidak langsung menyebabkan bug (karena `m.includes('tahsin')` sudah menangkap sebagian besar format), pola berbeda di dua file rawan menyebabkan edge case. Kedua fungsi diseragamkan di v39. Lihat juga §25 untuk checklist `cariGuruTT`.
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1419,5 +1478,11 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `assets/js/sheets.js` | `append('SISWA!A1', [row])` di `addSiswa()` — anchor `A1` wajib | v37 |
 | `assets/js/sheets.js` | `siswa.sort((a, b) => (a[1] \|\| '').localeCompare(b[1] \|\| '', 'id'))` di `getSiswa()` — tepat sebelum `return` | v38 | Wajib. Tanpanya urutan siswa mengikuti posisi baris di sheet — siswa baru selalu di akhir atau posisi acak. Lihat §27. |
  Wajib. Tanpa anchor, data siswa baru ditulis ke kolom acak dan tidak terbaca `getSiswa`. Lihat §3 dan §26. |
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 09 Juni 2026 (v38). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+| `rapor/laporan-tt.html` | Refresh `currentUser.kelasList` dari `freshUser` di init — bukan hanya `currentUser.mapel` | v39 | **Wajib.** Tanpa ini dropdown kelas pakai data session lama → guru_mapel TT tidak dapat kelas yang benar. Lihat §28. |
+| `rapor/laporan-tt.html` | Refresh `currentUser.kelas_mapel` dan `currentUser.kelasMapelList` dari `freshUser` di init | v39 | Wajib. Sinkron dengan refresh kelasList. Lihat §28. |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib agar baris refresh kelasList tidak dihapus saat salin-tempel dari halaman lain. |
+| `rapor/laporan-tt.html` | `isTTGuru()` — alias lengkap: `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` | v39 | Wajib identik dengan `guru-mapel.html`. Format mapel bervariasi di sheet. Lihat §28. |
+| `dashboard/guru-mapel.html` | Refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, `currentUser.kelasMapelList` dari `freshUser` | v39 | Wajib. Tanpa ini `hasKelas6` (menu SAJ) pakai data session lama. Lihat §28. |
+| `dashboard/guru-mapel.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib. |
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 11 Juni 2026 (v39). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
