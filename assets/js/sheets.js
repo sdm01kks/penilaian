@@ -357,7 +357,16 @@ const SHEETS = (() => {
         kelas:           r[4] || '',
         mapel:           mapelRaw,
         mapelList:       mapelRaw ? mapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
-        kelasList:       r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
+        // ⚠️ ANTIREGRESI §30: kelasList WAJIB gabungan kolom E + kolom K — identik dengan auth.js.
+        // Di auth.js: kelasList = [...kelasUtamaArr, ...kelasMapelArr].
+        // Jika getUsers() hanya pakai kolom E, maka freshUser.kelasList yang di-sync ke
+        // currentUser (§28) akan menimpa kelasList session dengan versi yang kehilangan
+        // kelas tambahan kolom K → guru_kelas TT merangkap kehilangan akses dropdown kelas TT.
+        kelasList:       (() => {
+          const e = r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [];
+          const k = kelasMapelRaw ? kelasMapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+          return [...new Set([...e, ...k])];
+        })(),
         status:          r[6] || '',
         ditambah:        r[7] || '',
         tanggal:         r[8] || '',
