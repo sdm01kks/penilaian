@@ -1,3 +1,23 @@
+## [2026-06-12] — v43 · Perbaikan Akses Laporan TT untuk Guru Kelas TT Merangkap (Nisya)
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `assets/js/sheets.js` | `guru_kelas` yang mengajar TT di kelas lain (kolom K di sheet USERS) tidak mendapat dropdown kelas TT tambahannya saat membuka `laporan-tt.html`. Kasus konkret: Nisya El Salsabila. | **Akar masalah:** `getUsers()` di `sheets.js` membangun `kelasList` hanya dari kolom E (`r[4]`), sedangkan `auth.js` membangun dari gabungan kolom E + kolom K. Fix §28 (v39) menyebabkan `freshUser.kelasList` dari `getUsers()` menimpa `currentUser.kelasList` dari session — yang lebih lengkap karena sudah gabungan E+K. Akibatnya kelas TT di kolom K hilang dari dropdown. **Fix:** `kelasList` di `getUsers()` kini dibangun identik dengan `auth.js`: IIFE yang menggabungkan kolom E dan kolom K dengan deduplikasi `new Set`. |
+
+> **Catatan:** Ini adalah regresi yang ditimbulkan oleh fix §28 (v39). Fix §28 benar dalam niatnya (sync `kelasList` dari sheet terbaru), tapi mengungkap inkonsistensi yang sudah lama ada antara `getUsers()` dan `auth.js`. Invariant yang harus dijaga: `getUsers().kelasList ≡ auth.js kelasList ≡ [kolom E ∪ kolom K]`. Lihat ANTIREGRESI.md §30.
+
+### 📋 File yang Diubah (v43)
+
+| File | Status |
+|------|--------|
+| `assets/js/sheets.js` | **Diubah** — `getUsers()`: `kelasList` dibangun dengan IIFE gabungan kolom E + `kelasMapelRaw` + komentar `⚠️ ANTIREGRESI §30` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §30, entri riwayat v43, penanda kode kumulatif v43 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v43 ini |
+
+---
+
 ## [2026-06-11] — v42 · Logo Sekolah di Avatar Siswa + Perbaikan Tampilan Aspek Dashboard
 
 ### ✨ Peningkatan
