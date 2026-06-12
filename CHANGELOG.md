@@ -1,3 +1,21 @@
+## [2026-06-12] — v44 · Perbaikan Wali Kelas Salah di TTD Rapor (Regresi dari v43)
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/preview.html` | TTD rapor menampilkan nama guru mapel yang mengajar di kelas tersebut (bukan wali kelas sebenarnya). Contoh: rapor kelas 4A menampilkan Bu April (wali 4B, guru Al-Islam di 4A) alih-alih Bu Wilis (wali kelas 4A). | **Akar masalah:** regresi dari v43. Setelah `getUsers().kelasList` diubah menjadi gabungan kolom E+K, `users.find()` untuk wali kelas yang memakai `u.kelasList?.includes(activeKelas)` kini juga mencocokkan guru mapel merangkap. **Fix:** ganti ke `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — hanya mencocokkan dari kolom E (kelas utama). Lihat ANTIREGRESI §31 untuk aturan umum: `kelas` (kolom E) untuk identifikasi wali; `kelasList` (E+K) untuk hak akses. |
+
+### 📋 File yang Diubah (v44)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — `users.find()` wali kelas: ganti `u.kelasList?.includes(activeKelas)` → `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` + komentar `⚠️ ANTIREGRESI §31` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §31, entri riwayat v44, penanda kode kumulatif v44 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v44 ini |
+
+---
+
 ## [2026-06-12] — v43 · Perbaikan Akses Laporan TT untuk Guru Kelas TT Merangkap (Nisya)
 
 ### 🐛 Perbaikan

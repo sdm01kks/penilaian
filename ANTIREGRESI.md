@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v44 | `rapor/preview.html` | Wali kelas di TTD rapor menampilkan nama guru yang mengajar mapel di kelas tersebut (bukan wali kelas sebenarnya) | `users.find()` memakai `u.kelasList?.includes(activeKelas)`; sejak v43 `kelasList` = gabungan E+K → guru non-wali yang punya kelas di kolom K false-match. Lihat §31. |
 | v43 | `assets/js/sheets.js` | `guru_kelas` TT merangkap (Nisya) kehilangan akses dropdown kelas TT setelah v39 | `getUsers()` membangun `kelasList` hanya dari kolom E; `auth.js` membangun dari gabungan E+K. Setelah §28 (v39) menyinkronkan `freshUser.kelasList` ke `currentUser`, kelas K ditimpa. Lihat §30. |
 | v40 | `rapor/laporan-tt.html` | Progress hafalan tampil 0/N (0%) dan semua detail target `—`, meski siswa sudah menyetor seluruh target | `buildLaporanQuran` membangun `materiLulus` dengan `.map(s=>s.materi)` tanpa expand JSON array; setoran multi-materi tersimpan sebagai JSON array → `materiLulus.has(k)` selalu false. Lihat §29. |
 | v39 | `rapor/laporan-tt.html`, `dashboard/guru-mapel.html` | Guru `guru_mapel` TT (Muhammad Rizki) tidak mendapat dropdown kelas di laporan TT — kelas yang diampu tidak tampil | Blok `freshUser` hanya me-refresh `currentUser.mapel`; `kelasList` dan `kelas_mapel` tidak ikut di-refresh → `isiDropdownKelas()` memakai data session lama. Lihat §28. |
@@ -1507,6 +1508,55 @@ Setiap kali salah satu diubah, yang lain **wajib** disesuaikan.
 
 ---
 
+### 31. Pencarian Wali Kelas Wajib Pakai Kolom E (`kelas`), Bukan `kelasList` ⚠️
+
+**Konteks:** Wali kelas adalah satu-satunya `guru_kelas` yang **kelas utamanya** (kolom E) adalah kelas yang bersangkutan. Seorang `guru_kelas` bisa mengajar mapel di kelas lain sebagai guru mapel merangkap — kelas-kelas tambahan itu tersimpan di kolom K.
+
+**Akar masalah (v44):** Setelah fix §30 (v43), `getUsers().kelasList` = gabungan kolom E + K. `preview.html` mencari wali kelas dengan:
+
+```javascript
+// ❌ SALAH — kelasList mencakup kelas tambahan (kolom K)
+users.find(u =>
+  u.role === 'guru_kelas' &&
+  (u.kelasList?.includes(activeKelas) || u.kelas?.includes(activeKelas)) &&
+  u.status === 'aktif'
+)
+```
+
+Bu April (`guru_kelas` 4B, mengajar Al-Islam di 4A via kolom K) punya `kelasList = ["4B","4A","4C"]`. `kelasList.includes("4A")` = `true` → Bu April muncul sebagai wali kelas 4A, padahal wali 4A adalah Bu Wilis.
+
+**Pola wajib sejak v44:**
+
+```javascript
+// ✅ BENAR — hanya cocokkan dari kolom E (field kelas)
+users.find(u =>
+  u.role === 'guru_kelas' &&
+  u.kelas?.split(',').map(s => s.trim()).includes(activeKelas) &&
+  u.status === 'aktif'
+)
+```
+
+**Aturan umum:** Untuk mencari **wali/penanggung jawab** suatu kelas, selalu gunakan field `kelas` (kolom E). Untuk menentukan **hak akses** guru ke suatu kelas, gunakan `kelasList` (kolom E + K).
+
+| Tujuan | Field yang digunakan |
+|--------|---------------------|
+| Siapa wali kelas X? | `u.kelas` (kolom E) |
+| Apakah guru boleh akses kelas X? | `u.kelasList` (kolom E + K) |
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/preview.html` | `users.find()` untuk wali kelas memakai `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — **bukan** `u.kelasList` |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §31` di blok pencarian wali kelas |
+
+**Checklist wajib:**
+- [ ] Setiap query "siapa wali kelas X" → gunakan `u.kelas`, bukan `u.kelasList`
+- [ ] Uji kelas yang walikelas-nya berbeda dari guru mapel merangkap di kelas yang sama → wali kelas tampil benar
+- [ ] Setelah ada perubahan di `getUsers()` yang mempengaruhi `kelasList` → audit semua `users.find(…guru_kelas…)` untuk memastikan tidak ada yang pakai `kelasList`
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1593,10 +1643,12 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib agar baris refresh kelasList tidak dihapus saat salin-tempel dari halaman lain. |
 | `assets/js/sheets.js` | `kelasList` di `getUsers()` dibangun dengan IIFE gabungan kolom E + `kelasMapelRaw` (kolom K) menggunakan `new Set` — identik dengan `auth.js` | v43 | **Wajib.** Tanpa ini, `freshUser.kelasList` yang di-sync (§28) hanya berisi kelas E → guru_kelas TT merangkap kehilangan kelas K. Lihat §30. |
 | `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §30` di baris `kelasList` di `getUsers()` | v43 | Penanda wajib agar field tidak disederhanakan kembali ke `r[4]` saja. |
+| `rapor/preview.html` | Pencarian wali kelas memakai `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — bukan `u.kelasList` | v44 | **Wajib.** `kelasList` mencakup kelas tambahan (kolom K); wali kelas hanya ditentukan dari kelas utama (kolom E). Lihat §31. |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §31` di blok `users.find()` pencarian wali kelas | v44 | Penanda wajib agar query tidak kembali memakai `kelasList`. |
 | `rapor/laporan-tt.html` | `isTTGuru()` — alias lengkap: `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` | v39 | Wajib identik dengan `guru-mapel.html`. Format mapel bervariasi di sheet. Lihat §28. |
 | `dashboard/guru-mapel.html` | Refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, `currentUser.kelasMapelList` dari `freshUser` | v39 | Wajib. Tanpa ini `hasKelas6` (menu SAJ) pakai data session lama. Lihat §28. |
 | `dashboard/guru-mapel.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib. |
 | `rapor/laporan-tt.html` | `materiLulus` dibangun dengan `forEach` + expand `startsWith('[')` — bukan `new Set(setoranLulus.map(s=>s.materi))` | v40 | **Wajib.** Tanpa expand, setoran multi-materi (JSON array) tidak dikenali → progress 0% dan semua detail `—`. Lihat §29. |
 | `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §29` di blok `materiLulus` di `buildLaporanQuran` | v40 | Penanda wajib agar pola expand tidak diganti kembali ke `.map`. |
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 12 Juni 2026 (v43). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 12 Juni 2026 (v44). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
