@@ -332,12 +332,18 @@ async function muatRapor(siswa) {
       r[1]===siswa.id && r[2]===activeKelas && r[8]===sem && r[9]===tahun);
 
     // Wali kelas
+    // ⚠️ ANTIREGRESI §31: Wali kelas WAJIB dicari dari kolom E (field `kelas`) saja,
+    // BUKAN dari `kelasList`. Sejak v43, `kelasList` = gabungan kolom E + K (kelas tambahan
+    // guru mapel/merangkap). Jika pakai `kelasList`, guru_kelas yang mengajar mapel di
+    // kelas lain (kolom K) akan false-match sebagai wali kelas kelas tersebut.
+    // Contoh: Bu April (wali 4B) mengajar di 4A via kolom K → kelasList includes "4A"
+    // → muncul sebagai wali 4A padahal wali 4A adalah Bu Wilis.
     let wali = { nama: '[Guru Kelas]', nbm: '[NBM. Guru Kelas]' };
     try {
       const users = await SHEETS.getUsers();
       const waliUser = users.find(u =>
         u.role==='guru_kelas' &&
-        (u.kelasList?.includes(activeKelas) || u.kelas?.includes(activeKelas)) &&
+        u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas) &&
         u.status==='aktif'
       );
       if (waliUser) wali = { nama: waliUser.nama, nbm: waliUser.nbm || '' };
