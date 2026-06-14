@@ -1,3 +1,23 @@
+## [2026-06-15] — v50 · Leger Kelas: Hitung Nilai dari SLM+SAS+Bobot, Tampilkan Semua Siswa
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-kelas.html` | Data leger selalu kosong (0 siswa, 0 mapel) meskipun nilai sudah diinput | Akar masalah: `tampilkanLeger()` membaca kolom `r[9]` (nilai_akhir tersimpan di sheet). Kolom ini hanya terisi jika nilai pernah disimpan ulang oleh sistem — pada banyak kasus kolom ini kosong meskipun `nilai_slm` dan `nilai_sas` sudah ada. Fix: hitung nilai akhir dari `nilai_slm * bobot_slm + nilai_sas * bobot_sas` per TP, identik dengan logika `preview.html`. |
+| 2 | `rapor/leger-kelas.html` | Siswa tanpa nilai tidak muncul sama sekali di tabel | Fix: semua siswa selalu ditampilkan. Nilai yang belum ada ditampilkan sebagai `—`. Ranking hanya diberikan untuk siswa yang memiliki minimal satu nilai; siswa tanpa nilai sama sekali mendapat `—` di kolom peringkat. |
+| 3 | `rapor/leger-kelas.html` | Nilai ditampilkan dengan satu desimal (`87.3`) — tidak konsisten dengan rapor | Diubah ke bilangan bulat (`Math.round`) sesuai tampilan di `preview.html`. |
+| 4 | `rapor/leger-kelas.html` | Label cetak selalu menampilkan "Wali Kelas" meskipun yang mencetak adalah admin | Kondisikan: admin → "Admin: [nama]"; guru kelas → "Wali Kelas: [nama]". |
+
+### 📋 File yang Diubah (v50)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-kelas.html` | **Diubah** — `tampilkanLeger()` ditulis ulang: muat TP via `getTPKKTP`, hitung `na = slm*bSlm% + sas*bSas%` per TP, rata-rata per mapel, tampilkan semua siswa, ranking null untuk siswa tanpa nilai |
+| `CHANGELOG.md` | **Diubah** — tambah entri v50 ini |
+
+---
+
 ## [2026-06-15] — v49 · Audit Akses Leger: Guru Kelas Dibatasi ke Kelas Utama Saja
 
 ### 🐛 Perbaikan
