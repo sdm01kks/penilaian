@@ -1,4 +1,29 @@
+## [2026-06-15] — v47 · Koreksi Akses Leger: Kelas untuk Admin+Guru, Bidang Studi Khusus Admin
+
+### 🐛 Koreksi + ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/leger-kelas.html` | Admin kini dapat mengakses Leger Nilai Kelas (leger semua mapel per-kelas). `requireLogin` diubah ke `['guru_kelas', 'admin']`. Admin mendapat semua kelas di dropdown (kelasDiampu kosong → allKelas). Sidebar dikondisikan: Dashboard → `admin.html` untuk admin; nav Input Penilaian dan Setup TP disembunyikan untuk admin. Header menampilkan "Administrator". |
+| 2 | `rapor/leger-mapel.html` | Leger Nilai Bidang Studi **dibatasi khusus admin** (bukan guru). `requireLogin` diubah ke `'admin'`. Sidebar bug diperbaiki: Dashboard selalu mengarah ke `admin.html`; nav khusus guru (TT, Setup TT) disembunyikan; label header menampilkan "Administrator". Blok `isTTGuru` yang tidak relevan untuk admin dihapus. |
+| 3 | `dashboard/admin.html` | Sidebar diperbarui: "Leger Nilai Kelas" (📊, `leger-kelas.html`) sebagai menu utama; "Leger Nilai Bidang Studi" (📈, `leger-mapel.html`) sebagai menu terpisah di bawahnya. |
+
+### 📋 File yang Diubah (v47)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-kelas.html` | **Diubah** — `requireLogin`, label header, `navDashboard` id + JS kondisional, hide nav input untuk admin |
+| `rapor/leger-mapel.html` | **Diubah** — `requireLogin('admin')`, sidebar fix, hapus blok isTTGuru |
+| `dashboard/admin.html` | **Diubah** — pisah nav leger-kelas dan leger-mapel |
+| `CHANGELOG.md` | **Diubah** — tambah entri v47 ini |
+
+> **Catatan v46:** Patch v46 keliru membuka `leger-mapel.html` untuk semua guru. v47 mengoreksinya: `leger-kelas.html` (leger per-kelas semua mapel) untuk admin + guru kelas; `leger-mapel.html` (leger bidang studi) khusus admin.
+
+
+---
+
 ## [2026-06-15] — v46 · Akses Admin ke Leger Nilai Bidang Studi
+ · Akses Admin ke Leger Nilai Bidang Studi
 
 ### ✨ Peningkatan
 
