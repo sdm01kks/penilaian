@@ -1,3 +1,27 @@
+## [2026-06-14] — v45 · Perbaikan Guru TT Salah di Kelas Multi-Mapel + UI Kelas Khusus TT
+
+### 🐛 Perbaikan + ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/laporan-tt.html` | **Fix `cariGuruTT()`.** Guru yang mengajar banyak mapel (misal Al-Islam + TT) sebelumnya false-match sebagai guru TT di kelas yang hanya diampu Al-Islam-nya saja (bukan TT). Contoh: Pak Indra (Al-Islam + TT di 1A/1B; Al-Islam saja di 3A) muncul sebagai guru TT kelas 3A, padahal guru TT kelas 3A adalah Pak Rizki. Penyebab: skema sheet USERS tidak bisa merepresentasikan "mapel X di kelas A, mapel Y di kelas B". Fix: `cariGuruTT()` kini menggunakan kolom K sebagai pembatas kelas TT untuk `guru_mapel`. Jika kolom K diisi admin → hanya kelas di kolom K yang dianggap kelas TT. Jika kolom K kosong → fallback ke kolom E (TT murni, semua kelas). Untuk `guru_kelas` merangkap: tetap pakai E+K (§25-B). |
+| 2 | `setup/kelola-guru.html` | **UI "Kelas Khusus Tahsin-Tahfizh".** Tambah seksi baru yang muncul otomatis saat `guru_mapel` memilih mapel TT dan mengajar di lebih dari 1 kelas. Admin bisa memilih subset kelas yang benar-benar diampu TT, tersimpan ke kolom K. Jika dikosongkan, semua kelas dianggap kelas TT (backward compatible). |
+
+### 📋 File yang Diubah (v45)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — `cariGuruTT()`: tambah cabang role dengan komentar §32 |
+| `setup/kelola-guru.html` | **Diubah** — HTML seksi `#seksiKelasTT`; variabel `kelasTTDipilih`; fungsi `isTTDipilih`, `renderKelasTTSeksi`, `renderKelasTTCheckbox`, `toggleKelasTT`; panggilan dari `toggleMapelCheck`, `toggleKelasCheck`, `pilihRole`; `simpanGuru()` menyimpan `kelasTTDipilih` ke `kelas_mapel` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §32, entri riwayat v45, penanda kode kumulatif v45 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v45 ini |
+
+### ⚠️ Catatan Migrasi Data
+
+Guru yang sudah terdaftar sebagai `guru_mapel` multi-mapel perlu diedit di Kelola Guru untuk mengisi kolom "Kelas Khusus TT" agar `cariGuruTT()` bekerja benar. Sebelum diisi, kolom K kosong → fallback ke kolom E (sama seperti perilaku lama).
+
+---
+
 ## [2026-06-12] — v44 · Perbaikan Wali Kelas Salah di TTD Rapor (Regresi dari v43)
 
 ### 🐛 Perbaikan

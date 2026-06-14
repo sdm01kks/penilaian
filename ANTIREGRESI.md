@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v45 | `rapor/laporan-tt.html`, `setup/kelola-guru.html` | `cariGuruTT()` mengembalikan guru yang hanya mengajar sebagian mapel TT, bukan semua kelas (Pak Indra: Al-Islam + TT di 1A/1B, Al-Islam saja di 3A → muncul salah sebagai guru TT kelas 3A) | `cariGuruTT()` hanya cek `hasTT` + `kelas ∈ kelasList`; tidak ada cara membedakan "TT di kelas A" vs "non-TT di kelas B". Fix: kolom K dipakai sebagai pembatas kelas TT untuk `guru_mapel`; UI ditambah seksi "Kelas Khusus TT". Lihat §32. |
 | v44 | `rapor/preview.html` | Wali kelas di TTD rapor menampilkan nama guru yang mengajar mapel di kelas tersebut (bukan wali kelas sebenarnya) | `users.find()` memakai `u.kelasList?.includes(activeKelas)`; sejak v43 `kelasList` = gabungan E+K → guru non-wali yang punya kelas di kolom K false-match. Lihat §31. |
 | v43 | `assets/js/sheets.js` | `guru_kelas` TT merangkap (Nisya) kehilangan akses dropdown kelas TT setelah v39 | `getUsers()` membangun `kelasList` hanya dari kolom E; `auth.js` membangun dari gabungan E+K. Setelah §28 (v39) menyinkronkan `freshUser.kelasList` ke `currentUser`, kelas K ditimpa. Lihat §30. |
 | v40 | `rapor/laporan-tt.html` | Progress hafalan tampil 0/N (0%) dan semua detail target `—`, meski siswa sudah menyetor seluruh target | `buildLaporanQuran` membangun `materiLulus` dengan `.map(s=>s.materi)` tanpa expand JSON array; setoran multi-materi tersimpan sebagai JSON array → `materiLulus.has(k)` selalu false. Lihat §29. |
@@ -1557,6 +1558,56 @@ users.find(u =>
 
 ---
 
+### 32. `cariGuruTT()` — Kolom K sebagai Pembatas Kelas TT untuk `guru_mapel` Multi-Mapel ⚠️
+
+**Konteks:** `cariGuruTT()` mencocokkan guru TT untuk suatu kelas berdasarkan `hasTT` (mapel mengandung TT) dan kelas. Masalah muncul ketika seorang `guru_mapel` mengajar **lebih dari satu mapel** dan TT **hanya di sebagian kelas**.
+
+**Akar masalah:** Skema sheet USERS tidak bisa merepresentasikan "mapel X di kelas A, mapel Y di kelas B" secara terpisah. Kolom E (`kelas`) berisi semua kelas yang diampu, kolom F (`mapel`) berisi semua mapel — tanpa relasi per-kelas. Akibatnya `cariGuruTT()` yang hanya cek `hasTT + kelas ∈ kelasList` akan false-match guru yang mengajar TT di kelas A tetapi juga mengajar mapel lain di kelas B (bukan TT).
+
+**Contoh (v45):** Pak Indra: `kelas = "1A,1B,3A"`, `mapel = "al-islam,tahsin-tahfizh"`.
+- `hasTT` = true → lanjut
+- `kelas ∈ kelasList` untuk "3A" → true → Pak Indra muncul sebagai guru TT kelas 3A ❌
+- Yang benar: Pak Rizki adalah guru TT kelas 3A
+
+**Solusi (tanpa mengubah skema sheet):** Manfaatkan kolom K (`kelas_mapel`) sebagai **pembatas kelas TT** untuk `guru_mapel`. Semantik kolom K per role:
+
+| Role | Makna kolom K |
+|------|--------------|
+| `guru_kelas` | Kelas tambahan tempat guru mengajar sebagai guru mapel |
+| `guru_mapel` | Kelas khusus TT (subset dari kolom E); jika kosong → semua kelas E adalah kelas TT |
+
+**Logika `cariGuruTT()` sejak v45:**
+```javascript
+if (u.role === 'guru_kelas') {
+  // TT di kelas utama (E) dan/atau kelas tambahan (K) — pakai gabungan
+  kelasGuru = [...kelasList, ...kelasMapelList];
+} else { // guru_mapel
+  kelasGuru = (kelasMapelList.length > 0)
+    ? kelasMapelList   // kolom K diisi → ini adalah kelas TT yang dibatasi admin
+    : kelasList;       // kolom K kosong → semua kelas E = kelas TT (TT murni)
+}
+```
+
+**Cara pengisian data (di kelola-guru.html):** Saat `guru_mapel` memilih mapel yang mengandung TT dan kelas > 1, muncul seksi "Kelas Khusus Tahsin-Tahfizh" (opsional). Admin memilih subset kelas yang benar-benar diampu TT. Nilai tersimpan ke kolom K.
+
+**Skenario lengkap:**
+
+| Guru | Role | Kelas (E) | Mapel (F) | Kelas TT (K) | cariGuruTT("3A") | cariGuruTT("1A") |
+|------|------|-----------|-----------|--------------|-------------------|-------------------|
+| Pak Indra | guru_mapel | 1A,1B,3A | al-islam,tt | 1A,1B | ❌ tidak match | ✅ match |
+| Pak Rizki | guru_mapel | 3A | tt | (kosong) | ✅ match | ❌ tidak match |
+| Nisya | guru_kelas | 2C | tt | 2B | ❌ tidak match | ❌ tidak match |
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | `cariGuruTT()` memiliki cabang `if (u.role === 'guru_kelas')` dan `else` dengan komentar `// §32` |
+| `setup/kelola-guru.html` | Fungsi `renderKelasTTSeksi()`, `renderKelasTTCheckbox()`, `toggleKelasTT()` ada dan dipanggil dari `toggleMapelCheck()` dan `toggleKelasCheck()` |
+| `setup/kelola-guru.html` | `simpanGuru()`: `kelas_mapel` untuk `guru_mapel` = `kelasTTDipilih.join(',')` |
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1645,10 +1696,13 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §30` di baris `kelasList` di `getUsers()` | v43 | Penanda wajib agar field tidak disederhanakan kembali ke `r[4]` saja. |
 | `rapor/preview.html` | Pencarian wali kelas memakai `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — bukan `u.kelasList` | v44 | **Wajib.** `kelasList` mencakup kelas tambahan (kolom K); wali kelas hanya ditentukan dari kelas utama (kolom E). Lihat §31. |
 | `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §31` di blok `users.find()` pencarian wali kelas | v44 | Penanda wajib agar query tidak kembali memakai `kelasList`. |
+| `rapor/laporan-tt.html` | `cariGuruTT()`: cabang `if (u.role==='guru_kelas')` pakai E+K; cabang `else` pakai kolom K jika tidak kosong, fallback ke kolom E | v45 | **Wajib.** Tanpa ini, guru_mapel multi-mapel false-match sebagai guru TT di kelas non-TT. Lihat §32. |
+| `setup/kelola-guru.html` | Fungsi `renderKelasTTSeksi()`, `renderKelasTTCheckbox()`, `toggleKelasTT()` hadir dan dipanggil | v45 | Penanda wajib. UI harus memberi admin cara mengisi kelas TT khusus untuk guru_mapel. |
+| `setup/kelola-guru.html` | `simpanGuru()`: `kelas_mapel` untuk `guru_mapel` = `kelasTTDipilih.join(',')` | v45 | Penanda wajib. Tanpa ini data tidak tersimpan ke kolom K. |
 | `rapor/laporan-tt.html` | `isTTGuru()` — alias lengkap: `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` | v39 | Wajib identik dengan `guru-mapel.html`. Format mapel bervariasi di sheet. Lihat §28. |
 | `dashboard/guru-mapel.html` | Refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, `currentUser.kelasMapelList` dari `freshUser` | v39 | Wajib. Tanpa ini `hasKelas6` (menu SAJ) pakai data session lama. Lihat §28. |
 | `dashboard/guru-mapel.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib. |
 | `rapor/laporan-tt.html` | `materiLulus` dibangun dengan `forEach` + expand `startsWith('[')` — bukan `new Set(setoranLulus.map(s=>s.materi))` | v40 | **Wajib.** Tanpa expand, setoran multi-materi (JSON array) tidak dikenali → progress 0% dan semua detail `—`. Lihat §29. |
 | `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §29` di blok `materiLulus` di `buildLaporanQuran` | v40 | Penanda wajib agar pola expand tidak diganti kembali ke `.map`. |
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 12 Juni 2026 (v44). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 14 Juni 2026 (v45). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
