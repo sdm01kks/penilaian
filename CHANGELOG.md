@@ -1,3 +1,23 @@
+## [2026-06-15] — v48 · Fix Tampilan Sidebar Leger + Pesan Informatif Kelas Kosong
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-mapel.html` | Teks "Dashboard" di sidebar tidak tampil sempurna — terrender sebagai teks literal dengan karakter backslash | Akar masalah: saat patch v46 diinjeksikan via Python string, quotes di HTML ter-escape menjadi `\"` → backslash literal di HTML. Fix: ganti ke quote biasa dan arahkan href langsung ke `admin.html` (tidak perlu JS lagi karena halaman ini khusus admin). |
+| 2 | `rapor/leger-mapel.html` | Subtext halaman menyebut "mata pelajaran yang Anda ampu" — tidak relevan untuk admin | Diubah menjadi "per mata pelajaran dan kelas" yang netral. |
+| 3 | `rapor/leger-kelas.html` | Jika `allKelas` kosong setelah load berhasil, dropdown menampilkan hanya "Pilih Kelas" tanpa keterangan apapun | Tambah pengecekan `kelasList.length === 0` → tampilkan "Tidak ada kelas tersedia" dan disable tombol Tampilkan/Cetak. |
+
+### 📋 File yang Diubah (v48)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-mapel.html` | **Diubah** — fix backslash di nav HTML; href navDashboard langsung ke admin.html; update subtext halaman |
+| `rapor/leger-kelas.html` | **Diubah** — tambah guard kelasList.length === 0 dengan pesan informatif |
+| `CHANGELOG.md` | **Diubah** — tambah entri v48 ini |
+
+---
+
 ## [2026-06-15] — v47 · Koreksi Akses Leger: Kelas untuk Admin+Guru, Bidang Studi Khusus Admin
 
 ### 🐛 Koreksi + ✨ Peningkatan
