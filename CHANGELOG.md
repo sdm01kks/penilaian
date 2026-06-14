@@ -1,3 +1,23 @@
+## [2026-06-15] — v46 · Akses Admin ke Leger Nilai Bidang Studi
+
+### ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/leger-mapel.html` | Admin kini diizinkan mengakses halaman Leger Nilai Bidang Studi. `requireLogin` diubah dari `'guru_mapel'` menjadi `['guru_kelas', 'guru_mapel', 'admin']`. Admin otomatis mendapat semua kelas dan semua mapel di dropdown (karena `allowedKelas = []` → filter tidak diterapkan, dan branch `// admin: semua mapel tampil` sudah ada di `_updateMapelDropdown`). |
+| 2 | `rapor/leger-mapel.html` | Sidebar dan header dikondisikan berdasarkan role: tombol Dashboard mengarah ke `admin.html` untuk admin, `guru-kelas.html` untuk guru kelas, dan `guru-mapel.html` untuk guru mapel. Nav khusus guru (Setoran TT, Setup TT, Laporan TT) disembunyikan untuk admin. Label `userMapel` menampilkan "Administrator" untuk admin. |
+| 3 | `dashboard/admin.html` | Tambah link "Leger Nilai Bidang Studi" di sidebar admin di bawah "Preview & Cetak Rapor". |
+
+### 📋 File yang Diubah (v46)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-mapel.html` | **Diubah** — `requireLogin` ke array 3 role; `navDashboard` id + JS kondisional; hide nav guru-only untuk admin; label `userMapel` untuk admin |
+| `dashboard/admin.html` | **Diubah** — tambah nav-item leger-mapel di seksi Laporan & Rapor |
+| `CHANGELOG.md` | **Diubah** — tambah entri v46 ini |
+
+---
+
 ## [2026-06-14] — v45 · Perbaikan Guru TT Salah di Kelas Multi-Mapel + UI Kelas Khusus TT
 
 ### 🐛 Perbaikan + ✨ Peningkatan
