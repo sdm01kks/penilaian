@@ -153,7 +153,7 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
 <!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Utama</div>
-  <a class="nav-item" href="../dashboard/guru-mapel.html"><span class="nav-icon">🏠</span> Dashboard</a>
+  <a class=\"nav-item\" id=\"navDashboard\" href=\"../dashboard/guru-mapel.html\"><span class=\"nav-icon\">🏠</span> Dashboard</a>
 
   <div class="sidebar-section-label">Input Penilaian</div>
   <a class="nav-item" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM & SAS</a>
@@ -265,12 +265,30 @@ function rankBadge(r){
 /* ── init ────────────────────────────────────────────── */
 window.addEventListener('load', async () => {
   AUTH.init();
-  currentUser = AUTH.requireLogin('guru_mapel');
+  currentUser = AUTH.requireLogin(['guru_kelas', 'guru_mapel', 'admin']);  // ⚠️ ANTIREGRESI §33: admin wajib masuk daftar
   if (!currentUser) return;
+  // Admin diizinkan akses — requireLogin(['guru_kelas','guru_mapel','admin'])
+
 
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
-  document.getElementById('userMapel').textContent  = currentUser.mapel || '—';
+  document.getElementById('userMapel').textContent  = currentUser.role === 'admin'
+    ? 'Administrator' : (currentUser.mapel || '—');
+
+  // Arahkan tombol Dashboard ke dashboard yang sesuai role
+  const navDash = document.getElementById('navDashboard');
+  if (navDash) {
+    if (currentUser.role === 'admin') navDash.href = '../dashboard/admin.html';
+    else if (currentUser.role === 'guru_kelas') navDash.href = '../dashboard/guru-kelas.html';
+  }
+
+  // Sembunyikan nav guru-only jika admin
+  if (currentUser.role === 'admin') {
+    ['navSetoranTT','navSetupTT','navLaporanTT'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
 
   // Tampilkan menu TT jika guru ini mengampu TT
   const mapelUser = (currentUser.mapel || '').toLowerCase();
