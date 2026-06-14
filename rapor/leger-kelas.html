@@ -267,9 +267,16 @@ window.addEventListener('load', async () => {
     document.getElementById('semPill').textContent = 'Semester ' + sem + ' · ' + tp;
     document.getElementById('selSem').value = sem;
 
-    // Filter kelas — guru kelas hanya boleh akses kelasnya sendiri
-    const kelasDiampu = (currentUser.kelasList ||
-      (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()).filter(Boolean) : []));
+    // ⚠️ ANTIREGRESI §31 + §33: penentuan kelas yang boleh dilihat berbeda per role.
+    // Guru kelas → HANYA kelas utama (kolom E = field `kelas`). Sejak §30 (v43),
+    // kelasList = gabungan E+K; jika dipakai di sini, guru yang mengajar mapel di
+    // kelas lain (kolom K) akan bisa melihat leger kelas lain tersebut — tidak boleh.
+    // Admin → semua kelas (kelasDiampu kosong → allKelas).
+    const kelasDiampu = (currentUser.role === 'admin')
+      ? []  // admin: semua kelas
+      : (currentUser.kelas
+          ? currentUser.kelas.split(',').map(s => s.trim()).filter(Boolean)
+          : []);  // guru_kelas: kolom E saja
     const kelasList = kelasDiampu.length
       ? allKelas.filter(k => kelasDiampu.includes(k.nama))
       : allKelas;
