@@ -1,3 +1,27 @@
+## [2026-06-15] — v49 · Audit Akses Leger: Guru Kelas Dibatasi ke Kelas Utama Saja
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-kelas.html` | `kelasDiampu` memakai `currentUser.kelasList` (gabungan kolom E+K sejak §30/v43). Guru kelas yang mengajar mapel di kelas lain (kolom K) bisa melihat leger kelas-kelas tersebut — padahal hanya boleh melihat kelas utamanya sendiri. | Ganti ke `currentUser.kelas` (kolom E saja) untuk `guru_kelas`, identik dengan aturan §31 (kolom E untuk kepemilikan/identifikasi, bukan akses lintas kelas). Admin tetap mendapat semua kelas (kelasDiampu kosong). Komentar §31+§33 ditambahkan. |
+
+### ✅ Konfirmasi akses setelah v49
+
+| Halaman | Guru Kelas | Guru Mapel | Admin |
+|---------|-----------|-----------|-------|
+| `leger-kelas.html` | ✅ Hanya kelas utama (kolom E) | ❌ Tidak bisa masuk | ✅ Semua kelas |
+| `leger-mapel.html` | ❌ Tidak bisa masuk | ❌ Tidak bisa masuk | ✅ Semua mapel + kelas |
+
+### 📋 File yang Diubah (v49)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-kelas.html` | **Diubah** — `kelasDiampu`: ganti `kelasList` → `kelas` (kolom E) untuk guru_kelas; eksplisit `[]` untuk admin; komentar §31+§33 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v49 ini |
+
+---
+
 ## [2026-06-15] — v48 · Fix Tampilan Sidebar Leger + Pesan Informatif Kelas Kosong
 
 ### 🐛 Perbaikan
