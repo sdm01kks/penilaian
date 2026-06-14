@@ -935,14 +935,24 @@ function cariGuruTT(allUsers, kelas) {
     if (!hasTT) return false;
     // Jika belum ada kelas terpilih, kembalikan yang pertama ditemukan (fallback)
     if (!kelas) return true;
-    // ⚠️ ANTIREGRESI §25-B: cek kelasList (kolom E) DAN kelasMapelList (kolom K).
-    // guru_kelas yang merangkap TT di kelas lain menyimpan kelas TT di kolom K.
-    // Sebelumnya hanya kelasList yang dicek → guru merangkap tidak pernah cocok.
-    const allKelasGuru = [
-      ...(u.kelasList      || []),
-      ...(u.kelasMapelList || []),
-    ];
-    return allKelasGuru.includes(kelas);
+    // ⚠️ ANTIREGRESI §25-B + §32: penentuan kelas TT berbeda berdasarkan role.
+    // Lihat §32 untuk ilustrasi lengkap.
+    let kelasGuru;
+    if (u.role === 'guru_kelas') {
+      // guru_kelas: TT boleh di kelas utama (E) dan/atau kelas tambahan (K)
+      kelasGuru = [
+        ...(u.kelasList      || []),
+        ...(u.kelasMapelList || []),
+      ];
+    } else {
+      // guru_mapel: jika kolom K diisi oleh admin → kolom K adalah pembatas kelas TT
+      // (dipakai untuk guru yang mengajar banyak mapel, TT hanya di sebagian kelas).
+      // Jika kolom K kosong → pakai kolom E (guru TT murni, semua kelas = kelas TT).
+      kelasGuru = (u.kelasMapelList && u.kelasMapelList.length > 0)
+        ? u.kelasMapelList
+        : (u.kelasList || []);
+    }
+    return [...new Set(kelasGuru)].includes(kelas);
   }) || null;
 }
 
