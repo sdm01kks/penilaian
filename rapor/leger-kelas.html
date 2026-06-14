@@ -321,70 +321,104 @@ async function tampilkanLeger() {
 
   showLoading('Memuat nilai siswa…');
   try {
-    // Mapel — excludes Tahsin
+    // Mapel — excludes Tahsin, urut sesuai field urutan
     const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
-    const mapelList = allMapel.filter(m => !isTahsin(m)).sort((a,b) => a.urutan - b.urutan);
+    const mapelList = allMapel.filter(m => !isTahsin(m)).sort((a,b) => (a.urutan||0) - (b.urutan||0));
 
     // Siswa di kelas ini, urut abjad
-    const siswaList = (await SHEETS.getSiswa(kelas)).sort((a,b) => a.nama.localeCompare(b.nama));
+    const siswaList = (await SHEETS.getSiswa(kelas)).sort((a,b) =>
+      a.nama.localeCompare(b.nama, 'id'));
 
-    // Baca NILAI sheet langsung — bypass getNilai agar tidak terdistorsi filter
-    const rawNilaiRows = await SHEETS.read('NILAI!A:K');
+    // Format semester: terima Arab & Romawi
+    const toRomawi = { '1':'I','2':'II','3':'III','4':'IV' };
+    const toArab   = { 'I':'1','II':'2','III':'3','IV':'4' };
+    const semAktif = config['semester_aktif'] || semester;
+    const semValid = new Set([
+      semester, toRomawi[semester]||semester,
+      semAktif, toRomawi[semAktif]||semAktif, toArab[semAktif]||semAktif
+    ]);
 
-    // FIX 1: semester tersimpan sebagai Romawi ("I","II") — terima kedua format
-    const semRomawi = { '1':'I', '2':'II', '3':'III', '4':'IV' };
-    const semArab   = { 'I':'1', 'II':'2', 'III':'3', 'IV':'4' };
-    const semAktif  = config['semester_aktif'] || semester;
-    const semValid  = new Set([semester, semRomawi[semester]||semester,
-                               semAktif, semRomawi[semAktif]||semAktif,
-                               semArab[semAktif]||semAktif]);
+    // Muat TP & NILAI sekaligus
+    const [allTP, rawNilaiRows] = await Promise.all([
+      SHEETS.getTPKKTP({ kelas }),
+      SHEETS.read('NILAI!A:K')
+    ]);
 
-    // Indeks: id_siswa → id_mapel → [nilai_akhir per TP]
-    // Nilai akhir per mapel = rata-rata semua TP mapel tersebut
-    const nilaiIdx = {};
-    rawNilaiRows.slice(1).forEach(r => {
-      if (!r[0] || r[0] === 'id_nilai' || r[0].trim() === '' || !r[1] || !r[2]) return;
-      if (kelas && r[4] !== kelas) return;
-      if (!semValid.has(r[5])) return;           // FIX 1: cocokkan Romawi atau Arab
-      if (tahun && r[6] && r[6] !== tahun) return;
-      const va = (r[9] !== undefined && r[9] !== null && r[9] !== '')
-        ? parseFloat(r[9]) : null;
-      if (va === null) return;
-      const idSiswa = r[1];
-      const idMapel = r[3];
-      if (!nilaiIdx[idSiswa]) nilaiIdx[idSiswa] = {};
-      if (!nilaiIdx[idSiswa][idMapel]) nilaiIdx[idSiswa][idMapel] = [];
-      nilaiIdx[idSiswa][idMapel].push(va);
+    // Indeks TP per mapel: id_mapel → [{ id_tp, bobot_slm, bobot_sas }]
+    const tpByMapel = {};
+    allTP.forEach(tp => {
+      if (!tpByMapel[tp.id_mapel]) tpByMapel[tp.id_mapel] = [];
+      tpByMapel[tp.id_mapel].push(tp);
     });
 
-    // Helper: rata-rata nilai mapel per siswa
-    function nilaiMapel(id_siswa, id_mapel) {
-      const arr = nilaiIdx[id_siswa]?.[id_mapel];
-      if (!arr || !arr.length) return null;
-      return arr.reduce((a,b)=>a+b,0) / arr.length;
+    // Indeks nilai: id_siswa → id_tp → { slm, sas }
+    // Hitung nilai akhir per TP = slm*bobot_slm% + sas*bobot_sas% (identik preview.html)
+    const nilaiByTP = {};   // id_siswa → id_tp → nilai_akhir (number)
+    rawNilaiRows.slice(1).forEach(r => {
+      if (!r[0] || r[0] === 'id_nilai' || !r[1] || !r[2]) return;
+      if (r[4] !== kelas) return;
+      if (!semValid.has(r[5])) return;
+      if (tahun && r[6] && r[6] !== tahun) return;
+      const idSiswa = r[1];
+      const idTP    = r[2];
+      const slmRaw  = r[7]; const sasRaw = r[8];
+      if (slmRaw === '' || slmRaw === null || slmRaw === undefined) return;
+      const slm = parseFloat(slmRaw);
+      if (isNaN(slm)) return;
+      if (!nilaiByTP[idSiswa]) nilaiByTP[idSiswa] = {};
+      // Bobot dari allTP; fallback 60/40
+      const tp = allTP.find(t => t.id_tp === idTP);
+      const bSlm = tp?.bobot_slm ?? 60;
+      const bSas = tp?.bobot_sas ?? 40;
+      const sas  = (sasRaw !== '' && sasRaw !== null && sasRaw !== undefined)
+        ? parseFloat(sasRaw) : null;
+      const na = (sas !== null && !isNaN(sas))
+        ? Math.round(slm * bSlm/100 + sas * bSas/100)
+        : Math.round(slm);
+      nilaiByTP[idSiswa][idTP] = na;
+    });
+
+    // Hitung nilai akhir per mapel per siswa = rata-rata nilai akhir semua TP mapel
+    function nilaiMapel(idSiswa, idMapel) {
+      const tps = tpByMapel[idMapel];
+      if (!tps || !tps.length) return null;
+      const naArr = tps
+        .map(tp => nilaiByTP[idSiswa]?.[tp.id_tp])
+        .filter(v => v !== undefined && v !== null);
+      if (!naArr.length) return null;
+      return naArr.reduce((a,b)=>a+b,0) / naArr.length;
     }
 
-    // Hitung nilai setiap siswa
+    // Bangun baris — TAMPILKAN SEMUA SISWA walaupun nilai kosong
     const rows = siswaList.map(s => {
-      const vals = mapelList.map(m => nilaiMapel(s.id, m.id));
+      const vals  = mapelList.map(m => nilaiMapel(s.id, m.id));
       const filled = vals.filter(v => v !== null);
-      const rata = filled.length ? filled.reduce((a,b)=>a+b,0)/filled.length : null;
+      const rata  = filled.length ? filled.reduce((a,b)=>a+b,0)/filled.length : null;
       return { siswa: s, vals, rata, rank: 0 };
     });
 
-    // Ranking berdasarkan rata-rata semua mapel
+    // Ranking — siswa tanpa nilai apapun paling bawah, urutan nama sebagai tiebreaker
     const ranked = [...rows].sort((a,b) => {
-      if (a.rata===null && b.rata===null) return 0;
-      if (a.rata===null) return 1;
-      if (b.rata===null) return -1;
+      if (a.rata === null && b.rata === null) return 0;
+      if (a.rata === null) return 1;
+      if (b.rata === null) return -1;
       return b.rata - a.rata;
     });
-    ranked.forEach((r,i) => { r.rank = i+1; });
+    let rankNo = 1;
+    ranked.forEach((r,i) => {
+      if (r.rata === null) { r.rank = null; return; }
+      if (i > 0 && ranked[i-1].rata !== null && Math.abs(r.rata - ranked[i-1].rata) < 0.001) {
+        r.rank = ranked[i-1].rank; // nilai sama → rank sama
+      } else {
+        r.rank = rankNo;
+      }
+      rankNo++;
+    });
     const rankMap = {};
     ranked.forEach(r => { rankMap[r.siswa.id] = r.rank; });
 
     // Statistik
-    const rataList = rows.map(r=>r.rata).filter(v=>v!==null);
+    const rataList  = rows.map(r=>r.rata).filter(v=>v!==null);
     const rataKelas = rataList.length ? (rataList.reduce((a,b)=>a+b,0)/rataList.length).toFixed(1) : '—';
     const maxVal    = rataList.length ? Math.max(...rataList).toFixed(1) : '—';
     const minVal    = rataList.length ? Math.min(...rataList).toFixed(1) : '—';
@@ -396,42 +430,46 @@ async function tampilkanLeger() {
     document.getElementById('statMin').textContent   = minVal;
 
     // Judul
+    const waliLabel = currentUser.role === 'admin'
+      ? `Admin: ${currentUser.nama}` : `Wali Kelas: ${currentUser.nama}`;
     const title = `Leger Nilai Kelas ${kelas} · Semester ${semester} · ${tahun}`;
     document.getElementById('tableTitle').textContent = title;
     document.getElementById('printTitle').textContent = title;
     document.getElementById('printSub').textContent   =
-      `Wali Kelas: ${currentUser.nama} · Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
+      `${waliLabel} · Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
 
-    // Thead — No | Nama Siswa | NISN | Mapel1…MapelN (nama penuh) | Rata-rata | Peringkat
-    // Gunakan 2 baris header agar nama mapel bisa wrap lebih rapi
+    // Thead
     const thMapelTop = mapelList.map(m =>
-      `<th style="min-width:64px;font-size:10.5px;white-space:normal;line-height:1.3;max-width:80px">${m.nama}</th>`
+      `<th style="min-width:58px;font-size:10.5px;white-space:normal;line-height:1.3;max-width:80px">${m.nama}</th>`
     ).join('');
     document.getElementById('tblHead').innerHTML = `<tr>
-      <th class="left" style="min-width:32px">No</th>
+      <th class="left" style="min-width:28px">No</th>
       <th class="left" style="min-width:160px">Nama Siswa</th>
-      <th style="min-width:110px">NISN</th>
+      <th style="min-width:100px">NISN</th>
       ${thMapelTop}
-      <th style="min-width:70px">Rata-rata</th>
-      <th style="min-width:62px">Peringkat</th>
+      <th style="min-width:68px">Rata-rata</th>
+      <th style="min-width:60px">Peringkat</th>
     </tr>`;
 
     // Tbody
     let html = '';
     rows.forEach((r, i) => {
-      const rank = rankMap[r.siswa.id];
-      const tdMapel = r.vals.map(v => {
-        if (v===null) return `<td style="color:#ccc">—</td>`;
-        return `<td class="${nilaiColor(v)}">${v.toFixed(1)}</td>`;
-      }).join('');
-      const rataStr = r.rata!==null ? r.rata.toFixed(1) : '<span style="color:#ccc">—</span>';
+      const rank    = rankMap[r.siswa.id];
+      const tdMapel = r.vals.map(v =>
+        v === null
+          ? `<td style="color:#ccc">—</td>`
+          : `<td class="${nilaiColor(v)}">${Math.round(v)}</td>`
+      ).join('');
+      const rataStr = r.rata !== null
+        ? `<span class="${nilaiColor(r.rata)}">${Math.round(r.rata)}</span>`
+        : '<span style="color:#ccc">—</span>';
       html += `<tr>
         <td>${i+1}</td>
         <td class="left nama" title="${r.siswa.nama}">${r.siswa.nama}</td>
         <td style="font-size:11px;color:var(--ink-muted)">${r.siswa.nisn||'—'}</td>
         ${tdMapel}
-        <td class="${nilaiColor(r.rata)}" style="font-weight:700">${rataStr}</td>
-        <td>${rankBadge(rank)}</td>
+        <td style="font-weight:700">${rataStr}</td>
+        <td>${rank !== null ? rankBadge(rank) : '<span style="color:#ccc">—</span>'}</td>
       </tr>`;
     });
 
