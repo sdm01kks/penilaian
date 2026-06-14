@@ -312,6 +312,21 @@ input:disabled { background:var(--green-ghost); color:var(--ink-muted); cursor:n
         </p>
       </div>
 
+      <!-- Kelas khusus TT untuk guru_mapel yang mengajar banyak mapel -->
+      <div id="seksiKelasTT" style="display:none;">
+        <div class="form-section-title">Kelas Khusus Tahsin-Tahfizh
+          <span style="font-weight:400;font-size:10px;color:var(--ink-muted);margin-left:6px;">(opsional)</span>
+        </div>
+        <div class="kelas-check-grid" id="kelasTTCheckGrid">
+          <!-- diisi JS -->
+        </div>
+        <p class="input-note" style="margin-top:8px;">
+          Isi hanya jika guru ini mengajar Tahsin-Tahfizh <strong>tidak di semua kelas yang dipilih di atas</strong>.
+          Misalnya: guru mengajar Al-Islam di kelas 1A, 1B, dan 3A — tetapi TT hanya di 1A dan 1B.
+          Jika dikosongkan, semua kelas di atas dianggap sebagai kelas TT.
+        </p>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="tutupModal()">Batal</button>
@@ -495,6 +510,7 @@ let editId     = null;
 let roleVal    = '';
 let kelasDipilih      = [];
 let kelasMapelDipilih = [];   // kelas tambahan sbg guru mapel (untuk guru_kelas merangkap)
+let kelasTTDipilih    = [];   // kelas khusus TT untuk guru_mapel multi-mapel (§32)
 
 /* ── Init ────────────────────────────────────────────── */
 window.addEventListener('load', async () => {
@@ -657,7 +673,7 @@ function cekKelasKosong() {
 /* ── Modal ────────────────────────────────────────────── */
 function bukaTambah() {
   editId = null; roleVal = '';
-  kelasDipilih = []; kelasMapelDipilih = []; mapelDipilih = [];
+  kelasDipilih = []; kelasMapelDipilih = []; mapelDipilih = []; kelasTTDipilih = [];
   document.getElementById('modalTitle').textContent = 'Tambah Akun Guru';
   resetForm();
   bukaModal();
@@ -688,6 +704,12 @@ function bukaEdit(id) {
   // (guru_kelas dengan kelas tambahan menyimpan mapel spesifik, bukan 'semua')
   mapelDipilih = (u.mapel && u.mapel !== 'semua')
     ? u.mapel.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  // §32: untuk guru_mapel — jika kolom K berisi kelas TT khusus, muat ke kelasTTDipilih
+  // (kolom K untuk guru_mapel = kelas TT; untuk guru_kelas = kelas tambahan sbg guru mapel)
+  kelasTTDipilih = (u.role === 'guru_mapel' && u.kelasMapelList?.length)
+    ? u.kelasMapelList.map(s => s.trim()).filter(Boolean)
     : [];
 
   document.getElementById('modalTitle').textContent = 'Edit Akun Guru';
@@ -748,7 +770,7 @@ function tutupModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   document.body.style.overflow = '';
   resetForm();
-  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = []; kelasMapelDipilih = [];
+  editId = null; roleVal = ''; kelasDipilih = []; mapelDipilih = []; kelasMapelDipilih = []; kelasTTDipilih = [];
 }
 
 function resetForm() {
@@ -807,6 +829,7 @@ function pilihRole(role, fromEdit = false) {
     document.getElementById('noteMapel').textContent  = 'Pilih semua mapel yang diajarkan.';
     renderKelasCheckbox(true);
     renderMapelCheckbox();
+    renderKelasTTSeksi(); // §32: tampilkan seksi kelas TT jika mapel TT dipilih
   }
 }
 
@@ -850,6 +873,8 @@ function toggleKelasCheck(nama, onlyOne = false) {
     const chk = document.getElementById('chk-' + nama);
     if (chk) chk.checked = true;
   }
+  // §32: kelas berubah → re-render seksi kelas TT (jumlah kelas mempengaruhi visibilitasnya)
+  if (roleVal === 'guru_mapel') renderKelasTTSeksi();
 }
 
 /* ── Kelas Tambahan sbg Guru Mapel (guru_kelas merangkap) ─ */
@@ -927,6 +952,49 @@ let mapelDipilih = [];
     document.getElementById('mc-wrap-'+id)?.classList.toggle('selected', mapelDipilih.includes(id));
     const chk = document.getElementById('mc-'+id);
     if (chk) chk.checked = mapelDipilih.includes(id);
+    // §32: tampilkan seksi kelas TT jika mapel TT dipilih oleh guru_mapel
+    renderKelasTTSeksi();
+  }
+
+  // §32: tampilkan/sembunyikan seksi kelas TT berdasarkan mapel yang dipilih
+  function isTTDipilih() {
+    return mapelDipilih.some(id => {
+      const m = (allMapel || []).find(x => x.id === id);
+      if (!m) return false;
+      const lower = (m.id + ' ' + m.nama).toLowerCase();
+      return lower.includes('tahsin') || lower.includes('tahfizh') ||
+             lower === 'tt' || lower.endsWith('_tt') || lower.startsWith('tt_');
+    });
+  }
+
+  function renderKelasTTSeksi() {
+    const seksi = document.getElementById('seksiKelasTT');
+    if (!seksi) return;
+    // Hanya tampil untuk guru_mapel yang memilih mapel TT dan punya lebih dari 1 kelas
+    const tampil = roleVal === 'guru_mapel' && isTTDipilih() && kelasDipilih.length > 1;
+    seksi.style.display = tampil ? '' : 'none';
+    if (tampil) renderKelasTTCheckbox();
+    if (!tampil) kelasTTDipilih = [];
+  }
+
+  function renderKelasTTCheckbox() {
+    const grid = document.getElementById('kelasTTCheckGrid');
+    if (!grid) return;
+    grid.innerHTML = kelasDipilih.map(nama => `
+      <label class="kelas-check ${kelasTTDipilih.includes(nama)?'selected':''}"
+             id="ktt-wrap-${nama}" onclick="toggleKelasTT('${nama}')">
+        <input type="checkbox" value="${nama}"
+          ${kelasTTDipilih.includes(nama)?'checked':''}>
+        <span>${nama}</span>
+      </label>
+    `).join('');
+  }
+
+  function toggleKelasTT(nama) {
+    const idx = kelasTTDipilih.indexOf(nama);
+    if (idx > -1) kelasTTDipilih.splice(idx, 1);
+    else          kelasTTDipilih.push(nama);
+    document.getElementById('ktt-wrap-'+nama)?.classList.toggle('selected', kelasTTDipilih.includes(nama));
   }
 
   function isiDropdownMapel() { /* deprecated */ }
@@ -978,7 +1046,12 @@ async function simpanGuru() {
                        : (mapelDipilih.length ? mapelDipilih.join(',') : 'semua'),
       status,
       nbm:         document.getElementById('f_nbm').value.trim(),
-      kelas_mapel: roleVal === 'guru_kelas' ? kelasMapelDipilih.join(',') : '',
+      kelas_mapel: roleVal === 'guru_kelas'
+        ? kelasMapelDipilih.join(',')
+        // §32: untuk guru_mapel, kelas_mapel = kelas khusus TT (jika diisi)
+        : roleVal === 'guru_mapel'
+          ? kelasTTDipilih.join(',')
+          : '',
     };
 
     if (editId) {
