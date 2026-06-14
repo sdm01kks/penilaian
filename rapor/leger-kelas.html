@@ -137,13 +137,13 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
 
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Utama</div>
-  <a class="nav-item" href="../dashboard/guru-kelas.html"><span class="nav-icon">🏠</span> Dashboard</a>
+  <a class="nav-item" id="navDashboard" href="../dashboard/guru-kelas.html"><span class="nav-icon">🏠</span> Dashboard</a>
 
   <div class="sidebar-section-label">Input Penilaian</div>
-  <a class="nav-item" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS</a>
-  <a class="nav-item" href="../penilaian/input-dpl.html"><span class="nav-icon">🌱</span> Input Kokurikuler</a>
-  <a class="nav-item" href="../penilaian/input-ekskul.html"><span class="nav-icon">🏆</span> Input Ekstrakurikuler</a>
-  <a class="nav-item" href="../penilaian/input-absensi.html"><span class="nav-icon">📋</span> Input Absensi &amp; Catatan</a>
+  <a class="nav-item" id="navInputNilai" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS</a>
+  <a class="nav-item" id="navInputDpl" href="../penilaian/input-dpl.html"><span class="nav-icon">🌱</span> Input Kokurikuler</a>
+  <a class="nav-item" id="navInputEkskul" href="../penilaian/input-ekskul.html"><span class="nav-icon">🏆</span> Input Ekstrakurikuler</a>
+  <a class="nav-item" id="navInputAbsensi" href="../penilaian/input-absensi.html"><span class="nav-icon">📋</span> Input Absensi &amp; Catatan</a>
 
   <div class="sidebar-section-label">Rapor &amp; Leger</div>
   <a class="nav-item" href="../rapor/preview.html"><span class="nav-icon">🖨️</span> Preview &amp; Cetak Rapor</a>
@@ -151,7 +151,7 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
   <a class="nav-item" href="../rapor/laporan-tt.html"><span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh</a>
 
   <div class="sidebar-section-label">Kurikulum</div>
-  <a class="nav-item" href="../setup/mapel-tp.html"><span class="nav-icon">📚</span> TP &amp; KKTP Mapel Saya</a>
+  <a class="nav-item" id="navSetupTP" href="../setup/mapel-tp.html"><span class="nav-icon">📚</span> TP &amp; KKTP Mapel Saya</a>
 </nav>
 
 <main class="main">
@@ -235,12 +235,26 @@ function rankBadge(r){
 window.addEventListener('load', async () => {
   AUTH.init();
   // Hanya guru kelas yang boleh akses leger kelas
-  currentUser = AUTH.requireLogin('guru_kelas');
+  currentUser = AUTH.requireLogin(['guru_kelas', 'admin']);
   if (!currentUser) return;
 
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
-  document.getElementById('userKelas').textContent  = 'Kelas ' + (currentUser.kelas || '—');
+  document.getElementById('userKelas').textContent  = currentUser.role === 'admin'
+    ? 'Administrator' : 'Kelas ' + (currentUser.kelas || '—');
+
+  // Kondisikan sidebar Dashboard link berdasarkan role
+  const navDash = document.getElementById('navDashboard');
+  if (navDash) navDash.href = currentUser.role === 'admin'
+    ? '../dashboard/admin.html' : '../dashboard/guru-kelas.html';
+
+  // Sembunyikan nav input penilaian untuk admin (bukan tugasnya di sini)
+  if (currentUser.role === 'admin') {
+    ['navInputNilai','navInputDpl','navInputEkskul','navInputAbsensi','navSetupTP'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
 
   showLoading('Memuat data master…');
   try {

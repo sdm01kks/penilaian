@@ -265,35 +265,26 @@ function rankBadge(r){
 /* ── init ────────────────────────────────────────────── */
 window.addEventListener('load', async () => {
   AUTH.init();
-  currentUser = AUTH.requireLogin(['guru_kelas', 'guru_mapel', 'admin']);  // ⚠️ ANTIREGRESI §33: admin wajib masuk daftar
+  // leger-mapel.html: hanya admin yang boleh akses
+  currentUser = AUTH.requireLogin('admin');
   if (!currentUser) return;
-  // Admin diizinkan akses — requireLogin(['guru_kelas','guru_mapel','admin'])
-
 
   document.getElementById('userName').textContent   = currentUser.nama;
-  document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
-  document.getElementById('userMapel').textContent  = currentUser.role === 'admin'
-    ? 'Administrator' : (currentUser.mapel || '—');
+  document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'A';
+  document.getElementById('userMapel').textContent  = 'Administrator';
 
-  // Arahkan tombol Dashboard ke dashboard yang sesuai role
+  // Sidebar: Dashboard → admin
   const navDash = document.getElementById('navDashboard');
-  if (navDash) {
-    if (currentUser.role === 'admin') navDash.href = '../dashboard/admin.html';
-    else if (currentUser.role === 'guru_kelas') navDash.href = '../dashboard/guru-kelas.html';
-  }
+  if (navDash) navDash.href = '../dashboard/admin.html';
 
-  // Sembunyikan nav guru-only jika admin
-  if (currentUser.role === 'admin') {
-    ['navSetoranTT','navSetupTT','navLaporanTT'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-  }
+  // Sembunyikan nav khusus guru
+  ['navSetoranTT','navSetupTT','navLaporanTT'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 
-  // Tampilkan menu TT jika guru ini mengampu TT
-  const mapelUser = (currentUser.mapel || '').toLowerCase();
-  const isTTGuru  = mapelUser.includes('tahsin') || mapelUser.includes('tahfizh') || mapelUser === 'tt';
-  if (isTTGuru) {
+  // (blok isTTGuru tidak diperlukan untuk admin — dihapus)
+  if (false) {
     ['navSetoranTT','navSetupTT','navLaporanTT'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'flex';
