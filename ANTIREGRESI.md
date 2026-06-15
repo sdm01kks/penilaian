@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v54 | `rapor/leger-guru-mapel.html`, `dashboard/guru-kelas.html` | Guru kelas yang merangkap guru mapel tidak bisa membuka leger bidang studi — halaman menolak akses dan menu tidak muncul di sidebar | `requireLogin('guru_mapel')` menolak role `guru_kelas`; sidebar guru-kelas tidak punya link ke halaman ini. Lihat §34. |
 | v45 | `rapor/laporan-tt.html`, `setup/kelola-guru.html` | `cariGuruTT()` mengembalikan guru yang hanya mengajar sebagian mapel TT, bukan semua kelas (Pak Indra: Al-Islam + TT di 1A/1B, Al-Islam saja di 3A → muncul salah sebagai guru TT kelas 3A) | `cariGuruTT()` hanya cek `hasTT` + `kelas ∈ kelasList`; tidak ada cara membedakan "TT di kelas A" vs "non-TT di kelas B". Fix: kolom K dipakai sebagai pembatas kelas TT untuk `guru_mapel`; UI ditambah seksi "Kelas Khusus TT". Lihat §32. |
 | v44 | `rapor/preview.html` | Wali kelas di TTD rapor menampilkan nama guru yang mengajar mapel di kelas tersebut (bukan wali kelas sebenarnya) | `users.find()` memakai `u.kelasList?.includes(activeKelas)`; sejak v43 `kelasList` = gabungan E+K → guru non-wali yang punya kelas di kolom K false-match. Lihat §31. |
 | v43 | `assets/js/sheets.js` | `guru_kelas` TT merangkap (Nisya) kehilangan akses dropdown kelas TT setelah v39 | `getUsers()` membangun `kelasList` hanya dari kolom E; `auth.js` membangun dari gabungan E+K. Setelah §28 (v39) menyinkronkan `freshUser.kelasList` ke `currentUser`, kelas K ditimpa. Lihat §30. |
@@ -1608,6 +1609,65 @@ if (u.role === 'guru_kelas') {
 
 ---
 
+### 34. `leger-guru-mapel.html` — `guru_kelas` Merangkap Harus Diizinkan, Kelas dari Kolom K Saja ⚠️
+
+**Konteks:** Banyak guru kelas (role = `guru_kelas`) yang juga mengajar mata pelajaran bidang studi di kelas lain. Data ini tersimpan di: kolom F (`mapel`) = mapel yang diajarkan, kolom K (`kelas_mapel`) = kelas tempat mengajar mapel tersebut.
+
+**Akar masalah (v54):** `leger-guru-mapel.html` awalnya hanya mengizinkan `requireLogin('guru_mapel')`. `guru_kelas` ditolak meskipun secara fungsional memiliki tanggung jawab yang sama sebagai guru bidang studi di kelas lain.
+
+**Dua aturan wajib yang harus selalu berjalan bersamaan:**
+
+1. **Akses halaman:** `requireLogin(['guru_mapel', 'guru_kelas'])` — kedua role diizinkan.
+
+2. **Kelas yang tersedia di dropdown berbeda per role:**
+
+| Role | Kelas di dropdown `leger-guru-mapel.html` | Alasan |
+|------|------------------------------------------|--------|
+| `guru_mapel` | `kelasList` (kolom E + K) | Semua kelas yang diampu |
+| `guru_kelas` | `kelasMapelList` (kolom K saja) | Kolom E = kelas wali → bukan ranah leger mapel; sudah ada di `leger-kelas.html` |
+
+**Jika `guru_kelas` punya kolom K kosong:** Guru tidak punya kelas mapel tambahan → tampilkan pesan informatif dan link kembali ke dashboard, jangan tampilkan dropdown kosong.
+
+**Menu di sidebar:** `navLegerMapel` di `guru-kelas.html` muncul hanya jika `kelasMapelList.length > 0 && mapelBidStudi.length > 0`. Jangan tampilkan menu ini untuk semua guru kelas secara default.
+
+**Pola wajib:**
+```javascript
+// requireLogin
+currentUser = AUTH.requireLogin(['guru_mapel', 'guru_kelas']);
+
+// Logika kelas per role
+if (currentUser.role === 'guru_kelas') {
+  allKelasGuru = currentUser.kelasMapelList || [];  // kolom K saja
+} else {
+  allKelasGuru = currentUser.kelasList || [];        // E + K
+}
+
+// Guard kolom K kosong untuk guru_kelas
+if (currentUser.role === 'guru_kelas' && allKelasGuru.length === 0) {
+  // Tampilkan pesan — jangan lanjutkan
+  return;
+}
+```
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/leger-guru-mapel.html` | `requireLogin(['guru_mapel', 'guru_kelas'])` |
+| `rapor/leger-guru-mapel.html` | Cabang `if (currentUser.role === 'guru_kelas')` untuk `allKelasGuru` — hanya kolom K |
+| `rapor/leger-guru-mapel.html` | Guard `allKelasGuru.length === 0` dengan pesan informatif |
+| `rapor/leger-guru-mapel.html` | `dashHref` kondisional untuk link Dashboard dan topbar |
+| `dashboard/guru-kelas.html` | `navLegerMapel` dengan `style="display:none"` + JS kondisional §34 |
+
+**Checklist setelah mengubah akses `leger-guru-mapel.html`:**
+- [ ] Guru kelas dengan kolom K berisi → bisa masuk, dropdown kelas = isi kolom K
+- [ ] Guru kelas dengan kolom K kosong → pesan informatif, tidak error
+- [ ] Guru mapel → perilaku tidak berubah, kelas dari kelasList (E+K)
+- [ ] Sidebar guru-kelas: menu muncul hanya jika ada kelas mapel + mapel bukan "semua"
+- [ ] Link Dashboard mengarah benar ke masing-masing dashboard role
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1707,10 +1767,14 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/preview.html` | Fungsi `faseKini(kelas)` — menghitung fase siswa saat ini dari nomor kelas; JANGAN diganti `d.fase` dari sheet | v52 | **Wajib.** Kolom fase di sheet KELAS diisi manual dan bisa salah (contoh: Kelas 2B terset "B" padahal harusnya "A"). Lihat §33. |
 | `rapor/preview.html` | `${faseKini(d.kelas)}` di 2 call site identitas (screen + print) — bukan `${d.fase}` | v52 | **Wajib.** Mengembalikan ke `d.fase` menyebabkan fase tampil salah jika data sheet tidak akurat. Lihat §33. |
 | `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §33` di deklarasi `faseKini` | v52 | Penanda wajib agar fungsi tidak dihapus atau diganti `d.fase`. |
-| `rapor/leger-guru-mapel.html` | `requireLogin('guru_mapel')` — bukan `guru_kelas` atau `admin` | v53 | **Wajib.** Halaman ini khusus guru bidang studi; guru kelas dan admin punya halaman leger masing-masing. |
-| `rapor/leger-guru-mapel.html` | Dropdown mapel dibangun dari `currentUser.mapelList` exclude TT — jika hanya 1 mapel, dropdown disembunyikan | v53 | Wajib. Guru hanya boleh melihat mapel yang diampu. |
-| `rapor/leger-guru-mapel.html` | Dropdown kelas dari `kelasList` (E+K, §30) — bukan hanya kolom E | v53 | Wajib. Guru mapel yang mengajar di kelas tambahan (kolom K) harus bisa memilihnya. |
+| `rapor/leger-guru-mapel.html` | `requireLogin(['guru_mapel', 'guru_kelas'])` — kedua role diizinkan | v53→v54 | **Wajib.** Banyak guru kelas yang merangkap guru mapel; hanya `'guru_mapel'` menolak mereka. Lihat §34. |
+| `rapor/leger-guru-mapel.html` | Dropdown mapel dibangun dari `currentUser.mapel` exclude TT — jika hanya 1 mapel, dropdown disembunyikan | v53 | Wajib. Guru hanya boleh melihat mapel yang diampu. |
+| `rapor/leger-guru-mapel.html` | Cabang `if (currentUser.role === 'guru_kelas')` untuk `allKelasGuru` — pakai `kelasMapelList` (kolom K saja) | v54 | **Wajib.** `guru_kelas` tidak boleh melihat leger kelas walinya via halaman ini — hanya kelas tambahan (kolom K). Lihat §34. |
+| `rapor/leger-guru-mapel.html` | Guard `allKelasGuru.length === 0` untuk `guru_kelas` — pesan informatif, bukan dropdown kosong | v54 | Wajib. Tanpa ini dropdown kelas tampil kosong tanpa keterangan. Lihat §34. |
+| `rapor/leger-guru-mapel.html` | `dashHref` kondisional — `guru_kelas` → `guru-kelas.html`, `guru_mapel` → `guru-mapel.html` | v54 | Wajib. Link Dashboard dan topbar harus mengarah ke dashboard masing-masing role. |
+| `rapor/leger-guru-mapel.html` | Dropdown kelas dari `kelasList` (E+K, §30) untuk `guru_mapel` — bukan hanya kolom E | v53 | Wajib. Guru mapel yang mengajar di kelas tambahan (kolom K) harus bisa memilihnya. |
 | `dashboard/guru-mapel.html` | Seksi "Laporan" di sidebar dengan link `leger-guru-mapel.html` | v53 | Penanda wajib agar guru mapel bisa menemukan halaman ini dari dashboard. |
+| `dashboard/guru-kelas.html` | `navLegerMapel` (`display:none`) + JS kondisional `kelasMapelList.length > 0 && mapelBidStudi.length > 0` | v54 | **Wajib.** Menu hanya muncul untuk guru kelas yang benar-benar merangkap guru mapel. Lihat §34. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v53). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v54). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

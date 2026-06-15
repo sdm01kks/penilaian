@@ -1,3 +1,25 @@
+## [2026-06-15] — v54 · Akses Leger Bidang Studi untuk Guru Kelas yang Merangkap Guru Mapel
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-guru-mapel.html` | `requireLogin('guru_mapel')` menolak `guru_kelas` yang juga mengajar bidang studi di kelas lain. Guru dengan role `guru_kelas` tidak bisa mengakses halaman ini meskipun memiliki kelas tambahan (kolom K) dan mata pelajaran (kolom F). | `requireLogin(['guru_mapel', 'guru_kelas'])`. Untuk `guru_kelas`, kelas yang tersedia di dropdown diambil hanya dari `kelasMapelList` (kolom K) — bukan dari `kelasList` (E+K) agar guru tidak bisa melihat leger kelasnya sendiri via halaman ini (sudah ada di `leger-kelas.html`). |
+| 2 | `rapor/leger-guru-mapel.html` | Link Dashboard selalu mengarah ke `guru-mapel.html` meskipun yang login adalah `guru_kelas`. | Tambah kondisi `dashHref` berdasarkan `currentUser.role` — dikondisikan untuk `navDashboard` dan `topbarHome`. |
+| 3 | `rapor/leger-guru-mapel.html` | Jika `guru_kelas` membuka halaman tapi kolom K-nya kosong (tidak punya kelas mapel), halaman menampilkan dropdown kelas kosong tanpa penjelasan. | Tambah guard: jika `guru_kelas` dan `allKelasGuru` kosong → tampilkan pesan informatif dengan link kembali ke dashboard. |
+| 4 | `dashboard/guru-kelas.html` | Menu "Leger Bidang Studi Saya" tidak muncul di sidebar karena tidak ada link ke `leger-guru-mapel.html`. | Tambah `navLegerMapel` (`display:none` secara default) di seksi Rapor & Leger. JS menampilkannya hanya jika `kelasMapelList.length > 0 && mapelBidStudi.length > 0` (guru punya kelas tambahan dan mapel yang diajarkan). |
+
+### 📋 File yang Diubah (v54)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `rapor/leger-guru-mapel.html` | **Diubah** | `requireLogin` ke array; logika kelas berbeda per role; kondisi Dashboard href; guard kolom K kosong |
+| `dashboard/guru-kelas.html` | **Diubah** | Tambah `navLegerMapel` di sidebar; JS kondisional untuk menampilkan menu |
+| `CHANGELOG.md` | **Diubah** | Tambah entri v54 ini |
+| `ANTIREGRESI.md` | **Diubah** | Tambah §34 dan penanda kumulatif v54 |
+
+---
+
 ## [2026-06-15] — v53 · Leger Nilai Bidang Studi untuk Guru Mapel
 
 ### ✨ Fitur Baru
