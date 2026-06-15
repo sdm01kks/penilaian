@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Leger Nilai — Bidang Studi</title>
+<title>Rekap Nilai Bidang Studi — Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -23,7 +23,6 @@ html{font-size:15px}
 body{font-family:"Plus Jakarta Sans",sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh;overflow-x:hidden}
 .topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
 .topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
-.topbar-logo img{width:38px;height:38px;border-radius:8px;background:#fff;padding:2px;object-fit:contain}
 .brand-name{font-family:"Amiri",serif;font-size:14px;font-weight:700;color:#fff;line-height:1.1}
 .brand-sub{font-size:10px;color:rgba(255,255,255,.55)}
 .topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.18);flex-shrink:0}
@@ -44,71 +43,51 @@ body{font-family:"Plus Jakarta Sans",sans-serif;background:#f4f6f4;color:var(--i
 .page-header{margin-bottom:20px}
 .page-header h1{font-family:"Amiri",serif;font-size:24px;color:var(--green-deep);font-weight:700}
 .page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
-
-/* Filter bar */
+/* Filter */
 .filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow)}
 .filter-group{display:flex;flex-direction:column;gap:5px;min-width:140px}
-.filter-group label{font-size:11px;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.8px}
-.filter-group select{padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);cursor:pointer;outline:none;transition:border-color .2s}
-.filter-group select:focus{border-color:var(--green-light)}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .18s;border:none}
-.btn-primary{background:var(--green-dark);color:#fff}
+.filter-group label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-muted)}
+select,.btn{height:38px;border-radius:8px;border:1px solid var(--border);font-family:inherit;font-size:13px;padding:0 10px;background:#fff;color:var(--ink);outline:none}
+select:focus{border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(45,112,85,.12)}
+.btn{cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:0 16px;transition:all .2s}
+.btn-primary{background:var(--green-dark);color:#fff;border-color:var(--green-dark)}
 .btn-primary:hover{background:var(--green-deep)}
-.btn-secondary{background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green-light)}
-.btn-secondary:hover{background:var(--green-light);color:#fff}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-
-/* Stat cards */
-.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
-.stat-card .label{font-size:10.5px;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.7px}
-.stat-card .val{font-size:22px;font-weight:700;color:var(--green-deep);margin-top:4px;font-family:"Amiri",serif}
-.stat-card .sub{font-size:11px;color:var(--ink-muted);margin-top:2px}
-
-/* Table wrapper */
-.table-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.btn-primary:disabled{background:#ccc;border-color:#ccc;cursor:not-allowed}
+.btn-secondary{background:#fff;color:var(--green-dark);border-color:var(--green-dark)}
+.btn-secondary:disabled{color:#ccc;border-color:#ccc;cursor:not-allowed}
+/* Tabel */
+.table-wrap{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-card);overflow:hidden}
 .table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
-.table-title{font-size:13px;font-weight:700;color:var(--green-deep)}
+.table-title{font-size:13.5px;font-weight:700;color:var(--green-deep)}
 .table-scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
-thead th{background:var(--green-dark);color:#fff;padding:9px 10px;text-align:center;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:10}
+thead th{background:var(--green-dark);color:#fff;padding:9px 12px;font-size:11px;font-weight:600;white-space:nowrap;text-align:center}
 thead th.left{text-align:left}
-thead th.tp-group{background:var(--green-mid);font-size:11px;font-weight:500}
-tbody tr{border-bottom:1px solid var(--green-ghost)}
-tbody tr:hover{background:var(--green-ghost)}
-tbody td{padding:7px 10px;text-align:center;white-space:nowrap}
+tbody td{padding:8px 12px;border-bottom:1px solid #f0f0ee;text-align:center;vertical-align:middle}
 tbody td.left{text-align:left}
-tbody td.nama{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-weight:500}
-tbody tr.stat-row-tbl{background:var(--green-pale);font-weight:600}
-tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--green-deep)}
-/* rank badge */
-.rank{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700}
-.rank.r1{background:#FFD700;color:#7a5c00}
-.rank.r2{background:#C0C0C0;color:#444}
-.rank.r3{background:#cd7f32;color:#fff}
-.rank.rn{background:var(--green-pale);color:var(--green-dark)}
-/* nilai warna */
-.n-a{color:#c0392b;font-weight:600}
-.n-b{color:#e67e22;font-weight:600}
-.n-c{color:#27ae60;font-weight:600}
-.n-d{color:#2980b9;font-weight:600}
-
-/* empty state */
-.empty-state{text-align:center;padding:60px 20px;color:var(--ink-muted)}
-.empty-state .icon{font-size:48px;margin-bottom:12px}
-.empty-state p{font-size:14px;line-height:1.7}
-
-/* loading */
+tbody tr:hover{background:#f9faf8}
+tbody tr:last-child td{border-bottom:none}
+.best-cell{background:#e8f5e9;color:#2e7d32;font-weight:700}
+.worst-cell{background:#fff3e0;color:#e65100;font-weight:700}
+.avg-row td{background:var(--green-pale);font-weight:700;color:var(--green-deep);border-top:2px solid var(--green-light)}
+/* Badge nilai */
+.n-d{color:#1a7a4c;font-weight:600}
+.n-c{color:#2980b9}
+.n-b{color:#e67e22}
+.n-a{color:#c0392b}
+/* Loading */
 #loadingOverlay{position:fixed;inset:0;background:rgba(15,50,38,.45);z-index:999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .loading-box{background:#fff;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.2)}
 .spinner{width:36px;height:36px;border:3px solid var(--green-pale);border-top-color:var(--green-dark);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loadingOverlay.hidden{display:none}
-
-/* ── PRINT ───────────────────────────────────────────── */
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink-muted)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px;line-height:1.8}
+/* Print */
 @media print{
-  .topbar,.sidebar,.filter-bar,.stat-row,.table-toolbar,.btn,
-  #loadingOverlay{display:none!important}
+  .topbar,.sidebar,.filter-bar,.btn,#loadingOverlay{display:none!important}
   .main{margin:0;padding:0}
   .table-wrap{box-shadow:none;border:none;border-radius:0}
   table{font-size:10px}
@@ -119,11 +98,16 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
 .print-header{display:none;margin-bottom:12px;font-family:"Amiri",serif}
 .print-header h2{font-size:16px;font-weight:700;color:#000}
 .print-header p{font-size:11px;color:#444;margin-top:2px}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-toggle{display:block}
+  .main{margin-left:0}
+}
 </style>
 </head>
 <body>
 
-<!-- Loading -->
 <div id="loadingOverlay">
   <div class="loading-box">
     <div class="spinner"></div>
@@ -131,60 +115,46 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
   </div>
 </div>
 
-<!-- Topbar -->
 <div class="topbar">
   <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
-  <a class="topbar-logo" href="../dashboard/guru-mapel.html">
-    <div style="width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;">📊</div>
+  <a class="topbar-logo" href="../dashboard/admin.html">
+    <div style="width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;">📈</div>
     <div><div class="brand-name">SDM01KKS</div><div class="brand-sub">Sistem Penilaian</div></div>
   </a>
   <div class="topbar-divider"></div>
-  <div class="topbar-title">Leger Nilai Bidang Studi</div>
+  <div class="topbar-title">Rekap Nilai Bidang Studi</div>
   <div class="topbar-right">
     <div style="text-align:right">
       <div class="user-name" id="userName">—</div>
-      <div style="font-size:10px;color:rgba(255,255,255,.55)" id="userMapel">—</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.55)" id="userRole">Administrator</div>
     </div>
-    <div class="user-avatar" id="userAvatar">G</div>
+    <div class="user-avatar" id="userAvatar">A</div>
     <button class="btn-logout" onclick="AUTH.logout()">⇠ Keluar</button>
   </div>
 </div>
 
-<!-- Sidebar -->
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Utama</div>
-  <a class="nav-item" id="navDashboard" href="../dashboard/admin.html"><span class="nav-icon">🏠</span> Dashboard</a>
-
-  <div class="sidebar-section-label">Input Penilaian</div>
-  <a class="nav-item" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM & SAS</a>
-  <a class="nav-item" id="navSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none"><span class="nav-icon">📖</span> Setoran Tahsin-Tahfizh</a>
-  <a class="nav-item" id="navLaporanTT" href="../rapor/laporan-tt.html" style="display:none"><span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh</a>
-
-  <div class="sidebar-section-label">Laporan</div>
-  <a class="nav-item active" href="leger-mapel.html"><span class="nav-icon">📊</span> Leger Nilai</a>
-
-  <div class="sidebar-section-label">Kurikulum</div>
-  <a class="nav-item" href="../setup/mapel-tp.html"><span class="nav-icon">📚</span> Setup TP & KKTP</a>
-  <a class="nav-item" id="navSetupTT" href="../setup/tahsin-tahfizh.html" style="display:none"><span class="nav-icon">📖</span> Setup Tahsin-Tahfizh</a>
+  <a class="nav-item" href="../dashboard/admin.html"><span class="nav-icon">🏠</span> Dashboard</a>
+  <div class="sidebar-section-label">Laporan &amp; Rapor</div>
+  <a class="nav-item" href="../rapor/preview.html"><span class="nav-icon">🖨️</span> Preview &amp; Cetak Rapor</a>
+  <a class="nav-item" href="../rapor/leger-kelas.html"><span class="nav-icon">📊</span> Leger Nilai Kelas</a>
+  <a class="nav-item active" href="leger-mapel.html"><span class="nav-icon">📈</span> Rekap Nilai Bidang Studi</a>
+  <a class="nav-item" href="../rapor/laporan-tt.html"><span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh</a>
+  <div class="sidebar-section-label">Ujian Sekolah</div>
+  <a class="nav-item" href="../ujian-sekolah/leger-us.html"><span class="nav-icon">📋</span> Leger Nilai Ujian Sekolah</a>
+  <div class="sidebar-section-label">Pengaturan</div>
+  <a class="nav-item" href="../setup/profil-sekolah.html"><span class="nav-icon">⚙️</span> Profil Sekolah</a>
+  <a class="nav-item" href="../setup/kelola-guru.html"><span class="nav-icon">👤</span> Kelola Guru</a>
 </nav>
 
-<!-- Main -->
 <main class="main">
   <div class="page-header">
-    <h1>📊 Leger Nilai Bidang Studi</h1>
-    <p>Rekap nilai per-TP seluruh siswa per mata pelajaran dan kelas · <span id="semPill" style="font-weight:600;color:var(--green-dark)">—</span></p>
+    <h1>📈 Rekap Nilai Bidang Studi</h1>
+    <p>Rata-rata nilai akhir per mata pelajaran untuk setiap kelas · <span id="semPill" style="font-weight:600;color:var(--green-dark)">—</span></p>
   </div>
 
-  <!-- Filter -->
   <div class="filter-bar">
-    <div class="filter-group">
-      <label>Mata Pelajaran</label>
-      <select id="selMapel" onchange="onFilterChange()"><option value="">— Pilih —</option></select>
-    </div>
-    <div class="filter-group">
-      <label>Kelas</label>
-      <select id="selKelas" onchange="onKelasChange()"><option value="">— Semua Kelas —</option></select>
-    </div>
     <div class="filter-group">
       <label>Semester</label>
       <select id="selSem" onchange="onFilterChange()">
@@ -193,35 +163,23 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
       </select>
     </div>
     <div style="margin-top:auto;display:flex;gap:8px">
-      <button class="btn btn-primary" id="btnTampilkan" onclick="tampilkanLeger()" disabled>▶ Tampilkan</button>
+      <button class="btn btn-primary" id="btnTampilkan" onclick="tampilkanRekap()" disabled>▶ Tampilkan</button>
       <button class="btn btn-secondary" id="btnCetak" onclick="window.print()" disabled>🖨️ Cetak / PDF</button>
     </div>
   </div>
 
-  <!-- Stat cards -->
-  <div class="stat-row" id="statRow" style="display:none">
-    <div class="stat-card"><div class="label">Jumlah Siswa</div><div class="val" id="statSiswa">—</div></div>
-    <div class="stat-card"><div class="label">Jumlah TP</div><div class="val" id="statTP">—</div></div>
-    <div class="stat-card"><div class="label">Rata-rata Kelas</div><div class="val" id="statRata">—</div></div>
-    <div class="stat-card"><div class="label">Nilai Tertinggi</div><div class="val" id="statMax">—</div></div>
-    <div class="stat-card"><div class="label">Nilai Terendah</div><div class="val" id="statMin">—</div></div>
-    <div class="stat-card"><div class="label">Tuntas (≥70)</div><div class="val" id="statTuntas">—</div><div class="sub" id="statTuntasPct"></div></div>
-  </div>
-
-  <!-- Print header (hanya muncul saat print) -->
   <div class="print-header" id="printHeader">
-    <h2 id="printTitle">Leger Nilai — </h2>
+    <h2 id="printTitle">Rekap Nilai Bidang Studi</h2>
     <p id="printSub"></p>
   </div>
 
-  <!-- Tabel -->
   <div class="table-wrap" id="tableWrap" style="display:none">
     <div class="table-toolbar">
       <span class="table-title" id="tableTitle">—</span>
-      <span style="font-size:11px;color:var(--ink-muted)">Nilai Akhir = 60% SLM + 40% SAS per TP · Ranking berdasarkan rata-rata nilai akhir</span>
+      <span style="font-size:11px;color:var(--ink-muted)" id="tableNote">Nilai akhir = rata-rata seluruh TP per mapel per kelas</span>
     </div>
     <div class="table-scroll">
-      <table id="tblLeger">
+      <table id="tblRekap">
         <thead id="tblHead"></thead>
         <tbody id="tblBody"></tbody>
       </table>
@@ -229,8 +187,8 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
   </div>
 
   <div class="empty-state" id="emptyState">
-    <div class="icon">📋</div>
-    <p>Pilih mata pelajaran dan kelas, lalu klik <strong>Tampilkan</strong><br>untuk melihat leger nilai.</p>
+    <div class="icon">📈</div>
+    <p>Pilih semester lalu klik <strong>Tampilkan</strong><br>untuk melihat rekap rata-rata nilai per bidang studi dan kelas.</p>
   </div>
 </main>
 
@@ -242,54 +200,26 @@ let allMapel    = [];
 let allKelas    = [];
 let config      = {};
 
-/* ── helpers ─────────────────────────────────────────── */
-function showLoading(t){ document.getElementById('loadingText').textContent = t||'Memuat…'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function showLoading(t){ document.getElementById('loadingText').textContent=t||'Memuat…'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
 function hideLoading(){ document.getElementById('loadingOverlay').classList.add('hidden'); }
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
 
 function nilaiColor(n){
-  if(n===null||n===undefined||n==='') return '';
-  const v = parseFloat(n);
-  if(isNaN(v)) return '';
-  if(v >= 86) return 'n-d';
-  if(v >= 76) return 'n-c';
-  if(v >= 61) return 'n-b';
+  if(n===null||n===undefined) return '';
+  if(n>=86) return 'n-d';
+  if(n>=76) return 'n-c';
+  if(n>=61) return 'n-b';
   return 'n-a';
 }
 
-function rankBadge(r){
-  const cls = r===1?'r1':r===2?'r2':r===3?'r3':'rn';
-  return `<span class="rank ${cls}">${r}</span>`;
-}
-
-/* ── init ────────────────────────────────────────────── */
 window.addEventListener('load', async () => {
   AUTH.init();
-  // leger-mapel.html: hanya admin yang boleh akses
+  // Hanya admin yang boleh akses halaman ini
   currentUser = AUTH.requireLogin('admin');
   if (!currentUser) return;
 
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'A';
-  document.getElementById('userMapel').textContent  = 'Administrator';
-
-  // Sidebar: Dashboard → admin
-  const navDash = document.getElementById('navDashboard');
-  if (navDash) navDash.href = '../dashboard/admin.html';
-
-  // Sembunyikan nav khusus guru
-  ['navSetoranTT','navSetupTT','navLaporanTT'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-
-  // (blok isTTGuru tidak diperlukan untuk admin — dihapus)
-  if (false) {
-    ['navSetoranTT','navSetupTT','navLaporanTT'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'flex';
-    });
-  }
 
   showLoading('Memuat data master…');
   try {
@@ -297,39 +227,15 @@ window.addEventListener('load', async () => {
       SHEETS.getConfig(), SHEETS.getMapel(), SHEETS.getKelas()
     ]);
 
-    const sem = config['semester_aktif'] || '1';
+    const sem = config['semester_aktif'] || 'I';
     const tp  = config['tahun_pelajaran'] || '—';
     document.getElementById('semPill').textContent = 'Semester ' + sem + ' · ' + tp;
-    document.getElementById('selSem').value = sem;
 
-    // Pisahkan kelas utama dan kelas tambahan untuk filter mapel per kelas
-    const isTahsin = m => m.nama?.toLowerCase().includes('tahsin');
-    const _kelasUtama    = (currentUser.kelasList ||
-      (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()).filter(Boolean) : []));
-    const _kelasTambahan = currentUser.kelas_mapel
-      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
-      : [];
-    const allowedKelas   = [...new Set([..._kelasUtama, ..._kelasTambahan])];
+    // Set dropdown semester
+    const selSem = document.getElementById('selSem');
+    selSem.value = sem;
 
-    // Simpan di closure agar bisa dipakai onKelasChange
-    window._lmKelasUtama    = _kelasUtama;
-    window._lmMapelDiampu   = currentUser.mapelList ||
-      (currentUser.mapel ? currentUser.mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
-    window._lmAllMapel      = allMapel;
-    window._lmIsTahsin      = isTahsin;
-
-    // Isi dropdown kelas
-    const selKelas = document.getElementById('selKelas');
-    let kelasList = allKelas;
-    if (allowedKelas.length) {
-      kelasList = allKelas.filter(k => allowedKelas.includes(k.nama));
-    }
-    selKelas.innerHTML = '<option value="">— Semua Kelas —</option>' +
-      kelasList.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
-
-    // Isi dropdown mapel (awal: tampilkan sesuai kelas belum dipilih → semua yg boleh)
-    _updateMapelDropdown('');
-
+    document.getElementById('btnTampilkan').disabled = false;
     hideLoading();
   } catch(e) {
     hideLoading();
@@ -337,277 +243,212 @@ window.addEventListener('load', async () => {
   }
 });
 
-// Dipanggil tiap kali kelas dropdown berubah
-function onKelasChange() {
-  _updateMapelDropdown(document.getElementById('selKelas').value);
-  onFilterChange();
-}
-
-// Filter dropdown mapel berdasarkan kelas yang dipilih
-function _updateMapelDropdown(kelasAktif) {
-  const selMapel    = document.getElementById('selMapel');
-  const prevVal     = selMapel.value;
-  const isTahsin    = window._lmIsTahsin    || (m => false);
-  const kelasUtama  = window._lmKelasUtama  || [];
-  const mapelDiampu = window._lmMapelDiampu || [];
-  let mapelFiltered = (window._lmAllMapel || []).filter(m => !isTahsin(m));
-
-  if (currentUser.role === 'guru_kelas') {
-    const isKelasUtama = !kelasAktif || kelasUtama.includes(kelasAktif);
-    if (!isKelasUtama) {
-      // Kelas tambahan → hanya mapel yang diampu (mapel spesifik, bukan 'semua')
-      if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
-        mapelFiltered = mapelFiltered.filter(m => mapelDiampu.includes(m.id));
-      } else {
-        mapelFiltered = []; // admin belum set mapel tambahan → kosong
-      }
-    }
-    // kelas utama / belum dipilih → semua mapel tersedia
-  } else if (currentUser.role === 'guru_mapel') {
-    if (mapelDiampu.length && !mapelDiampu.includes('semua')) {
-      mapelFiltered = mapelFiltered.filter(m => mapelDiampu.includes(m.id));
-    }
-  }
-  // admin: semua mapel tampil
-
-  selMapel.innerHTML = '<option value="">— Pilih Mapel —</option>' +
-    mapelFiltered.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
-
-  // Pertahankan pilihan sebelumnya jika masih tersedia
-  if (prevVal && mapelFiltered.find(m => m.id === prevVal)) selMapel.value = prevVal;
-
-  // Auto-pilih jika hanya 1 opsi
-  if (mapelFiltered.length === 1) selMapel.value = mapelFiltered[0].id;
-}
-
 function onFilterChange() {
-  const hasMapel = !!document.getElementById('selMapel').value;
-  document.getElementById('btnTampilkan').disabled = !hasMapel;
-  document.getElementById('btnCetak').disabled = !hasMapel;
+  // Tombol selalu aktif setelah data master terload
 }
 
-/* ── Tampilkan leger ─────────────────────────────────── */
-async function tampilkanLeger() {
-  const idMapel  = document.getElementById('selMapel').value;
-  const kelas    = document.getElementById('selKelas').value;
+async function tampilkanRekap() {
   const semester = document.getElementById('selSem').value;
   const tahun    = config['tahun_pelajaran'] || '';
 
-  if (!idMapel) return;
-
-  showLoading('Memuat nilai siswa…');
+  showLoading('Menghitung rata-rata nilai per kelas…');
   try {
-    const mapelObj = allMapel.find(m => m.id === idMapel);
+    // Mapel: exclude tahsin, urut sesuai field urutan
+    const isTahsin = m => (m.nama||'').toLowerCase().includes('tahsin');
+    const mapelList = allMapel
+      .filter(m => !isTahsin(m))
+      .sort((a,b) => (a.urutan||0) - (b.urutan||0));
 
-    // Ambil TP untuk mapel ini
-    // Tingkatan dari kelas terpilih atau semua tingkatan mapel yang diampu (termasuk kelas_mapel)
-    const kelasUtamaArr   = (currentUser.kelasList ||
-      (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []));
-    const kelasTambahanArr = currentUser.kelas_mapel
-      ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean)
-      : [];
-    const allAllowedKelas = [...new Set([...kelasUtamaArr, ...kelasTambahanArr])];
+    // Kelas: urut berdasarkan tingkat lalu nama
+    const kelasList = [...allKelas].sort((a,b) =>
+      (parseInt(a.tingkat)||0) - (parseInt(b.tingkat)||0) || a.nama.localeCompare(b.nama));
 
-    const tingkatanList = kelas
-      ? [kelas.replace(/[^0-9]/g,'')]
-      : allAllowedKelas.map(k => String(k).replace(/[^0-9]/g,''));
+    // Terima semester format Romawi & Arab
+    const toRomawi = {'1':'I','2':'II','3':'III','4':'IV'};
+    const toArab   = {'I':'1','II':'2','III':'3','IV':'4'};
+    const semAktif = config['semester_aktif'] || semester;
+    const semValid = new Set([
+      semester, toRomawi[semester]||semester,
+      semAktif, toRomawi[semAktif]||semAktif, toArab[semAktif]||semAktif
+    ]);
 
-    // FIX D-01 (v4 2026-04-30): Ganti for...of loop N serial HTTP requests dengan
-    // satu getTPKKTP({ id_mapel }) lalu filter tingkatan di JS.
-    // Pada jaringan mobile 500ms latency, sebelumnya bisa +1–2 dtk per tingkatan diampu.
-    const tingkatanUniq = [...new Set(tingkatanList)];
-    const allTPRaw = await SHEETS.getTPKKTP({ id_mapel: idMapel });
-    const tingkatanSet = new Set(tingkatanUniq);
-    let allTP = allTPRaw.filter(tp => {
-      if (tingkatanSet.size === 0) return true;
-      const tpTingkatan = String(tp.kelas).replace(/[^0-9]/g, '');
-      return tingkatanSet.has(tpTingkatan);
+    // Muat semua TP dan NILAI sekaligus
+    const [allTP, rawNilai] = await Promise.all([
+      SHEETS.getTPKKTP(),
+      SHEETS.read('NILAI!A:K')
+    ]);
+
+    // Indeks TP per mapel: id_mapel → [ {id_tp, bobot_slm, bobot_sas} ]
+    const tpByMapel = {};
+    allTP.forEach(tp => {
+      if (!tpByMapel[tp.id_mapel]) tpByMapel[tp.id_mapel] = [];
+      tpByMapel[tp.id_mapel].push(tp);
     });
-    // Deduplikasi id_tp (jaga-jaga)
-    const _seenTP = new Map();
-    allTP.forEach(tp => { if (!_seenTP.has(tp.id_tp)) _seenTP.set(tp.id_tp, tp); });
-    allTP = [..._seenTP.values()];
-    allTP.sort((a,b) => (parseInt(a.nomor_tp)||0) - (parseInt(b.nomor_tp)||0));
 
-    // Ambil siswa
-    const siswaList = kelas
-      ? await SHEETS.getSiswa(kelas)
-      : await (async () => {
-          // Semua siswa di kelas yang diampu guru (kelas utama + kelas_mapel)
-          const allSiswa = await SHEETS.getSiswa();
-          return allSiswa.filter(s => allAllowedKelas.includes(s.kelas));
-        })();
+    // Indeks nilai: id_tp → id_siswa → nilai_akhir (dihitung dari SLM+SAS+bobot)
+    // Kelompokkan juga per kelas siswa → pakai r[4] = kelas
+    // Struktur: { [id_mapel]: { [kelas]: [ nilai_akhir_per_siswa_per_tp ] } }
+    // Lebih tepatnya: hitung rata-rata TP per siswa dulu, lalu rata-rata per kelas
 
-    // Siswa diurutkan abjad per kelas
-    siswaList.sort((a,b) => a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama));
+    // nilaiSiswa: { [id_siswa]: { [id_tp]: nilai_akhir } }
+    // kelasSiswa: { [id_siswa]: kelas }
+    const nilaiSiswa = {};
+    const kelasSiswa = {};
 
-    // Ambil semua nilai relevan
-    const nilaiData = [];  // tidak dipakai — diganti baca langsung dari sheet di bawah
-
-    // Baca sheet NILAI secara langsung — bypass getNilai
-    const rawNilaiRows = await SHEETS.read('NILAI!A:K');
-
-    // FIX 1: Semester tersimpan sebagai Romawi ("I","II") tapi dropdown pakai Arab ("1","2")
-    // Buat mapping dua arah agar filter tetap cocok dalam format apapun
-    const semRomawi = { '1':'I', '2':'II', '3':'III', '4':'IV' };
-    const semArab   = { 'I':'1', 'II':'2', 'III':'3', 'IV':'4' };
-    const semAktif  = config['semester_aktif'] || semester;  // nilai di sheet (mungkin Romawi)
-    // Kandidat semester yang diterima (Arab dan Romawi keduanya valid)
-    const semKandidatUI  = semester;                          // "1" atau "2" dari dropdown
-    const semKandidatRom = semRomawi[semester] || semester;   // "I" atau "II"
-    const semValid = new Set([semKandidatUI, semKandidatRom, semAktif,
-                              semRomawi[semAktif]||semAktif, semArab[semAktif]||semAktif]);
-
-    // FIX 2: Buat indeks nomor_tp dari allTP untuk fallback lookup saat id_tp berubah
-    // key: nomor_tp (string) → id_tp baru
-    const tpByNomor = {};
-    allTP.forEach(tp => { tpByNomor[String(tp.nomor_tp)] = tp.id_tp; });
-
-    // Bangun nilaiIdx dari raw sheet
-    // key: "${id_siswa}_${id_tp_baru}" — pakai id_tp dari allTP (bukan dari sheet)
-    const nilaiIdx = {};
-    rawNilaiRows.slice(1).forEach(r => {
-      if (!r[0] || r[0] === 'id_nilai' || r[0].trim() === '' || !r[1] || !r[2]) return;
-      if (r[3] !== idMapel) return;
-      if (kelas && r[4] !== kelas) return;
-      if (!semValid.has(r[5])) return;   // FIX 1: cocokkan Romawi atau Arab
+    rawNilai.slice(1).forEach(r => {
+      if (!r[0] || r[0]==='id_nilai' || !r[1] || !r[2]) return;
+      if (!semValid.has(r[5])) return;
       if (tahun && r[6] && r[6] !== tahun) return;
+      const slmRaw = r[7];
+      if (slmRaw===''||slmRaw===null||slmRaw===undefined) return;
+      const slm = parseFloat(slmRaw);
+      if (isNaN(slm)) return;
 
-      const va = (r[9] !== undefined && r[9] !== null && r[9] !== '')
-        ? parseFloat(r[9]) : null;
+      const idSiswa = r[1];
+      const idTP    = r[2];
+      const kelas   = r[4] || '';
 
-      // FIX 2: coba pakai id_tp dari sheet; jika tidak ada di allTP, fallback ke nomor_tp
-      const idTpSheet  = r[2];
-      const tpMatch    = allTP.find(tp => tp.id_tp === idTpSheet);
-      const idTpPakai  = tpMatch ? idTpSheet : (() => {
-        // Ekstrak nomor TP dari id lama (format: TP-MAPEL-KELAS-NOMOR-HASH)
-        const parts = idTpSheet.split('-');
-        const nomor = parts[3] || '';
-        return tpByNomor[nomor] || idTpSheet;
-      })();
+      // Bobot dari allTP
+      const tp = allTP.find(t => t.id_tp === idTP);
+      const bSlm = tp?.bobot_slm ?? 60;
+      const bSas = tp?.bobot_sas ?? 40;
+      const sasRaw = r[8];
+      const sas = (sasRaw!==''&&sasRaw!==null&&sasRaw!==undefined) ? parseFloat(sasRaw) : null;
+      const na  = (sas!==null&&!isNaN(sas))
+        ? Math.round(slm*bSlm/100 + sas*bSas/100)
+        : Math.round(slm);
 
-      const key = `${r[1]}_${idTpPakai}`;
-      if (!nilaiIdx[key]) nilaiIdx[key] = va;  // ambil pertama jika ada duplikat
+      if (!nilaiSiswa[idSiswa]) nilaiSiswa[idSiswa] = {};
+      nilaiSiswa[idSiswa][idTP] = na;
+      if (!kelasSiswa[idSiswa]) kelasSiswa[idSiswa] = kelas;
     });
 
-    // Hitung nilai per siswa
-    const rows = siswaList.map((s, idx) => {
-      const vals = allTP.map(tp => {
-        const key = `${s.id}_${tp.id_tp}`;
-        const v = nilaiIdx[key];
+    // Hitung rata-rata nilai akhir per mapel per kelas
+    // Langkah: per siswa → rata-rata semua TP mapel → kumpulkan per kelas → rata-rata kelas
+    // rekap[id_mapel][kelas] = { sum, count }
+    const rekap = {};
+    mapelList.forEach(m => { rekap[m.id] = {}; });
 
-        return (v !== undefined && v !== null) ? parseFloat(v) : null;
+    const siswaIds = Object.keys(nilaiSiswa);
+    siswaIds.forEach(idSiswa => {
+      const kelas = kelasSiswa[idSiswa];
+      if (!kelas) return;
+      mapelList.forEach(m => {
+        const tps = tpByMapel[m.id] || [];
+        const naArr = tps
+          .map(tp => nilaiSiswa[idSiswa]?.[tp.id_tp])
+          .filter(v => v !== undefined && v !== null);
+        if (!naArr.length) return;
+        const rataMapelSiswa = naArr.reduce((a,b)=>a+b,0)/naArr.length;
+        if (!rekap[m.id][kelas]) rekap[m.id][kelas] = { sum:0, count:0 };
+        rekap[m.id][kelas].sum   += rataMapelSiswa;
+        rekap[m.id][kelas].count += 1;
       });
-      const filled = vals.filter(v => v !== null);
-      const total  = filled.reduce((a,b) => a+b, 0);
-      const rata   = filled.length ? (total / filled.length) : null;
-      return { siswa: s, vals, total, rata, rank: 0 };
     });
 
-    // Ranking berdasarkan rata-rata (null = belum ada nilai → urutan paling akhir)
-    const ranked = [...rows].sort((a,b) => {
-      if (a.rata === null && b.rata === null) return 0;
-      if (a.rata === null) return 1;
-      if (b.rata === null) return -1;
-      return b.rata - a.rata;
-    });
-    ranked.forEach((r,i) => { r.rank = i+1; });
+    // Fungsi rata-rata per sel
+    function avg(idMapel, kelas) {
+      const d = rekap[idMapel]?.[kelas];
+      if (!d || !d.count) return null;
+      return Math.round(d.sum / d.count);
+    }
 
-    // Statistik
-    const rataList = rows.map(r => r.rata).filter(v => v !== null);
-    const rataKelas = rataList.length ? (rataList.reduce((a,b)=>a+b,0)/rataList.length).toFixed(1) : '—';
-    const maxVal    = rataList.length ? Math.max(...rataList).toFixed(1) : '—';
-    const minVal    = rataList.length ? Math.min(...rataList).toFixed(1) : '—';
-    const tuntas    = rataList.filter(v=>v>=70).length;
-    const pctTuntas = rataList.length ? Math.round(tuntas/rataList.length*100) : 0;
+    // Hitung rata-rata keseluruhan per mapel dan temukan kelas terbaik/terburuk
+    function statsMapel(idMapel) {
+      const vals = kelasList
+        .map(k => ({ kelas: k.nama, v: avg(idMapel, k.nama) }))
+        .filter(x => x.v !== null);
+      if (!vals.length) return { rataAll: null, best: null, worst: null };
+      const rataAll = Math.round(vals.reduce((a,x)=>a+x.v,0)/vals.length);
+      const best  = vals.reduce((a,b) => b.v > a.v ? b : a);
+      const worst = vals.reduce((a,b) => b.v < a.v ? b : a);
+      return { rataAll, best, worst };
+    }
 
-    document.getElementById('statSiswa').textContent   = siswaList.length;
-    document.getElementById('statTP').textContent      = allTP.length;
-    document.getElementById('statRata').textContent    = rataKelas;
-    document.getElementById('statMax').textContent     = maxVal;
-    document.getElementById('statMin').textContent     = minVal;
-    document.getElementById('statTuntas').textContent  = tuntas + ' siswa';
-    document.getElementById('statTuntasPct').textContent = pctTuntas + '% ketuntasan';
-
-    // Judul
-    const kelasLabel = kelas ? 'Kelas ' + kelas : 'Semua Kelas yang Diampu';
-    const title = `Leger ${mapelObj?.nama || '—'} · ${kelasLabel} · Sem ${semester}`;
-    document.getElementById('tableTitle').textContent = title;
-    document.getElementById('printTitle').textContent = 'Leger Nilai ' + (mapelObj?.nama||'') + ' · ' + kelasLabel;
-    document.getElementById('printSub').textContent   = `Semester ${semester} · ${tahun} · Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
-
-    // Build thead — kolom: No | Nama Siswa | NISN | Kelas | TP1…TPn | Jumlah | Rata-rata | Peringkat
-    const thTP = allTP.map((tp,i) =>
-      `<th class="tp-group" title="${tp.nama_tp||''}">TP ${tp.nomor_tp||i+1}</th>`
+    // Bangun tabel
+    // Header: Mata Pelajaran | Kelas A | Kelas B | … | Rata-rata | Terbaik | Terburuk
+    const thKelas = kelasList.map(k =>
+      `<th>Kelas ${k.nama}</th>`
     ).join('');
-    const nisisnCol  = '<th rowspan="2" style="min-width:110px">NISN</th>';
-    const kelasCol   = !kelas ? '<th rowspan="2" style="min-width:60px">Kelas</th>' : '';
-    document.getElementById('tblHead').innerHTML = `
-      <tr>
-        <th rowspan="2" class="left" style="min-width:32px">No</th>
-        <th rowspan="2" class="left" style="min-width:160px">Nama Siswa</th>
-        ${nisisnCol}
-        ${kelasCol}
-        <th colspan="${allTP.length}" class="tp-group">Nilai Akhir per TP</th>
-        <th rowspan="2" style="min-width:60px">Jumlah</th>
-        <th rowspan="2" style="min-width:70px">Rata-rata</th>
-        <th rowspan="2" style="min-width:62px">Peringkat</th>
-      </tr>
-      <tr>${thTP}</tr>`;
-
-    // Build tbody (urut abjad tapi rank sudah dihitung)
-    const rankMap = {};
-    ranked.forEach(r => { rankMap[r.siswa.id] = r.rank; });
+    document.getElementById('tblHead').innerHTML = `<tr>
+      <th class="left" style="min-width:180px">Mata Pelajaran</th>
+      ${thKelas}
+      <th>Rata-rata</th>
+      <th>Terbaik</th>
+      <th>Terburuk</th>
+    </tr>`;
 
     let html = '';
-    rows.forEach((r, i) => {
-      const rank = rankMap[r.siswa.id];
-      const tdTP = r.vals.map(v => {
+    // Baris rata-rata per kelas (untuk baris footer)
+    const kelasAvgSum   = {}; // kelas → { sum, count }
+    kelasList.forEach(k => { kelasAvgSum[k.nama] = { sum:0, count:0 }; });
+    let totalAllSum = 0, totalAllCount = 0;
+
+    mapelList.forEach(m => {
+      const { rataAll, best, worst } = statsMapel(m.id);
+      const tdKelas = kelasList.map(k => {
+        const v = avg(m.id, k.nama);
         if (v === null) return `<td style="color:#ccc">—</td>`;
-        const cls = nilaiColor(v);
-        return `<td class="${cls}">${v.toFixed(1)}</td>`;
+        // Kontribusi ke rata-rata kelas (footer)
+        kelasAvgSum[k.nama].sum   += v;
+        kelasAvgSum[k.nama].count += 1;
+        const isBest  = best  && k.nama === best.kelas;
+        const isWorst = worst && k.nama === worst.kelas;
+        const cls = isBest ? 'best-cell' : isWorst ? 'worst-cell' : nilaiColor(v);
+        return `<td class="${cls}">${v}</td>`;
       }).join('');
-      const rataStr = r.rata !== null ? r.rata.toFixed(1) : '<span style="color:#ccc">—</span>';
-      const totalStr = r.total > 0 ? r.total.toFixed(1) : '<span style="color:#ccc">—</span>';
+
+      const rataStr = rataAll !== null
+        ? `<td class="${nilaiColor(rataAll)}" style="font-weight:700">${rataAll}</td>`
+        : `<td style="color:#ccc">—</td>`;
+      const bestStr  = best  ? `<td style="font-size:11px;color:#2e7d32;font-weight:600">${best.v} <span style="color:#888;font-weight:400">(Kelas ${best.kelas})</span></td>`
+                             : `<td style="color:#ccc">—</td>`;
+      const worstStr = worst ? `<td style="font-size:11px;color:#e65100;font-weight:600">${worst.v} <span style="color:#888;font-weight:400">(Kelas ${worst.kelas})</span></td>`
+                             : `<td style="color:#ccc">—</td>`;
+      if (rataAll !== null) { totalAllSum += rataAll; totalAllCount++; }
+
       html += `<tr>
-        <td>${i+1}</td>
-        <td class="nama" title="${r.siswa.nama}">${r.siswa.nama}</td>
-        <td style="font-size:11px;color:var(--ink-muted)">${r.siswa.nisn||'—'}</td>
-        ${!kelas ? `<td>${r.siswa.kelas}</td>` : ''}
-        ${tdTP}
-        <td style="font-weight:600">${totalStr}</td>
-        <td class="${nilaiColor(r.rata)}" style="font-weight:700">${rataStr}</td>
-        <td>${rankBadge(rank)}</td>
+        <td class="left" style="font-weight:500">${m.nama}</td>
+        ${tdKelas}
+        ${rataStr}
+        ${bestStr}
+        ${worstStr}
       </tr>`;
     });
 
-    // Baris statistik bawah
-    const tpRata = allTP.map((_,tpIdx) => {
-      const vals = rows.map(r => r.vals[tpIdx]).filter(v=>v!==null);
-      return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
-    }).map(v => `<td style="font-size:11px;color:var(--green-dark)">${v}</td>`).join('');
-
-    // colspan: No + Nama + NISN = 3, + Kelas jika multi-kelas
-    const statColspan = !kelas ? 4 : 3;
-    html += `<tr class="stat-row-tbl">
-      <td colspan="${statColspan}" class="left">Rata-rata Kelas</td>
-      ${tpRata}
-      <td>—</td>
-      <td>${rataKelas}</td>
-      <td>—</td>
+    // Baris rata-rata kelas (footer)
+    const tdKelasAvg = kelasList.map(k => {
+      const d = kelasAvgSum[k.nama];
+      if (!d.count) return `<td style="color:#ccc">—</td>`;
+      const v = Math.round(d.sum/d.count);
+      return `<td class="${nilaiColor(v)}">${v}</td>`;
+    }).join('');
+    const totalAllAvg = totalAllCount ? Math.round(totalAllSum/totalAllCount) : null;
+    html += `<tr class="avg-row">
+      <td class="left">Rata-rata Semua Mapel</td>
+      ${tdKelasAvg}
+      <td class="${nilaiColor(totalAllAvg)}">${totalAllAvg ?? '—'}</td>
+      <td colspan="2" style="color:var(--ink-muted);font-size:11px;font-weight:400">—</td>
     </tr>`;
 
     document.getElementById('tblBody').innerHTML = html;
 
-    // Tampilkan semua elemen
-    document.getElementById('statRow').style.display  = 'grid';
-    document.getElementById('tableWrap').style.display = 'block';
+    // Judul & print header
+    const semLabel = 'Semester ' + semester;
+    const title = `Rekap Nilai Bidang Studi · ${semLabel} · ${tahun}`;
+    document.getElementById('tableTitle').textContent = title;
+    document.getElementById('printTitle').textContent = title;
+    document.getElementById('printSub').textContent   =
+      `Dicetak oleh: ${currentUser.nama} · ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
+
+    document.getElementById('tableWrap').style.display  = 'block';
     document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('btnCetak').disabled = false;
 
     hideLoading();
   } catch(e) {
     hideLoading();
-    alert('Gagal memuat leger: ' + e.message);
+    alert('Gagal memuat data: ' + e.message);
     console.error(e);
   }
 }
