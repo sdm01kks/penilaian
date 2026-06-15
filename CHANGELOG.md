@@ -1,3 +1,42 @@
+## [2026-06-15] — v51 · Rekap Nilai Bidang Studi: Tulis Ulang Sesuai Kebutuhan Admin
+
+### ✨ Perubahan Besar
+
+`leger-mapel.html` ditulis ulang sepenuhnya. Halaman lama menampilkan nilai per-siswa per-TP
+(sama dengan leger kelas tapi untuk satu mapel) — tidak relevan untuk kebutuhan admin.
+Halaman baru menampilkan **rekap rata-rata per mapel × kelas** dalam satu tabel ringkas.
+
+**Kolom tabel baru:**
+
+| Kolom | Isi |
+|-------|-----|
+| Mata Pelajaran | Nama mapel (exclude Tahsin-Tahfizh) |
+| Kelas [X] | Rata-rata nilai akhir semua siswa di kelas tersebut untuk mapel ini |
+| Rata-rata | Rata-rata dari semua kelas yang punya data |
+| Terbaik | Nilai tertinggi + nama kelas |
+| Terburuk | Nilai terendah + nama kelas |
+| Baris footer | Rata-rata semua mapel per kelas |
+
+**Cara hitung:** identik dengan `preview.html` dan `leger-kelas.html` —
+`nilai_akhir per TP = slm × bobot_slm% + sas × bobot_sas%`,
+`nilai akhir mapel per siswa = rata-rata semua TP`,
+`nilai kelas = rata-rata semua siswa di kelas tersebut`.
+
+**Filter:** hanya semester (tidak ada filter kelas/mapel — justru tujuannya melihat semua sekaligus).
+
+**Akses:** tetap hanya admin (`requireLogin('admin')`).
+
+**Visual:** sel terbaik diberi latar hijau muda, sel terburuk latar oranye muda.
+
+### 📋 File yang Diubah (v51)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-mapel.html` | **Ditulis ulang** — konsep baru: rekap rata-rata per mapel × kelas |
+| `CHANGELOG.md` | **Diubah** — tambah entri v51 ini |
+
+---
+
 ## [2026-06-15] — v50 · Leger Kelas: Hitung Nilai dari SLM+SAS+Bobot, Tampilkan Semua Siswa
 
 ### 🐛 Perbaikan
