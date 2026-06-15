@@ -1,30 +1,290 @@
-## [2026-06-15] — v39 · Perbaikan Fase Salah di Identitas Rapor (Preview & Cetak)
+## [2026-06-15] — v51 · Rekap Nilai Bidang Studi: Tulis Ulang Sesuai Kebutuhan Admin
 
-### 🐛 Perbaikan Bug — Fase di Rapor Diambil dari Sheet, Bukan Dihitung dari Kelas
+### ✨ Perubahan Besar
 
-**Gejala:** Identitas siswa di halaman preview dan cetak rapor menampilkan fase yang salah — misalnya Kelas 2B menampilkan "Fase B" padahal seharusnya "Fase A".
+`leger-mapel.html` ditulis ulang sepenuhnya. Halaman lama menampilkan nilai per-siswa per-TP
+(sama dengan leger kelas tapi untuk satu mapel) — tidak relevan untuk kebutuhan admin.
+Halaman baru menampilkan **rekap rata-rata per mapel × kelas** dalam satu tabel ringkas.
 
-**Akar masalah:**
-Di `rapor/preview.html`, baris:
-```javascript
-const fase = allKelas.find(k => k.nama === activeKelas)?.fase || '?';
-```
-mengambil nilai fase dari kolom D sheet `KELAS` (via `getKelas()`). Nilai kolom ini bisa tidak akurat karena diisi manual dan tidak ada validasi. Nilai `d.fase` ini kemudian ditampilkan langsung di template string identitas siswa (screen dan print).
+**Kolom tabel baru:**
 
-Klasifikasi fase yang benar per kurikulum:
-- Kelas 1–2 → **Fase A**
-- Kelas 3–4 → **Fase B**
-- Kelas 5–6 → **Fase C**
+| Kolom | Isi |
+|-------|-----|
+| Mata Pelajaran | Nama mapel (exclude Tahsin-Tahfizh) |
+| Kelas [X] | Rata-rata nilai akhir semua siswa di kelas tersebut untuk mapel ini |
+| Rata-rata | Rata-rata dari semua kelas yang punya data |
+| Terbaik | Nilai tertinggi + nama kelas |
+| Terburuk | Nilai terendah + nama kelas |
+| Baris footer | Rata-rata semua mapel per kelas |
 
-**Perbaikan (v39):**
-Tambah helper `faseKini(kelas)` yang menghitung fase dari nomor kelas secara deterministik — serupa dengan `nextFase()` yang sudah ada untuk fase kenaikan kelas. Kedua call site `${d.fase}` (screen render + print render) diganti menjadi `${faseKini(d.kelas)}`.
+**Cara hitung:** identik dengan `preview.html` dan `leger-kelas.html` —
+`nilai_akhir per TP = slm × bobot_slm% + sas × bobot_sas%`,
+`nilai akhir mapel per siswa = rata-rata semua TP`,
+`nilai kelas = rata-rata semua siswa di kelas tersebut`.
 
-```javascript
-// faseKini: fase siswa SAAT INI berdasarkan nomor kelas
-function faseKini(kelas) { const n=parseInt(kelas.replace(/[^0-9]/g,'')); return isNaN(n)?'?':n<=2?'A':n<=4?'B':n<=6?'C':'D'; }
-```
+**Filter:** hanya semester (tidak ada filter kelas/mapel — justru tujuannya melihat semua sekaligus).
 
-**File yang diubah:** `rapor/preview.html`
+**Akses:** tetap hanya admin (`requireLogin('admin')`).
+
+**Visual:** sel terbaik diberi latar hijau muda, sel terburuk latar oranye muda.
+
+### 📋 File yang Diubah (v51)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-mapel.html` | **Ditulis ulang** — konsep baru: rekap rata-rata per mapel × kelas |
+| `CHANGELOG.md` | **Diubah** — tambah entri v51 ini |
+
+---
+
+## [2026-06-15] — v50 · Leger Kelas: Hitung Nilai dari SLM+SAS+Bobot, Tampilkan Semua Siswa
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-kelas.html` | Data leger selalu kosong (0 siswa, 0 mapel) meskipun nilai sudah diinput | Akar masalah: `tampilkanLeger()` membaca kolom `r[9]` (nilai_akhir tersimpan di sheet). Kolom ini hanya terisi jika nilai pernah disimpan ulang oleh sistem — pada banyak kasus kolom ini kosong meskipun `nilai_slm` dan `nilai_sas` sudah ada. Fix: hitung nilai akhir dari `nilai_slm * bobot_slm + nilai_sas * bobot_sas` per TP, identik dengan logika `preview.html`. |
+| 2 | `rapor/leger-kelas.html` | Siswa tanpa nilai tidak muncul sama sekali di tabel | Fix: semua siswa selalu ditampilkan. Nilai yang belum ada ditampilkan sebagai `—`. Ranking hanya diberikan untuk siswa yang memiliki minimal satu nilai; siswa tanpa nilai sama sekali mendapat `—` di kolom peringkat. |
+| 3 | `rapor/leger-kelas.html` | Nilai ditampilkan dengan satu desimal (`87.3`) — tidak konsisten dengan rapor | Diubah ke bilangan bulat (`Math.round`) sesuai tampilan di `preview.html`. |
+| 4 | `rapor/leger-kelas.html` | Label cetak selalu menampilkan "Wali Kelas" meskipun yang mencetak adalah admin | Kondisikan: admin → "Admin: [nama]"; guru kelas → "Wali Kelas: [nama]". |
+
+### 📋 File yang Diubah (v50)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-kelas.html` | **Diubah** — `tampilkanLeger()` ditulis ulang: muat TP via `getTPKKTP`, hitung `na = slm*bSlm% + sas*bSas%` per TP, rata-rata per mapel, tampilkan semua siswa, ranking null untuk siswa tanpa nilai |
+| `CHANGELOG.md` | **Diubah** — tambah entri v50 ini |
+
+---
+
+## [2026-06-15] — v49 · Audit Akses Leger: Guru Kelas Dibatasi ke Kelas Utama Saja
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-kelas.html` | `kelasDiampu` memakai `currentUser.kelasList` (gabungan kolom E+K sejak §30/v43). Guru kelas yang mengajar mapel di kelas lain (kolom K) bisa melihat leger kelas-kelas tersebut — padahal hanya boleh melihat kelas utamanya sendiri. | Ganti ke `currentUser.kelas` (kolom E saja) untuk `guru_kelas`, identik dengan aturan §31 (kolom E untuk kepemilikan/identifikasi, bukan akses lintas kelas). Admin tetap mendapat semua kelas (kelasDiampu kosong). Komentar §31+§33 ditambahkan. |
+
+### ✅ Konfirmasi akses setelah v49
+
+| Halaman | Guru Kelas | Guru Mapel | Admin |
+|---------|-----------|-----------|-------|
+| `leger-kelas.html` | ✅ Hanya kelas utama (kolom E) | ❌ Tidak bisa masuk | ✅ Semua kelas |
+| `leger-mapel.html` | ❌ Tidak bisa masuk | ❌ Tidak bisa masuk | ✅ Semua mapel + kelas |
+
+### 📋 File yang Diubah (v49)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-kelas.html` | **Diubah** — `kelasDiampu`: ganti `kelasList` → `kelas` (kolom E) untuk guru_kelas; eksplisit `[]` untuk admin; komentar §31+§33 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v49 ini |
+
+---
+
+## [2026-06-15] — v48 · Fix Tampilan Sidebar Leger + Pesan Informatif Kelas Kosong
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/leger-mapel.html` | Teks "Dashboard" di sidebar tidak tampil sempurna — terrender sebagai teks literal dengan karakter backslash | Akar masalah: saat patch v46 diinjeksikan via Python string, quotes di HTML ter-escape menjadi `\"` → backslash literal di HTML. Fix: ganti ke quote biasa dan arahkan href langsung ke `admin.html` (tidak perlu JS lagi karena halaman ini khusus admin). |
+| 2 | `rapor/leger-mapel.html` | Subtext halaman menyebut "mata pelajaran yang Anda ampu" — tidak relevan untuk admin | Diubah menjadi "per mata pelajaran dan kelas" yang netral. |
+| 3 | `rapor/leger-kelas.html` | Jika `allKelas` kosong setelah load berhasil, dropdown menampilkan hanya "Pilih Kelas" tanpa keterangan apapun | Tambah pengecekan `kelasList.length === 0` → tampilkan "Tidak ada kelas tersedia" dan disable tombol Tampilkan/Cetak. |
+
+### 📋 File yang Diubah (v48)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-mapel.html` | **Diubah** — fix backslash di nav HTML; href navDashboard langsung ke admin.html; update subtext halaman |
+| `rapor/leger-kelas.html` | **Diubah** — tambah guard kelasList.length === 0 dengan pesan informatif |
+| `CHANGELOG.md` | **Diubah** — tambah entri v48 ini |
+
+---
+
+## [2026-06-15] — v47 · Koreksi Akses Leger: Kelas untuk Admin+Guru, Bidang Studi Khusus Admin
+
+### 🐛 Koreksi + ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/leger-kelas.html` | Admin kini dapat mengakses Leger Nilai Kelas (leger semua mapel per-kelas). `requireLogin` diubah ke `['guru_kelas', 'admin']`. Admin mendapat semua kelas di dropdown (kelasDiampu kosong → allKelas). Sidebar dikondisikan: Dashboard → `admin.html` untuk admin; nav Input Penilaian dan Setup TP disembunyikan untuk admin. Header menampilkan "Administrator". |
+| 2 | `rapor/leger-mapel.html` | Leger Nilai Bidang Studi **dibatasi khusus admin** (bukan guru). `requireLogin` diubah ke `'admin'`. Sidebar bug diperbaiki: Dashboard selalu mengarah ke `admin.html`; nav khusus guru (TT, Setup TT) disembunyikan; label header menampilkan "Administrator". Blok `isTTGuru` yang tidak relevan untuk admin dihapus. |
+| 3 | `dashboard/admin.html` | Sidebar diperbarui: "Leger Nilai Kelas" (📊, `leger-kelas.html`) sebagai menu utama; "Leger Nilai Bidang Studi" (📈, `leger-mapel.html`) sebagai menu terpisah di bawahnya. |
+
+### 📋 File yang Diubah (v47)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-kelas.html` | **Diubah** — `requireLogin`, label header, `navDashboard` id + JS kondisional, hide nav input untuk admin |
+| `rapor/leger-mapel.html` | **Diubah** — `requireLogin('admin')`, sidebar fix, hapus blok isTTGuru |
+| `dashboard/admin.html` | **Diubah** — pisah nav leger-kelas dan leger-mapel |
+| `CHANGELOG.md` | **Diubah** — tambah entri v47 ini |
+
+> **Catatan v46:** Patch v46 keliru membuka `leger-mapel.html` untuk semua guru. v47 mengoreksinya: `leger-kelas.html` (leger per-kelas semua mapel) untuk admin + guru kelas; `leger-mapel.html` (leger bidang studi) khusus admin.
+
+
+---
+
+## [2026-06-15] — v46 · Akses Admin ke Leger Nilai Bidang Studi
+ · Akses Admin ke Leger Nilai Bidang Studi
+
+### ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/leger-mapel.html` | Admin kini diizinkan mengakses halaman Leger Nilai Bidang Studi. `requireLogin` diubah dari `'guru_mapel'` menjadi `['guru_kelas', 'guru_mapel', 'admin']`. Admin otomatis mendapat semua kelas dan semua mapel di dropdown (karena `allowedKelas = []` → filter tidak diterapkan, dan branch `// admin: semua mapel tampil` sudah ada di `_updateMapelDropdown`). |
+| 2 | `rapor/leger-mapel.html` | Sidebar dan header dikondisikan berdasarkan role: tombol Dashboard mengarah ke `admin.html` untuk admin, `guru-kelas.html` untuk guru kelas, dan `guru-mapel.html` untuk guru mapel. Nav khusus guru (Setoran TT, Setup TT, Laporan TT) disembunyikan untuk admin. Label `userMapel` menampilkan "Administrator" untuk admin. |
+| 3 | `dashboard/admin.html` | Tambah link "Leger Nilai Bidang Studi" di sidebar admin di bawah "Preview & Cetak Rapor". |
+
+### 📋 File yang Diubah (v46)
+
+| File | Status |
+|------|--------|
+| `rapor/leger-mapel.html` | **Diubah** — `requireLogin` ke array 3 role; `navDashboard` id + JS kondisional; hide nav guru-only untuk admin; label `userMapel` untuk admin |
+| `dashboard/admin.html` | **Diubah** — tambah nav-item leger-mapel di seksi Laporan & Rapor |
+| `CHANGELOG.md` | **Diubah** — tambah entri v46 ini |
+
+---
+
+## [2026-06-14] — v45 · Perbaikan Guru TT Salah di Kelas Multi-Mapel + UI Kelas Khusus TT
+
+### 🐛 Perbaikan + ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/laporan-tt.html` | **Fix `cariGuruTT()`.** Guru yang mengajar banyak mapel (misal Al-Islam + TT) sebelumnya false-match sebagai guru TT di kelas yang hanya diampu Al-Islam-nya saja (bukan TT). Contoh: Pak Indra (Al-Islam + TT di 1A/1B; Al-Islam saja di 3A) muncul sebagai guru TT kelas 3A, padahal guru TT kelas 3A adalah Pak Rizki. Penyebab: skema sheet USERS tidak bisa merepresentasikan "mapel X di kelas A, mapel Y di kelas B". Fix: `cariGuruTT()` kini menggunakan kolom K sebagai pembatas kelas TT untuk `guru_mapel`. Jika kolom K diisi admin → hanya kelas di kolom K yang dianggap kelas TT. Jika kolom K kosong → fallback ke kolom E (TT murni, semua kelas). Untuk `guru_kelas` merangkap: tetap pakai E+K (§25-B). |
+| 2 | `setup/kelola-guru.html` | **UI "Kelas Khusus Tahsin-Tahfizh".** Tambah seksi baru yang muncul otomatis saat `guru_mapel` memilih mapel TT dan mengajar di lebih dari 1 kelas. Admin bisa memilih subset kelas yang benar-benar diampu TT, tersimpan ke kolom K. Jika dikosongkan, semua kelas dianggap kelas TT (backward compatible). |
+
+### 📋 File yang Diubah (v45)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — `cariGuruTT()`: tambah cabang role dengan komentar §32 |
+| `setup/kelola-guru.html` | **Diubah** — HTML seksi `#seksiKelasTT`; variabel `kelasTTDipilih`; fungsi `isTTDipilih`, `renderKelasTTSeksi`, `renderKelasTTCheckbox`, `toggleKelasTT`; panggilan dari `toggleMapelCheck`, `toggleKelasCheck`, `pilihRole`; `simpanGuru()` menyimpan `kelasTTDipilih` ke `kelas_mapel` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §32, entri riwayat v45, penanda kode kumulatif v45 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v45 ini |
+
+### ⚠️ Catatan Migrasi Data
+
+Guru yang sudah terdaftar sebagai `guru_mapel` multi-mapel perlu diedit di Kelola Guru untuk mengisi kolom "Kelas Khusus TT" agar `cariGuruTT()` bekerja benar. Sebelum diisi, kolom K kosong → fallback ke kolom E (sama seperti perilaku lama).
+
+---
+
+## [2026-06-12] — v44 · Perbaikan Wali Kelas Salah di TTD Rapor (Regresi dari v43)
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/preview.html` | TTD rapor menampilkan nama guru mapel yang mengajar di kelas tersebut (bukan wali kelas sebenarnya). Contoh: rapor kelas 4A menampilkan Bu April (wali 4B, guru Al-Islam di 4A) alih-alih Bu Wilis (wali kelas 4A). | **Akar masalah:** regresi dari v43. Setelah `getUsers().kelasList` diubah menjadi gabungan kolom E+K, `users.find()` untuk wali kelas yang memakai `u.kelasList?.includes(activeKelas)` kini juga mencocokkan guru mapel merangkap. **Fix:** ganti ke `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — hanya mencocokkan dari kolom E (kelas utama). Lihat ANTIREGRESI §31 untuk aturan umum: `kelas` (kolom E) untuk identifikasi wali; `kelasList` (E+K) untuk hak akses. |
+
+### 📋 File yang Diubah (v44)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — `users.find()` wali kelas: ganti `u.kelasList?.includes(activeKelas)` → `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` + komentar `⚠️ ANTIREGRESI §31` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §31, entri riwayat v44, penanda kode kumulatif v44 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v44 ini |
+
+---
+
+## [2026-06-12] — v43 · Perbaikan Akses Laporan TT untuk Guru Kelas TT Merangkap (Nisya)
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `assets/js/sheets.js` | `guru_kelas` yang mengajar TT di kelas lain (kolom K di sheet USERS) tidak mendapat dropdown kelas TT tambahannya saat membuka `laporan-tt.html`. Kasus konkret: Nisya El Salsabila. | **Akar masalah:** `getUsers()` di `sheets.js` membangun `kelasList` hanya dari kolom E (`r[4]`), sedangkan `auth.js` membangun dari gabungan kolom E + kolom K. Fix §28 (v39) menyebabkan `freshUser.kelasList` dari `getUsers()` menimpa `currentUser.kelasList` dari session — yang lebih lengkap karena sudah gabungan E+K. Akibatnya kelas TT di kolom K hilang dari dropdown. **Fix:** `kelasList` di `getUsers()` kini dibangun identik dengan `auth.js`: IIFE yang menggabungkan kolom E dan kolom K dengan deduplikasi `new Set`. |
+
+> **Catatan:** Ini adalah regresi yang ditimbulkan oleh fix §28 (v39). Fix §28 benar dalam niatnya (sync `kelasList` dari sheet terbaru), tapi mengungkap inkonsistensi yang sudah lama ada antara `getUsers()` dan `auth.js`. Invariant yang harus dijaga: `getUsers().kelasList ≡ auth.js kelasList ≡ [kolom E ∪ kolom K]`. Lihat ANTIREGRESI.md §30.
+
+### 📋 File yang Diubah (v43)
+
+| File | Status |
+|------|--------|
+| `assets/js/sheets.js` | **Diubah** — `getUsers()`: `kelasList` dibangun dengan IIFE gabungan kolom E + `kelasMapelRaw` + komentar `⚠️ ANTIREGRESI §30` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §30, entri riwayat v43, penanda kode kumulatif v43 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v43 ini |
+
+---
+
+## [2026-06-11] — v42 · Logo Sekolah di Avatar Siswa + Perbaikan Tampilan Aspek Dashboard
+
+### ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/laporan-tt.html` | **Logo Muhammadiyah di avatar siswa.** Inisial huruf (mis. "A") di kartu siswa diganti dengan logo sekolah (embedded base64). Berlaku di tampilan dashboard (screen) maupun cetakan PDF. Ke depannya posisi ini akan digunakan untuk foto siswa. CSS `.lpr-avatar` disesuaikan untuk menampilkan gambar (background dihapus, `overflow: hidden` ditambahkan). |
+| 2 | `rapor/laporan-tt.html` | **Tampilan aspek tahsin di dashboard diperbaiki.** CSS untuk `.aspek-grid`, `.aspek-item`, `.aspek-item-header`, `.aspek-score-num`, `.aspek-score-pred`, dan `.aspek-item-desc` sebelumnya hanya ada di dalam `printHTML` template (hanya aktif saat cetak). Tampilan screen (dashboard) tidak punya CSS ini sehingga semua elemen aspek tampil tanpa layout — label, angka nilai, predikat, dan deskripsi menyatu dalam satu baris teks berantakan. Fix: tambah CSS screen yang identik (dengan ukuran px/screen yang sesuai) di `<style>` utama dokumen. Cetakan PDF tidak terpengaruh karena sudah punya CSS-nya sendiri di printHTML. |
+
+### 📋 File yang Diubah (v42)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — (1) `.lpr-avatar` screen CSS: hapus background hijau, tambah `overflow:hidden`; (2) avatar HTML di `buildLaporanIqro` dan `buildLaporanQuran`: ganti `charAt(0)` dengan `<img>` logo base64; (3) print `.lpr-avatar` CSS: hapus background, tambah `overflow:hidden`; (4) tambah CSS screen aspek grid lengkap |
+| `CHANGELOG.md` | **Diubah** — tambah entri v42 ini |
+
+---
+
+## [2026-06-11] — v41 · Peningkatan Laporan TT: Nilai Aspek, Footer, dan Peralihan Halaman
+
+### ✨ Peningkatan
+
+| # | File | Perubahan |
+|---|------|-----------|
+| 1 | `rapor/laporan-tt.html` | **Nilai dan predikat per aspek tahsin.** Bagian "Capaian Aspek Tahsin" kini menampilkan nilai numerik rata-rata dan predikat per aspek (Makharijul Huruf, Penerapan Tajwid, dst.) yang dihitung dari field `nilai_aspek` di setiap setoran. Sebelumnya semua aspek mendapat deskripsi dari nilai rata-rata keseluruhan tanpa menampilkan angkanya. Jika guru belum menginput nilai per aspek (data lama), deskripsi tetap ditampilkan dari `avgNilai` sebagai fallback. |
+| 2 | `rapor/laporan-tt.html` | **Footer halaman diselaraskan dengan rapor akademik (`preview.html`).** `@page` margin diubah dari `1.5cm 1.8cm` menjadi `1.5cm`; font-size dari `8.5pt` menjadi `9pt`; color dari `#777` menjadi `#888`; border-top dari `0.5pt` menjadi `1px`; ditambahkan `vertical-align: top` (penanda §8) dan `padding-top: 2pt`. |
+| 3 | `rapor/laporan-tt.html` | **Peralihan halaman lebih rapi.** Card siswa sebelumnya dibungkus border luar penuh (`1pt solid #bdbdbd`) sehingga border terpotong di tengah halaman saat konten melebihi satu halaman. Solusi: border luar dihapus; pemisah antar siswa (saat cetak banyak) menggunakan garis horizontal hijau tua di atas card berikutnya (`border-top: 1.5pt solid #1e4d3b`). Header card dan section-section di dalamnya kini bebas terpotong tanpa meninggalkan artefak visual. |
+
+### 📋 File yang Diubah (v41)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — (1) `buildLaporanQuran`: aspek section pakai IIFE untuk hitung rata-rata `nilai_aspek` per aspek; (2) `@page`: selaraskan dengan `preview.html`; (3) `.lpr-card` CSS: hapus border, ganti separator; (4) aspek CSS baru: `.aspek-item-header`, `.aspek-score-num`, `.aspek-score-pred` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v41 ini |
+
+---
+
+## [2026-06-11] — v40 · Perbaikan Progress Hafalan Selalu 0% di Laporan TT
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/laporan-tt.html` | Bagian "Progress Hafalan vs Target" selalu menampilkan `0 / N (0%)` dan semua item "Detail target hafalan" menampilkan `—`, meskipun siswa sudah menyetor dan lulus seluruh target. Contoh konkret: Adila Anissa Kelas 3B sudah menyetor 2 kali dengan 12 materi hafalan yang semuanya lulus, namun laporan tetap menampilkan 0/12. | Akar masalah: `buildLaporanQuran` membangun `materiLulus` dengan `new Set(setoranLulus.map(s => s.materi))`. Satu baris setoran yang mencakup banyak materi sekaligus menyimpan `s.materi` sebagai JSON array (`'["al-nas_1-6","al-falaq_1-5",...]'`), bukan key tunggal. Karena Set tidak di-expand, `materiLulus.has("al-nas_1-6")` selalu `false`. Fix: ganti ke pola `forEach` + `startsWith('[')` expand yang sudah terbukti benar di `input-setoran-tt.html` (penanda §11). |
+
+> **Catatan:** Pola expand JSON array `materi` sudah ada di `input-setoran-tt.html` (v11) tapi tidak diadopsi ke `laporan-tt.html` saat fungsi `buildLaporanQuran` dibuat. Lihat ANTIREGRESI.md §29.
+
+### 📋 File yang Diubah (v40)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — `buildLaporanQuran`: ganti `new Set(setoranLulus.map(s=>s.materi))` dengan `forEach` + expand `startsWith('[')` + komentar `⚠️ ANTIREGRESI §29` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §29, entri riwayat v40, penanda kode kumulatif v40 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v40 ini |
+
+---
+
+## [2026-06-11] — v39 · Perbaikan Akses Laporan TT untuk Guru Mapel (Muhammad Rizki)
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/laporan-tt.html` | Guru `guru_mapel` TT (contoh: Muhammad Rizki) tidak mendapat dropdown kelas saat membuka halaman laporan — atau mendapat daftar kelas yang tidak sesuai dengan kelas yang sebenarnya diajarnya. Penyebabnya: blok `freshUser` di init hanya me-refresh `currentUser.mapel` dari data sheet terbaru, tapi **tidak** me-refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, dan `currentUser.kelasMapelList`. Fungsi `isiDropdownKelas()` yang dipanggil setelahnya memakai `currentUser.kelasList` dari session login lama — sehingga jika admin mengubah kelas guru sejak guru terakhir login, dropdown tampil kosong atau tidak sesuai. | Tambah tiga baris refresh setelah `currentUser.mapel = freshUser.mapel`: (1) `currentUser.kelasList = freshUser.kelasList`, (2) `currentUser.kelas_mapel = freshUser.kelas_mapel`, (3) `currentUser.kelasMapelList = freshUser.kelasMapelList`. Diberi komentar `⚠️ ANTIREGRESI §28`. Lihat §28. |
+| 2 | `rapor/laporan-tt.html` | Fungsi `isTTGuru()` tidak identik dengan implementasi di `guru-mapel.html` — tidak memiliki alias `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')`. Jika format mapel guru TT di sheet menggunakan format yang hanya dikenali oleh alias tersebut, `isiDropdownKelas()` akan memperlakukan guru sebagai bukan guru TT dan menampilkan dropdown yang salah. | Tambah dua alias yang hilang ke `isTTGuru()` agar identik dengan `guru-mapel.html` dan `cariGuruTT()`. |
+| 3 | `dashboard/guru-mapel.html` | Sama dengan bug #1 — blok `freshUser` di init dashboard hanya me-refresh `mapel`, tidak `kelasList`. Akibatnya `hasKelas6` (yang menentukan apakah menu SAJ tampil) dihitung dari data session lama — guru yang baru ditugaskan ke kelas 6 tidak melihat menu SAJ sampai logout-login ulang. | Tambah refresh `kelasList`, `kelas_mapel`, dan `kelasMapelList` yang identik dengan fix #1. |
+
+> **Catatan:** Bug #1 dan #3 merupakan kekurangan dari pola `freshUser` yang sejak awal hanya dirancang untuk me-refresh `mapel`. Pola yang benar sejak v39: setiap kali `freshUser` dipakai untuk sinkronisasi, **semua field yang mempengaruhi akses wajib di-refresh** — bukan hanya satu field. Lihat ANTIREGRESI.md §28.
+
+### 📋 File yang Diubah (v39)
+
+| File | Status |
+|------|--------|
+| `rapor/laporan-tt.html` | **Diubah** — (1) blok `freshUser`: tambah refresh `kelasList` + `kelas_mapel` + `kelasMapelList` dengan komentar §28; (2) `isTTGuru()`: tambah alias `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` |
+| `dashboard/guru-mapel.html` | **Diubah** — blok `freshUser`: tambah refresh `kelasList` + `kelas_mapel` + `kelasMapelList` dengan komentar §28 |
+| `ANTIREGRESI.md` | **Diubah** — tambah §28, riwayat regresi v39, penanda kode kumulatif v39 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v39 ini |
 
 ---
 
