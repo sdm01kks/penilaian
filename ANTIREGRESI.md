@@ -8,6 +8,11 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v45 | `rapor/laporan-tt.html`, `setup/kelola-guru.html` | `cariGuruTT()` mengembalikan guru yang hanya mengajar sebagian mapel TT, bukan semua kelas (Pak Indra: Al-Islam + TT di 1A/1B, Al-Islam saja di 3A → muncul salah sebagai guru TT kelas 3A) | `cariGuruTT()` hanya cek `hasTT` + `kelas ∈ kelasList`; tidak ada cara membedakan "TT di kelas A" vs "non-TT di kelas B". Fix: kolom K dipakai sebagai pembatas kelas TT untuk `guru_mapel`; UI ditambah seksi "Kelas Khusus TT". Lihat §32. |
+| v44 | `rapor/preview.html` | Wali kelas di TTD rapor menampilkan nama guru yang mengajar mapel di kelas tersebut (bukan wali kelas sebenarnya) | `users.find()` memakai `u.kelasList?.includes(activeKelas)`; sejak v43 `kelasList` = gabungan E+K → guru non-wali yang punya kelas di kolom K false-match. Lihat §31. |
+| v43 | `assets/js/sheets.js` | `guru_kelas` TT merangkap (Nisya) kehilangan akses dropdown kelas TT setelah v39 | `getUsers()` membangun `kelasList` hanya dari kolom E; `auth.js` membangun dari gabungan E+K. Setelah §28 (v39) menyinkronkan `freshUser.kelasList` ke `currentUser`, kelas K ditimpa. Lihat §30. |
+| v40 | `rapor/laporan-tt.html` | Progress hafalan tampil 0/N (0%) dan semua detail target `—`, meski siswa sudah menyetor seluruh target | `buildLaporanQuran` membangun `materiLulus` dengan `.map(s=>s.materi)` tanpa expand JSON array; setoran multi-materi tersimpan sebagai JSON array → `materiLulus.has(k)` selalu false. Lihat §29. |
+| v39 | `rapor/laporan-tt.html`, `dashboard/guru-mapel.html` | Guru `guru_mapel` TT (Muhammad Rizki) tidak mendapat dropdown kelas di laporan TT — kelas yang diampu tidak tampil | Blok `freshUser` hanya me-refresh `currentUser.mapel`; `kelasList` dan `kelas_mapel` tidak ikut di-refresh → `isiDropdownKelas()` memakai data session lama. Lihat §28. |
 | v38 | `assets/js/sheets.js` | Siswa baru selalu muncul di posisi acak (biasanya akhir atau awal) di daftar siswa kelas — urutan tidak abjad | `getSiswa()` tidak mengurutkan hasil; siswa baru yang di-`append` ke baris terakhir sheet muncul di posisi sheet-nya. Lihat §27. |
 | v37 | `assets/js/sheets.js` | Siswa baru (via tambah manual \& mutasi masuk disetujui) tidak muncul di daftar siswa kelas | (1) `addSiswa` menggunakan `append('SISWA', [row])` tanpa anchor `!A1` → data baru ditulis ke kolom acak, tidak terbaca `getSiswa`. (2) `addSiswa` tidak menyimpan field `no_peserta_ismuba` (kolom P). (3) `getSiswa` hanya membaca `SISWA!A:O` sehingga kolom P tidak pernah dipopulasi. Lihat §3 dan §26. |
 | v36 | `rapor/laporan-tt.html` | Nama guru TT tidak muncul (tampil `—`) untuk guru_kelas yang merangkap TT di kelas lain (kelas TT ≠ kelas utama) | `cariGuruTT` hanya mengecek `u.kelasList` (kolom E = kelas utama); kelas TT ada di `u.kelasMapelList` (kolom K). Contoh: wali kelas 2C yang mengajar TT di 2B → `kelasList=["2C"]`, `includes("2B")=false`. Lihat §25-B. |
@@ -1338,6 +1343,271 @@ return siswa.map(r => ({ ... }));
 
 ---
 
+### 28. `freshUser` Wajib Refresh `kelasList` dan `kelas_mapel` — Bukan Hanya `mapel` ⚠️
+
+**Konteks:** Beberapa halaman membaca ulang data user dari sheet USERS saat init (`getUsers()`) untuk menghindari session cache yang basi. Pola ini menggunakan variabel `freshUser` untuk menimpa field `currentUser` dengan nilai terbaru dari sheet.
+
+**Akar masalah (v39):** Pola `if (freshUser?.mapel) currentUser.mapel = freshUser.mapel` hanya me-refresh field `mapel`. Field `kelasList` dan `kelas_mapel` — yang dipakai oleh `isiDropdownKelas()` untuk menentukan kelas mana yang boleh dipilih guru — **tidak ikut di-refresh**. Akibatnya:
+
+- Guru `guru_mapel` TT yang kelas ajarnya baru diubah admin tetap mendapat `kelasList` dari session login lama.
+- `isiDropdownKelas()` memfilter kelas berdasarkan `currentUser.kelasList` yang sudah basi → dropdown kosong atau tidak berisi kelas yang benar → laporan tidak bisa dibuka.
+- Bug ini tidak terdeteksi setelah login pertama (session masih fresh), tapi muncul jika guru sudah login lama dan admin mengubah kelas di sheet USERS tanpa meminta guru logout-login ulang.
+
+**File yang terkena:** `rapor/laporan-tt.html` (dampak utama: dropdown kelas kosong) dan `dashboard/guru-mapel.html` (dampak: `hasKelas6` untuk menu SAJ pakai data lama).
+
+**Pola yang salah:**
+```javascript
+// ❌ SALAH — hanya mapel yang di-refresh, kelasList masih dari session lama
+const freshUser = allUsersCache.find(u => u.email === currentUser.email);
+if (freshUser?.mapel) currentUser.mapel = freshUser.mapel;
+// isiDropdownKelas() dipanggil setelah ini → pakai currentUser.kelasList LAMA
+```
+
+**Pola wajib sejak v39:**
+```javascript
+// ✅ BENAR — refresh semua field yang dipakai untuk filter akses
+const freshUser = allUsersCache.find(u => u.email === currentUser.email);
+if (freshUser?.mapel)      currentUser.mapel      = freshUser.mapel;
+// ⚠️ ANTIREGRESI §28: WAJIB refresh kelasList dan kelas_mapel, bukan hanya mapel.
+if (freshUser?.kelasList)  currentUser.kelasList  = freshUser.kelasList;
+if (freshUser?.kelas_mapel !== undefined) {
+  currentUser.kelas_mapel    = freshUser.kelas_mapel;
+  currentUser.kelasMapelList = freshUser.kelasMapelList || [];
+}
+```
+
+**Kapan risiko meningkat:**
+- Setiap kali menambah pola `freshUser` di halaman baru — mudah menyalin hanya satu baris refresh
+- Jika ada refactor yang memisahkan init dari `isiDropdownKelas()` / filter akses kelas
+- Jika ditambahkan field baru di USERS sheet yang mempengaruhi akses → harus ikut di-refresh
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | Tiga baris refresh: `currentUser.mapel`, `currentUser.kelasList`, `currentUser.kelas_mapel/kelasMapelList` setelah `freshUser` ditemukan |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh freshUser |
+| `dashboard/guru-mapel.html` | Idem — tiga baris refresh dengan komentar `// ⚠️ ANTIREGRESI §28` |
+
+**Checklist wajib setelah mengubah pola `freshUser`:**
+- [ ] Pastikan `mapel`, `kelasList`, `kelas_mapel`, dan `kelasMapelList` semua di-refresh
+- [ ] Pastikan `isiDropdownKelas()` dipanggil SETELAH blok refresh selesai
+- [ ] Uji: login → admin ubah kelas guru di sheet → buka halaman (tanpa logout-login) → dropdown harus menampilkan kelas terbaru
+- [ ] Uji guru_mapel TT yang baru saja ditambahkan ke kelas baru oleh admin → kelas baru harus tampil di dropdown
+
+---
+
+**Catatan tambahan (v39):** Ditemukan juga ketidakkonsistenan `isTTGuru()` antara `laporan-tt.html` dan `guru-mapel.html`. `laporan-tt.html` tidak memiliki alias `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` yang ada di `guru-mapel.html`. Meski tidak langsung menyebabkan bug (karena `m.includes('tahsin')` sudah menangkap sebagian besar format), pola berbeda di dua file rawan menyebabkan edge case. Kedua fungsi diseragamkan di v39. Lihat juga §25 untuk checklist `cariGuruTT`.
+
+---
+
+### 29. `materiLulus` di `buildLaporanQuran` Wajib Expand JSON Array — Bukan `.map(s=>s.materi)` ⚠️ BERULANG
+
+**Konteks:** Satu baris setoran TT dapat menyimpan banyak materi hafalan sekaligus. Format kolom `materi` di sheet SETORAN_TT bisa berupa key tunggal (`"al-nas_1-6"`) **atau** JSON array (`'["al-nas_1-6","al-falaq_1-5","al-masad_1-5",...]'`). Satu setoran dengan banyak materi terjadi ketika guru mencentang beberapa materi sekaligus di `input-setoran-tt.html`.
+
+**Akar masalah (v40):** `buildLaporanQuran` di `rapor/laporan-tt.html` membangun `materiLulus` dengan:
+```javascript
+// ❌ SALAH — tidak expand JSON array
+const setoranLulus = setoran.filter(s => s.status_hafalan === 'lulus');
+const materiLulus  = new Set(setoranLulus.map(s => s.materi));
+```
+Jika `s.materi = '["al-nas_1-6","al-falaq_1-5",...]'`, maka Set berisi **string JSON mentah**, bukan key individual. Akibatnya `materiLulus.has("al-nas_1-6")` selalu `false` → `targetDicapai = []` → progress hafalan 0/N (0%) → semua detail target tampil `—`, meski siswa sudah menyetor seluruh target.
+
+**Pola yang sudah benar di `input-setoran-tt.html`** (penanda §11 — lihat juga baris 739–749):
+```javascript
+// ✅ BENAR — expand JSON array, identik dengan input-setoran-tt.html
+const materiLulus = new Set();
+setoran.filter(s => s.status_hafalan === 'lulus').forEach(s => {
+  const m = s.materi || '';
+  if (m.startsWith('[')) {
+    try { JSON.parse(m).forEach(k => materiLulus.add(k)); } catch(e) { materiLulus.add(m); }
+  } else if (m) {
+    materiLulus.add(m);
+  }
+});
+```
+
+**Dampak visual:** Progress hafalan menampilkan `0 / N (0%)` dan semua item di "Detail target hafalan" menampilkan `—`, meski siswa sudah menyetor dan lulus seluruh target semester.
+
+**Kapan risiko meningkat:**
+- Setiap kali ada refactor `buildLaporanQuran` — pola `.map(s=>s.materi)` lebih "simpel" dan mudah kembali dipakai
+- Jika ada copy-paste dari bagian `buildLaporanIqro` yang tidak membutuhkan expand (Iqro tidak punya target hafalan)
+- Jika format penyimpanan materi di `input-setoran-tt.html` berubah di masa depan, logika expand di sini harus ikut disesuaikan
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | `materiLulus` dibangun dengan `forEach` + expand `startsWith('[')`, komentar `// ⚠️ ANTIREGRESI §29` |
+| `rapor/laporan-tt.html` | Tidak ada `new Set(setoranLulus.map(s => s.materi))` di `buildLaporanQuran` |
+
+**Checklist wajib setelah mengubah logika materiLulus:**
+- [ ] Pastikan expand `startsWith('[')` ada sebelum `materiLulus.add(m)`
+- [ ] Pastikan `targetDicapai` dihitung dari `materiLulus` hasil expand, bukan dari `setoranLulus.map`
+- [ ] Uji dengan setoran multi-materi (satu baris setoran berisi banyak materi) → progress harus terhitung benar
+- [ ] Uji dengan setoran single-materi → tetap benar (tidak rusak)
+- [ ] Uji kelas tanpa setoran sama sekali → harus tampil 0/N (0%) tanpa error
+
+---
+
+### 30. `getUsers()` di `sheets.js` — `kelasList` Wajib Gabungan Kolom E + K, Identik dengan `auth.js` ⚠️ KRITIS
+
+**Konteks:** `kelasList` adalah field kunci yang menentukan kelas mana saja yang boleh dipilih guru di `isiDropdownKelas()`. Field ini dibangun di dua tempat: (1) `auth.js` saat guru login, (2) `getUsers()` di `sheets.js` saat halaman me-refresh data user.
+
+**Akar masalah (v43):** `getUsers()` di `sheets.js` membangun `kelasList` hanya dari kolom E:
+
+```javascript
+// ❌ SALAH — kelasList hanya kolom E, kelas tambahan (kolom K) tidak ikut
+kelasList: r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [],
+```
+
+Sedangkan `auth.js` membangun `kelasList` sebagai gabungan kolom E + K:
+
+```javascript
+// Di auth.js — kelasList = gabungan E + K
+const kelasListGabung = [...new Set([...kelasUtamaArr, ...kelasMapelArr])];
+```
+
+Ketika fix §28 diterapkan (v39), `freshUser.kelasList` dari `getUsers()` mulai digunakan untuk menimpa `currentUser.kelasList` dari session. Akibatnya `guru_kelas` yang mengajar TT di kelas tambahan (kolom K) kehilangan kelas tambahan tersebut dari `kelasList` — karena `freshUser.kelasList` hanya berisi kolom E.
+
+**Dampak konkret (v43):** Nisya El Salsabila (`guru_kelas`) mengajar TT di kelas lain (kolom K). Saat membuka `laporan-tt.html`, `freshUser.kelasList` menimpa `kelasList` session dengan versi yang hanya berisi kelas utama (kolom E). `isiDropdownKelas()` memakai `kelasList` tersebut → kelas TT tambahan tidak muncul di dropdown → tidak bisa cetak laporan kelas tersebut.
+
+**Pola wajib sejak v43 di `sheets.js` `getUsers()`:**
+
+```javascript
+// ✅ BENAR — identik dengan auth.js: gabungan kolom E + kolom K
+kelasList: (() => {
+  const e = r[4] ? String(r[4]).split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const k = kelasMapelRaw ? kelasMapelRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  return [...new Set([...e, ...k])];
+})(),
+```
+
+**Invariant yang HARUS selalu terjaga:**
+
+> `getUsers().kelasList` ≡ `auth.js kelasList` ≡ `[...kolom E, ...kolom K]` (deduplikasi)
+
+Setiap kali salah satu diubah, yang lain **wajib** disesuaikan.
+
+**Kapan risiko meningkat:**
+- Jika ada refactor `getUsers()` yang menyederhanakan field-field user
+- Jika `auth.js` diubah cara membangun `kelasList` tapi `sheets.js` tidak ikut
+- Jika ada penambahan kolom baru di sheet USERS yang mempengaruhi akses kelas
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `assets/js/sheets.js` | `kelasList` dibangun dengan IIFE gabungan `e` (kolom E) + `k` (kelasMapelRaw) dengan `new Set`, komentar `// ⚠️ ANTIREGRESI §30` |
+| `assets/js/auth.js` | `kelasList` = `[...new Set([...kelasUtamaArr, ...kelasMapelArr])]` — pastikan identik dengan `sheets.js` |
+
+**Checklist wajib setelah mengubah logika `kelasList`:**
+- [ ] Pastikan `getUsers()` dan `auth.js` menghasilkan `kelasList` yang identik untuk data yang sama
+- [ ] Uji `guru_kelas` yang punya kelas TT di kolom K → dropdown harus menampilkan kelas dari kolom E **dan** kolom K
+- [ ] Uji `guru_mapel` biasa → tidak berubah
+- [ ] Uji `admin` → tidak berubah (admin tidak difilter oleh `kelasList`)
+
+---
+
+### 31. Pencarian Wali Kelas Wajib Pakai Kolom E (`kelas`), Bukan `kelasList` ⚠️
+
+**Konteks:** Wali kelas adalah satu-satunya `guru_kelas` yang **kelas utamanya** (kolom E) adalah kelas yang bersangkutan. Seorang `guru_kelas` bisa mengajar mapel di kelas lain sebagai guru mapel merangkap — kelas-kelas tambahan itu tersimpan di kolom K.
+
+**Akar masalah (v44):** Setelah fix §30 (v43), `getUsers().kelasList` = gabungan kolom E + K. `preview.html` mencari wali kelas dengan:
+
+```javascript
+// ❌ SALAH — kelasList mencakup kelas tambahan (kolom K)
+users.find(u =>
+  u.role === 'guru_kelas' &&
+  (u.kelasList?.includes(activeKelas) || u.kelas?.includes(activeKelas)) &&
+  u.status === 'aktif'
+)
+```
+
+Bu April (`guru_kelas` 4B, mengajar Al-Islam di 4A via kolom K) punya `kelasList = ["4B","4A","4C"]`. `kelasList.includes("4A")` = `true` → Bu April muncul sebagai wali kelas 4A, padahal wali 4A adalah Bu Wilis.
+
+**Pola wajib sejak v44:**
+
+```javascript
+// ✅ BENAR — hanya cocokkan dari kolom E (field kelas)
+users.find(u =>
+  u.role === 'guru_kelas' &&
+  u.kelas?.split(',').map(s => s.trim()).includes(activeKelas) &&
+  u.status === 'aktif'
+)
+```
+
+**Aturan umum:** Untuk mencari **wali/penanggung jawab** suatu kelas, selalu gunakan field `kelas` (kolom E). Untuk menentukan **hak akses** guru ke suatu kelas, gunakan `kelasList` (kolom E + K).
+
+| Tujuan | Field yang digunakan |
+|--------|---------------------|
+| Siapa wali kelas X? | `u.kelas` (kolom E) |
+| Apakah guru boleh akses kelas X? | `u.kelasList` (kolom E + K) |
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/preview.html` | `users.find()` untuk wali kelas memakai `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — **bukan** `u.kelasList` |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §31` di blok pencarian wali kelas |
+
+**Checklist wajib:**
+- [ ] Setiap query "siapa wali kelas X" → gunakan `u.kelas`, bukan `u.kelasList`
+- [ ] Uji kelas yang walikelas-nya berbeda dari guru mapel merangkap di kelas yang sama → wali kelas tampil benar
+- [ ] Setelah ada perubahan di `getUsers()` yang mempengaruhi `kelasList` → audit semua `users.find(…guru_kelas…)` untuk memastikan tidak ada yang pakai `kelasList`
+
+---
+
+### 32. `cariGuruTT()` — Kolom K sebagai Pembatas Kelas TT untuk `guru_mapel` Multi-Mapel ⚠️
+
+**Konteks:** `cariGuruTT()` mencocokkan guru TT untuk suatu kelas berdasarkan `hasTT` (mapel mengandung TT) dan kelas. Masalah muncul ketika seorang `guru_mapel` mengajar **lebih dari satu mapel** dan TT **hanya di sebagian kelas**.
+
+**Akar masalah:** Skema sheet USERS tidak bisa merepresentasikan "mapel X di kelas A, mapel Y di kelas B" secara terpisah. Kolom E (`kelas`) berisi semua kelas yang diampu, kolom F (`mapel`) berisi semua mapel — tanpa relasi per-kelas. Akibatnya `cariGuruTT()` yang hanya cek `hasTT + kelas ∈ kelasList` akan false-match guru yang mengajar TT di kelas A tetapi juga mengajar mapel lain di kelas B (bukan TT).
+
+**Contoh (v45):** Pak Indra: `kelas = "1A,1B,3A"`, `mapel = "al-islam,tahsin-tahfizh"`.
+- `hasTT` = true → lanjut
+- `kelas ∈ kelasList` untuk "3A" → true → Pak Indra muncul sebagai guru TT kelas 3A ❌
+- Yang benar: Pak Rizki adalah guru TT kelas 3A
+
+**Solusi (tanpa mengubah skema sheet):** Manfaatkan kolom K (`kelas_mapel`) sebagai **pembatas kelas TT** untuk `guru_mapel`. Semantik kolom K per role:
+
+| Role | Makna kolom K |
+|------|--------------|
+| `guru_kelas` | Kelas tambahan tempat guru mengajar sebagai guru mapel |
+| `guru_mapel` | Kelas khusus TT (subset dari kolom E); jika kosong → semua kelas E adalah kelas TT |
+
+**Logika `cariGuruTT()` sejak v45:**
+```javascript
+if (u.role === 'guru_kelas') {
+  // TT di kelas utama (E) dan/atau kelas tambahan (K) — pakai gabungan
+  kelasGuru = [...kelasList, ...kelasMapelList];
+} else { // guru_mapel
+  kelasGuru = (kelasMapelList.length > 0)
+    ? kelasMapelList   // kolom K diisi → ini adalah kelas TT yang dibatasi admin
+    : kelasList;       // kolom K kosong → semua kelas E = kelas TT (TT murni)
+}
+```
+
+**Cara pengisian data (di kelola-guru.html):** Saat `guru_mapel` memilih mapel yang mengandung TT dan kelas > 1, muncul seksi "Kelas Khusus Tahsin-Tahfizh" (opsional). Admin memilih subset kelas yang benar-benar diampu TT. Nilai tersimpan ke kolom K.
+
+**Skenario lengkap:**
+
+| Guru | Role | Kelas (E) | Mapel (F) | Kelas TT (K) | cariGuruTT("3A") | cariGuruTT("1A") |
+|------|------|-----------|-----------|--------------|-------------------|-------------------|
+| Pak Indra | guru_mapel | 1A,1B,3A | al-islam,tt | 1A,1B | ❌ tidak match | ✅ match |
+| Pak Rizki | guru_mapel | 3A | tt | (kosong) | ✅ match | ❌ tidak match |
+| Nisya | guru_kelas | 2C | tt | 2B | ❌ tidak match | ❌ tidak match |
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/laporan-tt.html` | `cariGuruTT()` memiliki cabang `if (u.role === 'guru_kelas')` dan `else` dengan komentar `// §32` |
+| `setup/kelola-guru.html` | Fungsi `renderKelasTTSeksi()`, `renderKelasTTCheckbox()`, `toggleKelasTT()` ada dan dipanggil dari `toggleMapelCheck()` dan `toggleKelasCheck()` |
+| `setup/kelola-guru.html` | `simpanGuru()`: `kelas_mapel` untuk `guru_mapel` = `kelasTTDipilih.join(',')` |
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1419,9 +1689,24 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `assets/js/sheets.js` | `append('SISWA!A1', [row])` di `addSiswa()` — anchor `A1` wajib | v37 |
 | `assets/js/sheets.js` | `siswa.sort((a, b) => (a[1] \|\| '').localeCompare(b[1] \|\| '', 'id'))` di `getSiswa()` — tepat sebelum `return` | v38 | Wajib. Tanpanya urutan siswa mengikuti posisi baris di sheet — siswa baru selalu di akhir atau posisi acak. Lihat §27. |
  Wajib. Tanpa anchor, data siswa baru ditulis ke kolom acak dan tidak terbaca `getSiswa`. Lihat §3 dan §26. |
-| `rapor/preview.html` | Fungsi `faseKini(kelas)` — menghitung fase siswa saat ini dari nomor kelas; JANGAN diganti `d.fase` dari sheet | v39 | **Wajib.** Kolom fase di sheet KELAS tidak divalidasi dan bisa salah. Selalu hitung dari nomor kelas. Lihat §35. |
-| `rapor/preview.html` | `${faseKini(d.kelas)}` di 2 call site identitas (screen + print) — bukan `${d.fase}` | v39 | **Wajib.** Mengembalikan ke `d.fase` menyebabkan fase tampil salah jika data sheet tidak akurat. Lihat §35. |
-| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §35` di deklarasi `faseKini` | v39 | Penanda wajib agar fungsi tidak dihapus atau diganti `d.fase`. |
+| `rapor/laporan-tt.html` | Refresh `currentUser.kelasList` dari `freshUser` di init — bukan hanya `currentUser.mapel` | v39 | **Wajib.** Tanpa ini dropdown kelas pakai data session lama → guru_mapel TT tidak dapat kelas yang benar. Lihat §28. |
+| `rapor/laporan-tt.html` | Refresh `currentUser.kelas_mapel` dan `currentUser.kelasMapelList` dari `freshUser` di init | v39 | Wajib. Sinkron dengan refresh kelasList. Lihat §28. |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib agar baris refresh kelasList tidak dihapus saat salin-tempel dari halaman lain. |
+| `assets/js/sheets.js` | `kelasList` di `getUsers()` dibangun dengan IIFE gabungan kolom E + `kelasMapelRaw` (kolom K) menggunakan `new Set` — identik dengan `auth.js` | v43 | **Wajib.** Tanpa ini, `freshUser.kelasList` yang di-sync (§28) hanya berisi kelas E → guru_kelas TT merangkap kehilangan kelas K. Lihat §30. |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §30` di baris `kelasList` di `getUsers()` | v43 | Penanda wajib agar field tidak disederhanakan kembali ke `r[4]` saja. |
+| `rapor/preview.html` | Pencarian wali kelas memakai `u.kelas?.split(',').map(s=>s.trim()).includes(activeKelas)` — bukan `u.kelasList` | v44 | **Wajib.** `kelasList` mencakup kelas tambahan (kolom K); wali kelas hanya ditentukan dari kelas utama (kolom E). Lihat §31. |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §31` di blok `users.find()` pencarian wali kelas | v44 | Penanda wajib agar query tidak kembali memakai `kelasList`. |
+| `rapor/laporan-tt.html` | `cariGuruTT()`: cabang `if (u.role==='guru_kelas')` pakai E+K; cabang `else` pakai kolom K jika tidak kosong, fallback ke kolom E | v45 | **Wajib.** Tanpa ini, guru_mapel multi-mapel false-match sebagai guru TT di kelas non-TT. Lihat §32. |
+| `setup/kelola-guru.html` | Fungsi `renderKelasTTSeksi()`, `renderKelasTTCheckbox()`, `toggleKelasTT()` hadir dan dipanggil | v45 | Penanda wajib. UI harus memberi admin cara mengisi kelas TT khusus untuk guru_mapel. |
+| `setup/kelola-guru.html` | `simpanGuru()`: `kelas_mapel` untuk `guru_mapel` = `kelasTTDipilih.join(',')` | v45 | Penanda wajib. Tanpa ini data tidak tersimpan ke kolom K. |
+| `rapor/laporan-tt.html` | `isTTGuru()` — alias lengkap: `m === 'tahsin-tahfizh'` dan `m.replace(/[^a-z]/g,'').includes('tahsin')` | v39 | Wajib identik dengan `guru-mapel.html`. Format mapel bervariasi di sheet. Lihat §28. |
+| `dashboard/guru-mapel.html` | Refresh `currentUser.kelasList`, `currentUser.kelas_mapel`, `currentUser.kelasMapelList` dari `freshUser` | v39 | Wajib. Tanpa ini `hasKelas6` (menu SAJ) pakai data session lama. Lihat §28. |
+| `dashboard/guru-mapel.html` | Komentar `// ⚠️ ANTIREGRESI §28` di blok refresh `freshUser` | v39 | Penanda wajib. |
+| `rapor/laporan-tt.html` | `materiLulus` dibangun dengan `forEach` + expand `startsWith('[')` — bukan `new Set(setoranLulus.map(s=>s.materi))` | v40 | **Wajib.** Tanpa expand, setoran multi-materi (JSON array) tidak dikenali → progress 0% dan semua detail `—`. Lihat §29. |
+| `rapor/laporan-tt.html` | Komentar `// ⚠️ ANTIREGRESI §29` di blok `materiLulus` di `buildLaporanQuran` | v40 | Penanda wajib agar pola expand tidak diganti kembali ke `.map`. |
+| `rapor/preview.html` | Fungsi `faseKini(kelas)` — menghitung fase siswa saat ini dari nomor kelas; JANGAN diganti `d.fase` dari sheet | v52 | **Wajib.** Kolom fase di sheet KELAS diisi manual dan bisa salah (contoh: Kelas 2B terset "B" padahal harusnya "A"). Lihat §33. |
+| `rapor/preview.html` | `${faseKini(d.kelas)}` di 2 call site identitas (screen + print) — bukan `${d.fase}` | v52 | **Wajib.** Mengembalikan ke `d.fase` menyebabkan fase tampil salah jika data sheet tidak akurat. Lihat §33. |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §33` di deklarasi `faseKini` | v52 | Penanda wajib agar fungsi tidak dihapus atau diganti `d.fase`. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v39). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v52). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

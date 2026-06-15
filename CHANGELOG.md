@@ -1,3 +1,40 @@
+## [2026-06-15] — v52 · Perbaikan Fase Salah di Identitas Rapor (Preview & Cetak)
+
+### 🐛 Perbaikan Bug — Fase di Rapor Diambil dari Sheet, Bukan Dihitung dari Kelas
+
+**Gejala:** Identitas siswa di halaman preview dan cetak rapor menampilkan fase yang salah — misalnya Kelas 2B menampilkan "Fase B" padahal seharusnya "Fase A".
+
+**Akar masalah:**
+Di `rapor/preview.html`, baris:
+```javascript
+const fase = allKelas.find(k => k.nama === activeKelas)?.fase || '?';
+```
+mengambil nilai fase dari kolom D sheet `KELAS` (via `getKelas()`). Kolom ini diisi manual dan tidak ada validasi, sehingga bisa tidak akurat. Nilai `d.fase` ini kemudian ditampilkan langsung di template string identitas siswa — di dua tempat: render screen dan render print.
+
+Klasifikasi fase yang benar per kurikulum:
+- Kelas 1–2 → **Fase A**
+- Kelas 3–4 → **Fase B**
+- Kelas 5–6 → **Fase C**
+
+**Perbaikan (v52):**
+Tambah helper `faseKini(kelas)` yang menghitung fase dari nomor kelas secara deterministik — serupa dengan `nextFase()` yang sudah ada untuk fase kenaikan kelas. Kedua call site `${d.fase}` (screen + print) diganti menjadi `${faseKini(d.kelas)}`.
+
+```javascript
+// faseKini: fase siswa SAAT INI dihitung dari nomor kelas
+// ⚠️ ANTIREGRESI §33 — jangan ganti dengan d.fase dari sheet
+function faseKini(kelas) { const n=parseInt(kelas.replace(/[^0-9]/g,'')); return isNaN(n)?'?':n<=2?'A':n<=4?'B':n<=6?'C':'D'; }
+```
+
+### 📋 File yang Diubah (v52)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `rapor/preview.html` | **Diubah** | Tambah `faseKini(kelas)`; ganti `${d.fase}` → `${faseKini(d.kelas)}` di 2 call site (screen + print) |
+| `CHANGELOG.md` | **Diubah** | Tambah entri v52 |
+| `ANTIREGRESI.md` | **Diubah** | Tambah §33 + 3 baris penanda kumulatif v52 |
+
+---
+
 ## [2026-06-15] — v51 · Rekap Nilai Bidang Studi: Tulis Ulang Sesuai Kebutuhan Admin
 
 ### ✨ Perubahan Besar
