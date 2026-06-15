@@ -266,6 +266,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" href="../rapor/leger-kelas.html">
     <span class="nav-icon">📊</span> Leger Nilai Kelas
   </a>
+  <a class="nav-item" id="navLegerMapel" href="../rapor/leger-guru-mapel.html" style="display:none;">
+    <span class="nav-icon">📋</span> Leger Bidang Studi Saya
+  </a>
   <a class="nav-item" href="../rapor/laporan-tt.html">
     <span class="nav-icon">📋</span> Laporan Tahsin-Tahfizh
   </a>
@@ -475,6 +478,17 @@ window.addEventListener('load', async () => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
+  }
+
+  // Tampilkan menu Leger Bidang Studi jika guru ini merangkap guru mapel di kelas lain (kolom K)
+  // §34: guru_kelas merangkap mapel → kolom K tidak kosong → bisa akses leger-guru-mapel
+  const kelasMapelList = currentUser.kelasMapelList ||
+    (currentUser.kelas_mapel ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
+  const mapelBidStudi  = (currentUser.mapel || '')
+    .split(',').map(s=>s.trim()).filter(m => m && !['semua'].includes(m.toLowerCase()));
+  if (kelasMapelList.length > 0 && mapelBidStudi.length > 0) {
+    const navLM = document.getElementById('navLegerMapel');
+    if (navLM) navLM.style.display = '';
   }
 
   showLoading('Memuat data kelas…');
