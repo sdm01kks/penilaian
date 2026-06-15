@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Leger Nilai — Guru Bidang Studi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green-deep:#0f3226;--green-dark:#1e4d3b;--green-mid:#2d7055;
+  --green-light:#4aa07a;--green-pale:#e5f2ec;--green-ghost:#f0f7f3;
+  --white:#fff;--ink:#1c1b18;--ink-mid:#4a4840;--ink-muted:#7d7a72;
+  --border:rgba(30,77,59,.10);--radius:12px;
+  --sidebar-w:260px;--topbar-h:64px;
+  --shadow:0 2px 16px rgba(15,50,38,.10);
+}
+body{font-family:"Plus Jakarta Sans",sans-serif;background:#f4f6f4;color:var(--ink);min-height:100vh;overflow-x:hidden}
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:var(--green-dark);display:flex;align-items:center;padding:0 20px;gap:14px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.brand-name{font-family:"Amiri",serif;font-size:14px;font-weight:700;color:#fff;line-height:1.1}
+.brand-sub{font-size:10px;color:rgba(255,255,255,.55)}
+.topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.18);flex-shrink:0}
+.topbar-title{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.topbar-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.user-avatar{width:34px;height:34px;border-radius:50%;background:var(--green-mid);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.25)}
+.user-name{font-size:12px;font-weight:600;color:#fff}
+.btn-logout{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.75);font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.12);color:#fff}
+.sidebar-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+.sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);height:calc(100vh - var(--topbar-h));background:var(--white);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:20px 0 40px;transition:transform .3s ease}
+.sidebar-section-label{font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-muted);padding:14px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--ink-mid);text-decoration:none;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--green-ghost);color:var(--green-dark);border-left-color:var(--green-light)}
+.nav-item.active{background:var(--green-pale);color:var(--green-dark);font-weight:600;border-left-color:var(--green-dark)}
+.nav-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center}
+.main{margin-left:var(--sidebar-w);margin-top:var(--topbar-h);padding:24px 24px 80px}
+.page-header{margin-bottom:20px}
+.page-header h1{font-family:"Amiri",serif;font-size:24px;color:var(--green-deep);font-weight:700}
+.page-header p{font-size:13px;color:var(--ink-muted);margin-top:4px;line-height:1.6}
+.filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;box-shadow:var(--shadow)}
+.filter-group{display:flex;flex-direction:column;gap:5px;min-width:140px}
+.filter-group label{font-size:11px;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.8px}
+.filter-group select{padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);cursor:pointer;outline:none;transition:border-color .2s}
+.filter-group select:focus{border-color:var(--green-light)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .18s;border:none}
+.btn-primary{background:var(--green-dark);color:#fff}
+.btn-primary:hover{background:var(--green-deep)}
+.btn-secondary{background:var(--green-pale);color:var(--green-dark);border:1px solid var(--green-light)}
+.btn-secondary:hover{background:var(--green-light);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;display:none}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat-card .label{font-size:10.5px;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.7px}
+.stat-card .val{font-size:22px;font-weight:700;color:var(--green-deep);margin-top:4px;font-family:"Amiri",serif}
+.stat-card .sub{font-size:11px;color:var(--ink-muted);margin-top:2px}
+.table-wrap{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:none}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+.table-title{font-size:13px;font-weight:700;color:var(--green-deep)}
+.table-note{font-size:11px;color:var(--ink-muted)}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:var(--green-dark);color:#fff;padding:9px 10px;text-align:center;font-weight:600;white-space:nowrap}
+thead th.left{text-align:left}
+tbody tr{border-bottom:1px solid var(--green-ghost)}
+tbody tr:hover{background:var(--green-ghost)}
+tbody td{padding:7px 10px;text-align:center;white-space:nowrap}
+tbody td.left{text-align:left}
+tbody td.nama{max-width:180px;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+tbody tr.stat-row-tbl{background:var(--green-pale);font-weight:600}
+tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--green-deep)}
+.rank{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700}
+.rank.r1{background:#FFD700;color:#7a5c00}
+.rank.r2{background:#C0C0C0;color:#444}
+.rank.r3{background:#cd7f32;color:#fff}
+.rank.rn{background:var(--green-pale);color:var(--green-dark)}
+.n-a{color:#c0392b;font-weight:600}
+.n-b{color:#e67e22;font-weight:600}
+.n-c{color:#27ae60;font-weight:600}
+.n-d{color:#2980b9;font-weight:600}
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink-muted)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+#loadingOverlay{position:fixed;inset:0;background:rgba(15,50,38,.45);z-index:999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.loading-box{background:#fff;border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.2)}
+.spinner{width:36px;height:36px;border:3px solid var(--green-pale);border-top-color:var(--green-dark);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loadingOverlay.hidden{display:none}
+@media print{
+  .topbar,.sidebar,.filter-bar,.stat-row,.table-toolbar .btn,#loadingOverlay{display:none!important}
+  .main{margin:0;padding:8mm}
+  .table-wrap{display:block!important;box-shadow:none;border:none;border-radius:0}
+  .stat-row{display:grid!important}
+  @page{size:portrait;margin:10mm 8mm}
+}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-toggle{display:block}
+  .main{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div id="loadingText" style="font-size:13px;font-weight:600;color:var(--green-dark)">Memuat data…</div>
+  </div>
+</div>
+
+<div class="topbar">
+  <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+  <a class="topbar-logo" href="../dashboard/guru-mapel.html">
+    <div style="width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;">📊</div>
+    <div><div class="brand-name">SDM01KKS</div><div class="brand-sub">Sistem Penilaian</div></div>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">Leger Nilai Bidang Studi</div>
+  <div class="topbar-right">
+    <div style="text-align:right">
+      <div class="user-name" id="userName">—</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.55)" id="userMapel">—</div>
+    </div>
+    <div class="user-avatar" id="userAvatar">G</div>
+    <button class="btn-logout" onclick="AUTH.logout()">⇠ Keluar</button>
+  </div>
+</div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-section-label">Utama</div>
+  <a class="nav-item" href="../dashboard/guru-mapel.html"><span class="nav-icon">🏠</span> Dashboard</a>
+  <div class="sidebar-section-label">Input Penilaian</div>
+  <a class="nav-item" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS</a>
+  <div class="sidebar-section-label">Laporan</div>
+  <a class="nav-item active" href="leger-guru-mapel.html"><span class="nav-icon">📊</span> Leger Nilai Bidang Studi</a>
+  <div class="sidebar-section-label" id="navTTLabel" style="display:none">Tahsin-Tahfizh</div>
+  <a class="nav-item" id="navSetoranTT" href="../penilaian/input-setoran-tt.html" style="display:none"><span class="nav-icon">📖</span> Setoran TT</a>
+  <a class="nav-item" id="navLaporanTT" href="../rapor/laporan-tt.html" style="display:none"><span class="nav-icon">📋</span> Laporan TT</a>
+  <div class="sidebar-section-label">Kurikulum</div>
+  <a class="nav-item" href="../setup/mapel-tp.html"><span class="nav-icon">📚</span> Setup TP &amp; KKTP</a>
+  <a class="nav-item" id="navSetupTT" href="../setup/tahsin-tahfizh.html" style="display:none"><span class="nav-icon">⚙️</span> Setup Tahsin-Tahfizh</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>📊 Leger Nilai Bidang Studi</h1>
+    <p id="pageSubtitle">Nilai akhir per Tujuan Pembelajaran untuk setiap siswa pada mata pelajaran yang Anda ampu · <span id="semPill" style="font-weight:600;color:var(--green-dark)">—</span></p>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group" id="groupMapel" style="min-width:200px">
+      <label>Mata Pelajaran</label>
+      <select id="selMapel" onchange="onFilterChange()">
+        <option value="">— Pilih Mapel —</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Kelas</label>
+      <select id="selKelas" onchange="onFilterChange()">
+        <option value="">— Pilih Kelas —</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Semester</label>
+      <select id="selSem" onchange="onFilterChange()">
+        <option value="I">Semester 1</option>
+        <option value="II">Semester 2</option>
+      </select>
+    </div>
+    <div style="margin-top:auto;display:flex;gap:8px">
+      <button class="btn btn-primary" id="btnTampilkan" onclick="tampilkanLeger()" disabled>▶ Tampilkan</button>
+      <button class="btn btn-secondary" id="btnCetak" onclick="window.print()" disabled>🖨️ Cetak / PDF</button>
+    </div>
+  </div>
+
+  <div class="stat-row" id="statRow">
+    <div class="stat-card"><div class="label">Jumlah Siswa</div><div class="val" id="statSiswa">0</div></div>
+    <div class="stat-card"><div class="label">Jumlah TP</div><div class="val" id="statTP">0</div></div>
+    <div class="stat-card"><div class="label">Rata-rata Kelas</div><div class="val" id="statRata">—</div></div>
+    <div class="stat-card"><div class="label">Nilai Tertinggi</div><div class="val" id="statMax">—</div></div>
+    <div class="stat-card"><div class="label">Nilai Terendah</div><div class="val" id="statMin">—</div></div>
+    <div class="stat-card"><div class="label">Tuntas (≥70)</div><div class="val" id="statTuntas">0</div><div class="sub" id="statTuntasPct">0% ketuntasan</div></div>
+  </div>
+
+  <div class="table-wrap" id="tableWrap">
+    <div class="table-toolbar">
+      <span class="table-title" id="tableTitle">—</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="table-note" id="tableNote">Nilai Akhir = rata-rata seluruh TP</span>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead id="tblHead"></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="icon">📊</div>
+    <p>Pilih mata pelajaran dan kelas, lalu klik <strong>Tampilkan</strong><br>untuk melihat leger nilai bidang studi Anda.</p>
+  </div>
+</main>
+
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/sheets.js"></script>
+<script>
+let currentUser = null;
+let config      = {};
+let allMapelGuru = [];  // mapel yang diampu guru ini (exclude TT)
+let allKelasGuru = [];  // kelas yang diampu (dari kelasList E+K)
+let allKelas     = [];  // master kelas dari sheet
+let allTP        = [];  // semua TP
+
+const isTahsin = id => {
+  const lower = (id||'').toLowerCase();
+  return lower.includes('tahsin') || lower.includes('tahfizh') ||
+         lower === 'tt' || lower === 'mp_tt' || lower.endsWith('_tt') || lower.startsWith('tt_');
+};
+
+function showLoading(t){ document.getElementById('loadingText').textContent=t||'Memuat…'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading(){ document.getElementById('loadingOverlay').classList.add('hidden'); }
+
+function nilaiColor(v){
+  if(v===null||v===undefined) return '';
+  if(v>=86) return 'n-d'; if(v>=76) return 'n-c'; if(v>=61) return 'n-b'; return 'n-a';
+}
+function rankBadge(r){
+  if(r===null) return '<span style="color:#ccc">—</span>';
+  const cls = r===1?'r1':r===2?'r2':r===3?'r3':'rn';
+  return `<span class="rank ${cls}">${r}</span>`;
+}
+
+window.addEventListener('load', async () => {
+  AUTH.init();
+  // Hanya guru_mapel yang boleh akses
+  currentUser = AUTH.requireLogin('guru_mapel');
+  if (!currentUser) return;
+
+  document.getElementById('userName').textContent   = currentUser.nama;
+  document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
+  document.getElementById('userMapel').textContent  = currentUser.mapel || '—';
+
+  // Tampilkan nav TT jika relevan
+  const mapelRaw = (currentUser.mapel || '').toLowerCase();
+  const hasTT = mapelRaw.split(',').some(m =>
+    m.includes('tahsin') || m.includes('tahfizh') ||
+    m === 'tt' || m === 'mp_tt' || m.endsWith('_tt') || m.startsWith('tt_')
+  );
+  if (hasTT) {
+    ['navSetoranTT','navLaporanTT','navSetupTT','navTTLabel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = '';
+    });
+  }
+
+  showLoading('Memuat data master…');
+  try {
+    let allMapelMaster;
+    [config, allMapelMaster, allKelas, allTP] = await Promise.all([
+      SHEETS.getConfig(), SHEETS.getMapel(), SHEETS.getKelas(), SHEETS.getTPKKTP()
+    ]);
+
+    const sem = config['semester_aktif'] || 'I';
+    const tp  = config['tahun_pelajaran'] || '—';
+    document.getElementById('semPill').textContent = 'Semester ' + sem + ' · ' + tp;
+    document.getElementById('selSem').value = sem;
+
+    // Mapel guru ini — dari currentUser.mapelList, exclude TT
+    const myMapelIds = (currentUser.mapelList && currentUser.mapelList.length > 0)
+      ? currentUser.mapelList
+      : (currentUser.mapel || '').split(',').map(s => s.trim()).filter(Boolean);
+    allMapelGuru = allMapelMaster
+      .filter(m => myMapelIds.some(id => id.toLowerCase() === m.id.toLowerCase()) && !isTahsin(m.id))
+      .sort((a,b) => (a.urutan||0) - (b.urutan||0));
+
+    // Kelas guru ini — kelasList (E+K) persis seperti aturan §30
+    allKelasGuru = (currentUser.kelasList && currentUser.kelasList.length > 0)
+      ? currentUser.kelasList
+      : (currentUser.kelas || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    // Isi dropdown mapel
+    const selMapel = document.getElementById('selMapel');
+    if (allMapelGuru.length === 0) {
+      selMapel.innerHTML = '<option value="">— Tidak ada mata pelajaran —</option>';
+    } else if (allMapelGuru.length === 1) {
+      // Hanya 1 mapel — sembunyikan dropdown mapel, langsung terpilih
+      selMapel.innerHTML = `<option value="${allMapelGuru[0].id}">${allMapelGuru[0].nama}</option>`;
+      document.getElementById('groupMapel').style.display = 'none';
+    } else {
+      selMapel.innerHTML = '<option value="">— Pilih Mapel —</option>' +
+        allMapelGuru.map(m => `<option value="${m.id}">${m.nama}</option>`).join('');
+    }
+
+    // Isi dropdown kelas
+    const kelasUrut = allKelas
+      .filter(k => allKelasGuru.includes(k.nama))
+      .sort((a,b) => (parseInt(a.tingkat)||0)-(parseInt(b.tingkat)||0) || a.nama.localeCompare(b.nama));
+    document.getElementById('selKelas').innerHTML =
+      '<option value="">— Pilih Kelas —</option>' +
+      kelasUrut.map(k => `<option value="${k.nama}">Kelas ${k.nama}</option>`).join('');
+
+    onFilterChange();
+    hideLoading();
+  } catch(e) {
+    hideLoading();
+    alert('Gagal memuat data: ' + e.message);
+  }
+});
+
+function onFilterChange() {
+  const mapel  = document.getElementById('selMapel').value;
+  const kelas  = document.getElementById('selKelas').value;
+  const ok = (allMapelGuru.length === 1 || mapel) && kelas;
+  document.getElementById('btnTampilkan').disabled = !ok;
+}
+
+async function tampilkanLeger() {
+  const mapelId  = document.getElementById('selMapel').value ||
+                   (allMapelGuru.length === 1 ? allMapelGuru[0].id : '');
+  const kelas    = document.getElementById('selKelas').value;
+  const semester = document.getElementById('selSem').value;
+  const tahun    = config['tahun_pelajaran'] || '';
+  if (!mapelId || !kelas) return;
+
+  const mapelObj = allMapelGuru.find(m => m.id === mapelId);
+  if (!mapelObj) return;
+
+  showLoading('Memuat nilai siswa…');
+  try {
+    // TP untuk mapel ini saja, urut label
+    const tpList = allTP
+      .filter(tp => tp.id_mapel === mapelId)
+      .sort((a,b) => (parseInt(a.nomor_tp)||0) - (parseInt(b.nomor_tp)||0));
+
+    // Siswa di kelas ini, urut abjad
+    const siswaList = (await SHEETS.getSiswa(kelas))
+      .sort((a,b) => a.nama.localeCompare(b.nama, 'id'));
+
+    // Semester: terima Romawi & Arab
+    const toRomawi = {'1':'I','2':'II'};
+    const toArab   = {'I':'1','II':'2'};
+    const semAktif = config['semester_aktif'] || semester;
+    const semValid = new Set([
+      semester, toRomawi[semester]||semester,
+      semAktif, toRomawi[semAktif]||semAktif, toArab[semAktif]||semAktif
+    ]);
+
+    // Baca NILAI
+    const rawNilai = await SHEETS.read('NILAI!A:K');
+
+    // nilaiByTP: id_siswa → id_tp → nilai_akhir (hitung dari SLM+SAS+bobot)
+    const nilaiByTP = {};
+    rawNilai.slice(1).forEach(r => {
+      if (!r[0] || r[0]==='id_nilai' || !r[1] || !r[2]) return;
+      if (r[3] !== mapelId) return;       // hanya mapel ini
+      if (r[4] !== kelas) return;          // hanya kelas ini
+      if (!semValid.has(r[5])) return;
+      if (tahun && r[6] && r[6] !== tahun) return;
+      const slmRaw = r[7];
+      if (slmRaw===''||slmRaw===null||slmRaw===undefined) return;
+      const slm = parseFloat(slmRaw);
+      if (isNaN(slm)) return;
+      const idSiswa = r[1];
+      const idTP    = r[2];
+      const tp = allTP.find(t => t.id_tp === idTP);
+      const bSlm = tp?.bobot_slm ?? 60;
+      const bSas = tp?.bobot_sas ?? 40;
+      const sasRaw = r[8];
+      const sas = (sasRaw!==''&&sasRaw!==null&&sasRaw!==undefined) ? parseFloat(sasRaw) : null;
+      const na = (sas!==null&&!isNaN(sas))
+        ? Math.round(slm*bSlm/100 + sas*bSas/100) : Math.round(slm);
+      if (!nilaiByTP[idSiswa]) nilaiByTP[idSiswa] = {};
+      nilaiByTP[idSiswa][idTP] = na;
+    });
+
+    // Nilai akhir mapel per siswa = rata-rata semua TP
+    function nilaiAkhirMapel(idSiswa) {
+      if (!tpList.length) return null;
+      const arr = tpList.map(tp => nilaiByTP[idSiswa]?.[tp.id_tp])
+                        .filter(v => v!==undefined && v!==null);
+      return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+    }
+
+    // Bangun baris — tampilkan semua siswa
+    const rows = siswaList.map(s => {
+      const tpVals = tpList.map(tp => nilaiByTP[s.id]?.[tp.id_tp] ?? null);
+      const na     = nilaiAkhirMapel(s.id);
+      return { siswa: s, tpVals, na };
+    });
+
+    // Ranking berdasarkan nilai akhir mapel
+    const ranked = [...rows].sort((a,b) => {
+      if (a.na===null && b.na===null) return 0;
+      if (a.na===null) return 1; if (b.na===null) return -1;
+      return b.na - a.na;
+    });
+    let rankNo = 1;
+    ranked.forEach((r,i) => {
+      if (r.na===null) { r.rank=null; return; }
+      if (i>0 && ranked[i-1].na!==null && Math.abs(r.na-ranked[i-1].na)<0.001)
+        r.rank = ranked[i-1].rank;
+      else r.rank = rankNo;
+      rankNo++;
+    });
+    const rankMap = {};
+    ranked.forEach(r => { rankMap[r.siswa.id] = r.rank; });
+
+    // Statistik
+    const naFilled = rows.map(r=>r.na).filter(v=>v!==null);
+    const rataKelas = naFilled.length ? (naFilled.reduce((a,b)=>a+b,0)/naFilled.length).toFixed(1) : '—';
+    const maxVal    = naFilled.length ? Math.max(...naFilled) : '—';
+    const minVal    = naFilled.length ? Math.min(...naFilled) : '—';
+    const tuntas    = naFilled.filter(v=>v>=70).length;
+    const pctTuntas = naFilled.length ? Math.round(tuntas/naFilled.length*100) : 0;
+
+    document.getElementById('statSiswa').textContent  = siswaList.length;
+    document.getElementById('statTP').textContent     = tpList.length;
+    document.getElementById('statRata').textContent   = rataKelas;
+    document.getElementById('statMax').textContent    = maxVal !== '—' ? Math.round(maxVal) : '—';
+    document.getElementById('statMin').textContent    = minVal !== '—' ? Math.round(minVal) : '—';
+    document.getElementById('statTuntas').textContent = tuntas + ' siswa';
+    document.getElementById('statTuntasPct').textContent = pctTuntas + '% ketuntasan';
+    document.getElementById('statRow').style.display  = 'grid';
+
+    // Thead — kolom TP menggunakan nomor TP sebagai header, full label di title
+    const thTP = tpList.map((tp,i) =>
+      `<th title="${tp.deskripsi||tp.id_tp}" style="min-width:52px;font-size:10px">TP ${i+1}</th>`
+    ).join('');
+    document.getElementById('tblHead').innerHTML = `<tr>
+      <th class="left" style="min-width:28px">No</th>
+      <th class="left" style="min-width:170px">Nama Siswa</th>
+      <th style="min-width:100px">NISN</th>
+      ${thTP}
+      <th style="min-width:72px">Nilai Akhir</th>
+      <th style="min-width:60px">Peringkat</th>
+    </tr>`;
+
+    // Tbody
+    let html = '';
+    rows.forEach((r,i) => {
+      const rank   = rankMap[r.siswa.id];
+      const tdTP   = r.tpVals.map(v =>
+        v===null ? `<td style="color:#ccc">—</td>`
+                 : `<td class="${nilaiColor(v)}">${v}</td>`
+      ).join('');
+      const naStr  = r.na!==null
+        ? `<span class="${nilaiColor(Math.round(r.na))}" style="font-weight:700">${Math.round(r.na)}</span>`
+        : '<span style="color:#ccc">—</span>';
+      html += `<tr>
+        <td>${i+1}</td>
+        <td class="left nama" title="${r.siswa.nama}">${r.siswa.nama}</td>
+        <td style="font-size:11px;color:var(--ink-muted)">${r.siswa.nisn||'—'}</td>
+        ${tdTP}
+        <td>${naStr}</td>
+        <td>${rankBadge(rank)}</td>
+      </tr>`;
+    });
+
+    // Baris rata-rata per TP
+    const tdTPRata = tpList.map((_,ti) => {
+      const vals = rows.map(r=>r.tpVals[ti]).filter(v=>v!==null);
+      const v = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+      return v!==null ? `<td style="font-size:11px;color:var(--green-dark)">${v}</td>`
+                      : `<td style="color:#ccc">—</td>`;
+    }).join('');
+    const rataKelasNum = naFilled.length ? Math.round(naFilled.reduce((a,b)=>a+b,0)/naFilled.length) : null;
+    html += `<tr class="stat-row-tbl">
+      <td colspan="3" class="left">Rata-rata Kelas</td>
+      ${tdTPRata}
+      <td>${rataKelasNum!==null ? rataKelasNum : '—'}</td>
+      <td>—</td>
+    </tr>`;
+
+    document.getElementById('tblBody').innerHTML = html;
+
+    // Judul & toolbar
+    const title = `${mapelObj.nama} · Kelas ${kelas} · Semester ${semester} · ${tahun}`;
+    document.getElementById('tableTitle').textContent = title;
+    document.getElementById('tableNote').textContent  =
+      `Nilai Akhir = rata-rata ${tpList.length} TP · bobot SLM/SAS per TP`;
+    document.getElementById('tableWrap').style.display  = 'block';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('btnCetak').disabled = false;
+
+    hideLoading();
+  } catch(e) {
+    hideLoading();
+    alert('Gagal memuat data: ' + e.message);
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>
