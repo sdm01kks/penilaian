@@ -547,6 +547,10 @@ function angkaTerbilang(n) {
 // Kelas 1–2 → Fase A | Kelas 3–4 → Fase B | Kelas 5–6 → Fase C | Kelas 7+ → Fase D
 // ⚠️ PENANDA ANTIREGRESI §7 — jangan ubah logika ini, lihat ANTIREGRESI.md
 function nextFase(kelas) { const n=parseInt(kelas.replace(/[^0-9]/g,'')); const nx=isNaN(n)?0:n+1; return nx<=2?'A':nx<=4?'B':nx<=6?'C':'D'; }
+// faseKini: fase siswa SAAT INI dihitung dari nomor kelas — JANGAN ganti dengan d.fase dari sheet KELAS.
+// Kelas 1–2 → Fase A | Kelas 3–4 → Fase B | Kelas 5–6 → Fase C
+// ⚠️ ANTIREGRESI §33 — kolom fase di sheet bisa salah isi; selalu hitung deterministik dari kelas.
+function faseKini(kelas) { const n=parseInt(kelas.replace(/[^0-9]/g,'')); return isNaN(n)?'?':n<=2?'A':n<=4?'B':n<=6?'C':'D'; }
 function nextKelas(k) { const n=parseInt(k.replace(/[^0-9]/g,'')); return isNaN(n)?k:(n+1); }
 // kelasPokok: ambil hanya angka tingkatan, buang huruf rombel (mis. "2B" → 2, "3A" → 3)
 // ⚠️ PENANDA ANTIREGRESI §7 — dipakai di baris "Tinggal di kelas", jangan hapus
@@ -577,7 +581,7 @@ function buildRaporHTML(d) {
       </div>
       <div>
         <div class="rpr-info-row"><span class="rpr-info-label">Kelas</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.kelas}</span></div>
-        <div class="rpr-info-row"><span class="rpr-info-label">Fase</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.fase}</span></div>
+        <div class="rpr-info-row"><span class="rpr-info-label">Fase</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${faseKini(d.kelas)}</span></div>
         <div class="rpr-info-row"><span class="rpr-info-label">Semester</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.semester==='I'?'I (Ganjil)':'II (Genap)'}</span></div>
         <div class="rpr-info-row"><span class="rpr-info-label">Tahun Pelajaran</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.tahun}</span></div>
       </div>
@@ -885,7 +889,7 @@ function buildBodyPrint(d) {
     </div>
     <div>
       <div class="rpr-info-row"><span class="rpr-info-label">Kelas</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.kelas}</span></div>
-      <div class="rpr-info-row"><span class="rpr-info-label">Fase</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.fase}</span></div>
+      <div class="rpr-info-row"><span class="rpr-info-label">Fase</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${faseKini(d.kelas)}</span></div>
       <div class="rpr-info-row"><span class="rpr-info-label">Semester</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.semester==='I'?'I (Ganjil)':'II (Genap)'}</span></div>
       <div class="rpr-info-row"><span class="rpr-info-label">Tahun Pelajaran</span><span class="rpr-info-sep">:</span><span class="rpr-info-val">${d.tahun}</span></div>
     </div>
