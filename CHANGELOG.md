@@ -1,3 +1,37 @@
+## [2026-06-15] — v53 · Leger Nilai Bidang Studi untuk Guru Mapel
+
+### ✨ Fitur Baru
+
+Halaman baru `rapor/leger-guru-mapel.html` — leger nilai per mata pelajaran untuk guru bidang studi.
+
+**Latar belakang:** Selama ini guru bidang studi hanya dapat menginput nilai tanpa akses ke rekap nilai akhir dari mata pelajaran yang diampunya. Halaman ini memungkinkan guru untuk meninjau kembali penilaian yang telah diberikan.
+
+**Format tabel:** identik dengan leger guru kelas — No · Nama Siswa · NISN · kolom per TP · Nilai Akhir · Peringkat — bedanya hanya menampilkan satu mata pelajaran yang dipilih.
+
+**Filter tersedia:**
+- **Mata Pelajaran** — hanya mapel yang diampu guru (exclude Tahsin-Tahfizh). Jika guru hanya mengajar 1 mapel, dropdown disembunyikan dan mapelnya dipilih otomatis.
+- **Kelas** — semua kelas dari `kelasList` (kolom E + K sesuai §30), mencakup kelas tambahan.
+- **Semester**
+
+**Cara hitung:** identik dengan `preview.html` dan `leger-kelas.html` — `nilai_akhir per TP = slm × bobot_slm% + sas × bobot_sas%`, `nilai akhir mapel = rata-rata semua TP`. Semua siswa ditampilkan walau nilai belum ada (tampil `—`).
+
+**Statistik ringkas:** jumlah siswa, jumlah TP, rata-rata kelas, nilai tertinggi, nilai terendah, ketuntasan (≥70).
+
+**Akses:** `requireLogin('guru_mapel')` — hanya guru bidang studi. Guru kelas dan admin tidak dapat mengakses halaman ini.
+
+**Kelas yang bisa dipilih:** `kelasList` (kolom E + K), sehingga guru mapel yang mengajar di banyak kelas (termasuk kelas di kolom K) bisa memilih semua kelasnya.
+
+### 📋 File yang Diubah (v53)
+
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `rapor/leger-guru-mapel.html` | **Baru** | Halaman leger nilai bidang studi untuk guru_mapel |
+| `dashboard/guru-mapel.html` | **Diubah** | Tambah seksi "Laporan" di sidebar dengan link ke `leger-guru-mapel.html` |
+| `CHANGELOG.md` | **Diubah** | Tambah entri v53 ini |
+| `ANTIREGRESI.md` | **Diubah** | Tambah penanda kumulatif v53 |
+
+---
+
 ## [2026-06-15] — v52 · Perbaikan Fase Salah di Identitas Rapor (Preview & Cetak)
 
 ### 🐛 Perbaikan Bug — Fase di Rapor Diambil dari Sheet, Bukan Dihitung dari Kelas

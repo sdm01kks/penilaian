@@ -1707,6 +1707,10 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/preview.html` | Fungsi `faseKini(kelas)` — menghitung fase siswa saat ini dari nomor kelas; JANGAN diganti `d.fase` dari sheet | v52 | **Wajib.** Kolom fase di sheet KELAS diisi manual dan bisa salah (contoh: Kelas 2B terset "B" padahal harusnya "A"). Lihat §33. |
 | `rapor/preview.html` | `${faseKini(d.kelas)}` di 2 call site identitas (screen + print) — bukan `${d.fase}` | v52 | **Wajib.** Mengembalikan ke `d.fase` menyebabkan fase tampil salah jika data sheet tidak akurat. Lihat §33. |
 | `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §33` di deklarasi `faseKini` | v52 | Penanda wajib agar fungsi tidak dihapus atau diganti `d.fase`. |
+| `rapor/leger-guru-mapel.html` | `requireLogin('guru_mapel')` — bukan `guru_kelas` atau `admin` | v53 | **Wajib.** Halaman ini khusus guru bidang studi; guru kelas dan admin punya halaman leger masing-masing. |
+| `rapor/leger-guru-mapel.html` | Dropdown mapel dibangun dari `currentUser.mapelList` exclude TT — jika hanya 1 mapel, dropdown disembunyikan | v53 | Wajib. Guru hanya boleh melihat mapel yang diampu. |
+| `rapor/leger-guru-mapel.html` | Dropdown kelas dari `kelasList` (E+K, §30) — bukan hanya kolom E | v53 | Wajib. Guru mapel yang mengajar di kelas tambahan (kolom K) harus bisa memilihnya. |
+| `dashboard/guru-mapel.html` | Seksi "Laporan" di sidebar dengan link `leger-guru-mapel.html` | v53 | Penanda wajib agar guru mapel bisa menemukan halaman ini dari dashboard. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v52). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v53). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
