@@ -113,7 +113,7 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
 
 <div class="topbar">
   <button class="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-  <a class="topbar-logo" href="../dashboard/guru-mapel.html">
+  <a class="topbar-logo" id="topbarHome" href="../dashboard/guru-mapel.html">
     <div style="width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:22px;">📊</div>
     <div><div class="brand-name">SDM01KKS</div><div class="brand-sub">Sistem Penilaian</div></div>
   </a>
@@ -131,7 +131,7 @@ tbody tr.stat-row-tbl td{border-top:2px solid var(--green-light);color:var(--gre
 
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-section-label">Utama</div>
-  <a class="nav-item" href="../dashboard/guru-mapel.html"><span class="nav-icon">🏠</span> Dashboard</a>
+  <a class="nav-item" id="navDashboard" href="../dashboard/guru-mapel.html"><span class="nav-icon">🏠</span> Dashboard</a>
   <div class="sidebar-section-label">Input Penilaian</div>
   <a class="nav-item" href="../penilaian/input-nilai.html"><span class="nav-icon">📝</span> Input Nilai SLM &amp; SAS</a>
   <div class="sidebar-section-label">Laporan</div>
@@ -238,12 +238,20 @@ function rankBadge(r){
 window.addEventListener('load', async () => {
   AUTH.init();
   // Hanya guru_mapel yang boleh akses
-  currentUser = AUTH.requireLogin('guru_mapel');
+  currentUser = AUTH.requireLogin(['guru_mapel', 'guru_kelas']);
   if (!currentUser) return;
 
   document.getElementById('userName').textContent   = currentUser.nama;
   document.getElementById('userAvatar').textContent = currentUser.nama?.charAt(0)?.toUpperCase() || 'G';
   document.getElementById('userMapel').textContent  = currentUser.mapel || '—';
+
+  // Kondisikan link Dashboard dan topbar logo berdasarkan role
+  const dashHref = currentUser.role === 'guru_kelas'
+    ? '../dashboard/guru-kelas.html' : '../dashboard/guru-mapel.html';
+  const navDash = document.getElementById('navDashboard');
+  if (navDash) navDash.href = dashHref;
+  const topHome = document.getElementById('topbarHome');
+  if (topHome) topHome.href = dashHref;
 
   // Tampilkan nav TT jika relevan
   const mapelRaw = (currentUser.mapel || '').toLowerCase();
@@ -278,13 +286,33 @@ window.addEventListener('load', async () => {
       .filter(m => myMapelIds.some(id => id.toLowerCase() === m.id.toLowerCase()) && !isTahsin(m.id))
       .sort((a,b) => (a.urutan||0) - (b.urutan||0));
 
-    // Kelas guru ini — kelasList (E+K) persis seperti aturan §30
-    allKelasGuru = (currentUser.kelasList && currentUser.kelasList.length > 0)
-      ? currentUser.kelasList
-      : (currentUser.kelas || '').split(',').map(s => s.trim()).filter(Boolean);
+    // Kelas guru ini — berbeda berdasarkan role (§30 + §31 + §34):
+    // guru_mapel: kelasList (E+K) — semua kelas yang diampu
+    // guru_kelas merangkap: HANYA kolom K (kelasMapelList) — kelas tempat mengajar mapel.
+    //   Kolom E adalah kelas wali yang BUKAN tanggung jawab leger bidang studi.
+    //   Jika kelasMapelList kosong → guru_kelas tidak punya tugas mapel di kelas lain.
+    if (currentUser.role === 'guru_kelas') {
+      const kml = currentUser.kelasMapelList ||
+        (currentUser.kelas_mapel ? currentUser.kelas_mapel.split(',').map(s=>s.trim()).filter(Boolean) : []);
+      allKelasGuru = kml;
+    } else {
+      allKelasGuru = (currentUser.kelasList && currentUser.kelasList.length > 0)
+        ? currentUser.kelasList
+        : (currentUser.kelas || '').split(',').map(s => s.trim()).filter(Boolean);
+    }
 
     // Isi dropdown mapel
     const selMapel = document.getElementById('selMapel');
+    // Untuk guru_kelas: jika tidak punya kelas tambahan di kolom K, tidak bisa menggunakan halaman ini
+    if (currentUser.role === 'guru_kelas' && allKelasGuru.length === 0) {
+      document.querySelector('.main').innerHTML = `<div class="empty-state"><div class="icon">ℹ️</div>
+        <p>Anda belum terdaftar sebagai guru bidang studi di kelas lain.<br>
+        Minta admin untuk mengisi <strong>Kelas Tambahan</strong> di Kelola Guru jika Anda mengajar mata pelajaran di kelas lain.</p>
+        <a href="${dashHref}" style="display:inline-block;margin-top:16px;padding:8px 20px;background:var(--green-dark);color:#fff;border-radius:8px;text-decoration:none;font-weight:600">← Kembali ke Dashboard</a></div>`;
+      hideLoading();
+      return;
+    }
+
     if (allMapelGuru.length === 0) {
       selMapel.innerHTML = '<option value="">— Tidak ada mata pelajaran —</option>';
     } else if (allMapelGuru.length === 1) {
