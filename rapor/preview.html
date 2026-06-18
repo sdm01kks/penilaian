@@ -849,9 +849,18 @@ tr{page-break-inside:avoid}
 .rpr-section-title{page-break-after:avoid}
 .rpr-sub-title{page-break-after:avoid}
 .kok-header{page-break-after:avoid}
-.abs-catatan-grid{page-break-inside:avoid}
-.rpr-keputusan{page-break-inside:avoid}
-.rpr-ttd{page-break-inside:avoid}
+/* ⚠️ ANTIREGRESI §38: tiga blok ini WAJIB utuh dalam satu halaman saat cetak —
+   keluhan guru: Catatan Wali, Ketidakhadiran, dan TTD terpotong di tengah
+   pergantian halaman. .abs-catatan-grid (lama) tidak pernah berlaku karena
+   HTML aktual tidak memakai class itu — diganti .rpr-bagian-d yang membungkus
+   SELURUH bagian D (tabel absensi + Catatan Wali + Tanggapan) sebagai satu unit. */
+.rpr-bagian-d{page-break-inside:avoid;break-inside:avoid}
+.rpr-keputusan-wrap{page-break-inside:avoid;break-inside:avoid}
+.rpr-keputusan{page-break-inside:avoid;break-inside:avoid}
+.rpr-ttd-wrap{page-break-inside:avoid;break-inside:avoid}
+.rpr-ttd{page-break-inside:avoid;break-inside:avoid}
+/* Pembungkus gabungan D+Keputusan+TTD — proteksi utama, lihat §38 */
+.rpr-footer-group{page-break-inside:avoid;break-inside:avoid}
 </style>
 </head>
 <body>
@@ -928,8 +937,21 @@ function buildBodyPrint(d) {
   }
   html += `</tbody></table></div>`;
 
+  // ⚠️ ANTIREGRESI §38: Bagian D, Keputusan, dan TTD dibungkus SATU grup gabungan
+  // (.rpr-footer-group) — ketiganya selalu berurutan tanpa konten lain di antaranya
+  // dan totalnya jauh dari satu halaman penuh (±300pt dari ±737pt tinggi A4 setelah
+  // margin), sehingga aman digabung sebagai satu unit page-break-inside:avoid.
+  // Ini mencegah garis potong cetak masuk ke ANTARA bagian-bagian tersebut, bukan
+  // hanya melindungi masing-masing secara terpisah.
+  html += `<div class="rpr-footer-group">`;
+
   // Section D Absensi + Catatan + Tanggapan
-  html += `<div class="rpr-section">
+  // ⚠️ ANTIREGRESI §38: seluruh blok D (tabel absensi + Catatan Wali + Tanggapan)
+  // WAJIB dibungkus satu div dengan page-break-inside:avoid. Sebelumnya CSS
+  // .abs-catatan-grid{page-break-inside:avoid} tidak pernah berlaku karena HTML
+  // aktual memakai inline style flex, bukan class tersebut — sehingga garis
+  // potong cetak bisa jatuh tepat di tengah kotak Catatan Wali.
+  html += `<div class="rpr-section rpr-bagian-d">
 <div class="rpr-section-title">D. Ketidakhadiran</div>
 <div style="display:flex;gap:10pt;align-items:flex-start;margin-top:4pt;">
   <!-- Tabel absensi: flex-shrink:0 agar tidak melebar -->
@@ -965,9 +987,14 @@ function buildBodyPrint(d) {
 </div>`;
 
   // Keputusan
+  // ⚠️ ANTIREGRESI §38: pembungkus luar (margin-top) WAJIB ikut ditandai
+  // page-break-inside:avoid via class .rpr-keputusan-wrap — sebelumnya aturan
+  // CSS .rpr-keputusan hanya menyasar div bagian dalam, bukan pembungkusnya,
+  // sehingga judul "Berdasarkan pencapaian..." bisa terpisah halaman dari
+  // kotak keputusan Naik/Tinggal di bawahnya.
   if (isSem2) {
     const naik = d.absensi.keputusan !== 'Tinggal';
-    html += `<div style="margin-top:10pt">
+    html += `<div class="rpr-keputusan-wrap" style="margin-top:10pt">
 <div class="rpr-keputusan" style="min-width:0;width:auto;max-width:230pt;">
   <p>Berdasarkan pencapaian kompetensi pada semester ke-1 dan ke-2, peserta didik ditetapkan *)</p>
   <p><${naik?'strong':'s'}>Naik ke Fase ${nextFase(d.kelas)} | Kelas ${nextKelas(d.kelas)}</${naik?'strong':'s'}></p>
@@ -977,8 +1004,12 @@ function buildBodyPrint(d) {
   }
 
   // TTD — urutan: Orang Tua/Wali | Kepala Sekolah | (kota-tgl) Wali Kelas
+  // ⚠️ ANTIREGRESI §38: pembungkus luar WAJIB ikut ditandai page-break-inside:avoid
+  // via class .rpr-ttd-wrap — sebelumnya hanya .rpr-ttd (grid 3 kolom) yang
+  // dilindungi, sehingga baris tanggal kota (di luar grid) bisa terpisah ke
+  // halaman lain dari kotak tanda tangannya sendiri.
   const tanda = d.kota_rapor + ', ' + (d.tgl_rapor || '……………………');
-  html += `<div style="margin-top:20pt">
+  html += `<div class="rpr-ttd-wrap" style="margin-top:20pt">
   <div style="text-align:right;font-size:10.5pt;margin-bottom:3pt">${tanda}</div>
   <div class="rpr-ttd">
     <div class="rpr-ttd-col">
@@ -1000,6 +1031,8 @@ function buildBodyPrint(d) {
     </div>
   </div>
 </div>`;
+
+  html += `</div>`;  // tutup .rpr-footer-group
 
   return html;
 }
