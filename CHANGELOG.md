@@ -1,3 +1,125 @@
+## [2026-06-18] — v57 · Perbaikan Cetak Rapor Terpotong: Catatan Wali, Ketidakhadiran, TTD
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `rapor/preview.html` | Hasil cetak PDF rapor sering terpotong di tengah kotak Catatan Wali atau bagian Ketidakhadiran saat pergantian halaman. Contoh konkret: rapor Fairel Atharizz Calief kelas 4B. | **Akar masalah:** CSS `.abs-catatan-grid{page-break-inside:avoid}` adalah dead code — HTML aktual untuk bagian D memakai `<div style="display:flex;...">` inline, tidak pernah memakai class `.abs-catatan-grid`. Aturan CSS itu tidak pernah berlaku sama sekali. **Fix:** bungkus seluruh bagian D (tabel absensi + Catatan Wali + Tanggapan Orang Tua) dengan class baru `.rpr-bagian-d` yang benar-benar dipakai di HTML, diberi `page-break-inside:avoid`. |
+| 2 | `rapor/preview.html` | Bagian Keputusan (Naik/Tinggal kelas, khusus semester 2) bisa terpotong antara judul dan kotak keputusannya. | `.rpr-keputusan` di CSS lama hanya menyasar div bagian dalam; pembungkus luarnya (`<div style="margin-top:10pt">` polos) tidak terlindungi. Fix: pembungkus luar diberi class `.rpr-keputusan-wrap` dengan `page-break-inside:avoid`. |
+| 3 | `rapor/preview.html` | Bagian TTD (tanda tangan) bisa terpisah dari baris tanggal kota di atasnya saat pergantian halaman. | `.rpr-ttd` lama hanya menyasar grid 3 kolom TTD, bukan pembungkus yang juga berisi baris tanggal. Fix: pembungkus luar diberi class `.rpr-ttd-wrap` dengan `page-break-inside:avoid`. |
+| 4 | `rapor/preview.html` | Proteksi per-bagian (1-3) masih memungkinkan garis potong jatuh di SELA antar bagian (misal antara akhir Bagian D dan awal Keputusan). | Tambah pembungkus gabungan `.rpr-footer-group` yang menyatukan Bagian D + Keputusan + TTD sebagai satu unit `page-break-inside:avoid`. Total tinggi gabungan (~250-300pt) jauh di bawah satu halaman A4 penuh (~737pt setelah margin), sehingga aman digabung tanpa risiko menyisakan halaman kosong besar. |
+
+### 📋 File yang Diubah (v57)
+
+| File | Status |
+|------|--------|
+| `rapor/preview.html` | **Diubah** — HTML pembangun bagian D/Keputusan/TTD diberi class baru (`rpr-bagian-d`, `rpr-keputusan-wrap`, `rpr-ttd-wrap`) + pembungkus gabungan `rpr-footer-group`; CSS print: hapus rule dead code `.abs-catatan-grid`, tambah 6 rule `page-break-inside:avoid` untuk class yang benar-benar dipakai |
+| `ANTIREGRESI.md` | **Diubah** — tambah §38, entri riwayat v57, penanda kode kumulatif v57 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v57 ini |
+
+### 🔍 Catatan Audit
+
+Pola dead-code CSS seperti ini (rule yang terlihat seperti perlindungan tapi tidak pernah benar-benar dipakai) berisiko muncul lagi jika class HTML diubah tanpa memeriksa ulang CSS yang menyasarnya, atau sebaliknya. Lihat checklist di ANTIREGRESI §38 untuk pencegahan saat mengubah struktur bagian ini di masa depan.
+
+---
+
+## [2026-06-16] — v56 · [KOREKSI TAHAP 1] Reset Tahun Ajaran: Arsip, Bukan Hapus
+
+### 🐛 Koreksi Desain Penting
+
+Versi v55 (Tahap 1) merancang `resetTahunAjaranBaru()` sebagai operasi **destruktif** — `clearRange()` langsung mengosongkan sheet `NILAI`, `TP_KKTP`, dkk. tanpa menyalinnya dulu. Ini **tidak sesuai** dengan kebutuhan: data tahun ajaran lama harus tetap bisa diakses kapan saja dari dalam sistem, bukan hanya lewat file backup `.json` yang harus di-restore (dan restore akan menimpa data tahun berjalan).
+
+**Desain baru: arsip otomatis sebelum kosongkan.**
+
+| Langkah | Sebelumnya (v55) | Sekarang (v56) |
+|---------|-------------------|------------------|
+| 1 | `clearRange()` langsung pada sheet aktif | `duplicateSheetAs()` — salin sheet aktif ke tab baru `<SHEET>_<tahun>` |
+| 2 | (data lama hilang) | Jika langkah 1 berhasil → `clearRange()` sheet aktif. Jika gagal → **batal**, sheet aktif TIDAK dikosongkan (fail-safe) |
+| 3 | — | Data lama tetap ada selamanya di tab arsip, bisa dibaca via `getTahunArsipTersedia()` + `readArsip()` |
+
+**Fungsi baru di `assets/js/sheets.js`:**
+
+| Fungsi | Kegunaan |
+|--------|----------|
+| `getSheetMetadata()` | Ambil daftar semua tab + `sheetId` numerik (dibutuhkan API duplicate/delete sheet) |
+| `duplicateSheetAs(asal, arsip)` | Duplikasi tab — dasar mekanisme arsip. Tidak overwrite jika arsip dengan nama sama sudah ada |
+| `getTahunArsipTersedia()` | Deteksi semua tahun ajaran yang sudah diarsipkan, dari pola nama tab |
+| `readArsip(namaSheet, tahunArsip)` | Baca data mentah dari tab arsip tertentu |
+
+**`resetTahunAjaranBaru()` ditulis ulang** — sekarang menerima parameter `tahunLama` dan melakukan siklus arsip→kosongkan per sheet, bukan kosongkan langsung 8 sheet sekaligus tanpa jejak.
+
+### 📋 File yang Diubah (v56)
+
+| File | Status |
+|------|--------|
+| `assets/js/sheets.js` | **Diubah** — tambah `getSheetMetadata`, `duplicateSheetAs`, `getTahunArsipTersedia`, `readArsip`; `resetTahunAjaranBaru` ditulis ulang total (arsip-dulu, bukan hapus langsung) |
+| `CHANGELOG.md` | **Diubah** — tambah entri v56 ini |
+| `ANTIREGRESI.md` | **Diubah** — tambah §37, update §36 |
+
+### 📐 Yang TETAP tidak berubah dari v55
+
+- `USERS` (guru/admin) dan `SISWA` tidak pernah masuk daftar reset
+- `luluskanSiswa()` tetap mempertahankan `id_siswa` (§35)
+- `TP_KKTP` tetap disengaja ikut dalam siklus arsip+reset (§36) — bedanya sekarang diarsipkan dulu, bukan langsung hilang
+
+---
+
+## [2026-06-16] — v55 · [TAHAP 1/4] Fondasi Backend: Alumni, Naik Kelas, Reset Tahun Ajaran
+
+### 🚧 Status: Sedang Dikerjakan (Tahap 1 dari 4)
+
+Fitur besar: **Backup/Restore Data** dan **Reset Tahun Ajaran Baru** (termasuk naik kelas dan
+kelulusan). Dipecah menjadi 4 tahap agar progress bisa disimpan dan dilanjutkan:
+
+1. ✅ **Tahap 1 (selesai)** — Fondasi backend di `sheets.js`: fungsi Alumni, naik kelas, reset
+2. ⬜ Tahap 2 — Halaman Naik Kelas (`setup/naik-kelas.html`)
+3. ⬜ Tahap 3 — Halaman Backup & Restore (`setup/backup-restore.html`)
+4. ⬜ Tahap 4 — Halaman Reset Tahun Ajaran Baru + menu Alumni di dashboard admin
+
+### ✨ Fitur Baru (Tahap 1)
+
+**Sheet baru `ALUMNI`** (kolom A–Q): identitas siswa lengkap (identik struktur SISWA) +
+`tahun_lulus`. **`id_siswa` dipertahankan sama** dengan saat masih di SISWA — keputusan desain
+kunci agar seluruh riwayat nilai (NILAI, KOKURIKULER, EKSKUL_SISWA, ABSENSI, SETORAN_TT,
+NILAI_RAPOR_RERATA, NILAI_US) tetap bisa diakses penuh untuk alumni, bukan hanya ringkasan.
+
+**Fungsi baru di `assets/js/sheets.js`:**
+
+| Fungsi | Kegunaan |
+|--------|----------|
+| `clearRange(range)` | Kosongkan isi range tanpa menghapus sheet/header — dasar untuk reset |
+| `getAlumni({ tahun_lulus })` | Ambil daftar alumni, opsional filter per tahun lulus |
+| `luluskanSiswa(siswaList, tahunLulus)` | Pindahkan siswa kelas 6 ke ALUMNI lalu hapus dari SISWA, `id_siswa` dipertahankan |
+| `pindahKelasSiswa(idSiswa, kelasBaru)` | Naik kelas untuk satu siswa — hanya kolom E (kelas) yang diubah |
+| `pindahKelasBatch(mapping)` | Naik kelas massal dalam satu `valuesBatchWrite` — dipakai baik untuk mode otomatis (1→2, 3→4, 5→6) maupun assign manual oleh guru (2→3, 4→5) |
+| `resetTahunAjaranBaru()` | Kosongkan `TP_KKTP`, `NILAI`, `KOKURIKULER`, `EKSKUL_SISWA`, `ABSENSI`, `SETORAN_TT`, `NILAI_RAPOR_RERATA`, `NILAI_US` |
+
+### 📐 Keputusan Desain Penting
+
+**Naik kelas — dua mode:**
+- **Otomatis** (1→2, 3→4, 5→6): urutan kelas dipertahankan (1A→2A, 1B→2B), tidak diacak
+- **Assign manual** (2→3, 4→5 — peralihan fase): guru/admin menyusun ulang siswa ke kelas tujuan secara bebas lewat UI; sistem TIDAK melakukan randomisasi otomatis
+
+**Reset tahun ajaran — `TP_KKTP` DISENGAJA ikut dikosongkan.** Keputusan eksplisit: meskipun kurikulum sama antar tahun, Tujuan Pembelajaran dan KKTP bisa disesuaikan setelah evaluasi akhir tahun, jadi guru menyusun ulang dari awal setiap tahun ajaran — bukan dipertahankan otomatis.
+
+**Yang TIDAK direset:** `USERS`, `KELAS`, `MAPEL`, `EKSKUL` (master jenis), `DPL` (master jenis), `CONFIG` (kecuali field `tahun_pelajaran` yang akan diupdate di Tahap 4), `MUTASI`, `SYNC_LOG`.
+
+**Backup/Restore — tanpa scope Google Drive tambahan.** Backup berupa file `.json` yang diunduh ke perangkat admin (lokal atau bisa diunggah manual ke cloud storage apa pun oleh admin). Restore = upload file tersebut kembali. Tidak menambah OAuth scope karena hanya memakai Sheets API yang sudah ada plus `Blob`/`FileReader` di browser.
+
+### 📋 File yang Diubah (v55)
+
+| File | Status |
+|------|--------|
+| `assets/js/sheets.js` | **Diubah** — tambah `clearRange`, `getAlumni`, `luluskanSiswa`, `pindahKelasSiswa`, `pindahKelasBatch`, `resetTahunAjaranBaru` + ekspor semuanya |
+| `CHANGELOG.md` | **Diubah** — tambah entri v55 ini (status in-progress) |
+| `ANTIREGRESI.md` | **Diubah** — tambah §35, §36, dan penanda kumulatif tahap 1 |
+
+### ⚠️ Catatan untuk Lanjutan
+
+Sheet `ALUMNI` **belum dibuat di spreadsheet** — admin perlu membuat tab baru bernama `ALUMNI` dengan header di baris 1–2 (kolom A–Q sesuai skema di atas) sebelum Tahap 2–4 dapat diuji. Header disarankan: `id_siswa, nama, nis, nisn, kelas_terakhir, agama, alamat, nama_ayah, nama_ibu, pekerjaan_ayah, pekerjaan_ibu, no_hp, tempat_lahir, tgl_lahir, nama_wali, no_peserta_ismuba, tahun_lulus`.
+
+---
+
 ## [2026-06-15] — v54 · Akses Leger Bidang Studi untuk Guru Kelas yang Merangkap Guru Mapel
 
 ### 🐛 Perbaikan

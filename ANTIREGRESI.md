@@ -8,6 +8,7 @@
 
 | Versi | File yang Diubah | Fungsi yang Rusak | Pola Penyebab |
 |-------|-----------------|-------------------|---------------|
+| v57 | `rapor/preview.html` | Cetak PDF rapor terpotong di tengah Catatan Wali, Ketidakhadiran, atau TTD saat pergantian halaman | CSS `.abs-catatan-grid{page-break-inside:avoid}` adalah dead code (HTML aktual tidak memakai class itu); `.rpr-keputusan`/`.rpr-ttd` hanya melindungi div dalam, bukan pembungkus luarnya. Lihat §38. |
 | v54 | `rapor/leger-guru-mapel.html`, `dashboard/guru-kelas.html` | Guru kelas yang merangkap guru mapel tidak bisa membuka leger bidang studi — halaman menolak akses dan menu tidak muncul di sidebar | `requireLogin('guru_mapel')` menolak role `guru_kelas`; sidebar guru-kelas tidak punya link ke halaman ini. Lihat §34. |
 | v45 | `rapor/laporan-tt.html`, `setup/kelola-guru.html` | `cariGuruTT()` mengembalikan guru yang hanya mengajar sebagian mapel TT, bukan semua kelas (Pak Indra: Al-Islam + TT di 1A/1B, Al-Islam saja di 3A → muncul salah sebagai guru TT kelas 3A) | `cariGuruTT()` hanya cek `hasTT` + `kelas ∈ kelasList`; tidak ada cara membedakan "TT di kelas A" vs "non-TT di kelas B". Fix: kolom K dipakai sebagai pembatas kelas TT untuk `guru_mapel`; UI ditambah seksi "Kelas Khusus TT". Lihat §32. |
 | v44 | `rapor/preview.html` | Wali kelas di TTD rapor menampilkan nama guru yang mengajar mapel di kelas tersebut (bukan wali kelas sebenarnya) | `users.find()` memakai `u.kelasList?.includes(activeKelas)`; sejak v43 `kelasList` = gabungan E+K → guru non-wali yang punya kelas di kolom K false-match. Lihat §31. |
@@ -1668,6 +1669,182 @@ if (currentUser.role === 'guru_kelas' && allKelasGuru.length === 0) {
 
 ---
 
+### 35. `id_siswa` Alumni HARUS Identik dengan `id_siswa` di SISWA Sebelum Dihapus ⚠️ KRITIS
+
+**Konteks:** Saat siswa kelas 6 lulus, identitasnya dipindahkan dari sheet `SISWA` ke sheet `ALUMNI` baru via `luluskanSiswa()`. Seluruh riwayat nilai siswa tersebut (`NILAI`, `KOKURIKULER`, `EKSKUL_SISWA`, `ABSENSI`, `SETORAN_TT`, `NILAI_RAPOR_RERATA`, `NILAI_US`) terhubung lewat kolom `id_siswa` di masing-masing sheet tersebut.
+
+**Risiko utama:** Jika `luluskanSiswa()` di-refactor untuk men-generate `id` baru (misalnya memakai `_generateId('ALUMNI', 'AL')` seperti pola ID lain di sistem), seluruh riwayat nilai siswa tersebut akan **terputus permanen** — data nilai lama masih ada di sheet-sheet tersebut tapi tidak bisa lagi di-query untuk alumni itu karena `id_siswa` yang dicari tidak cocok.
+
+**Pola wajib:**
+```javascript
+// ✅ BENAR — id_siswa dari SISWA dipertahankan apa adanya
+const rowsAlumni = siswaList.map(s => [
+  s.id, s.nama, ...  // s.id adalah id_siswa ASLI, BUKAN id baru
+]);
+
+// ❌ SALAH — JANGAN generate id baru untuk baris ALUMNI
+const newId = await _generateId('ALUMNI', 'AL');  // akan memutus riwayat nilai!
+```
+
+**Implikasi desain:** Karena `id_siswa` dipertahankan, query nilai untuk alumni (misalnya saat admin ingin melihat rapor lengkap seorang alumni) menggunakan fungsi `getNilai`, `getAbsensi`, dll. yang **sudah ada** — tidak perlu fungsi baru khusus alumni untuk membaca riwayat nilai, cukup oper `id_siswa` dari hasil `getAlumni()`.
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `assets/js/sheets.js` | `luluskanSiswa()` memakai `s.id` langsung sebagai kolom A baris ALUMNI, tidak ada pemanggilan `_generateId` untuk baris alumni |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §35` di deklarasi `luluskanSiswa` |
+
+**Checklist wajib sebelum mengubah `luluskanSiswa()`:**
+- [ ] `id_siswa` di baris ALUMNI sama persis dengan `id_siswa` yang dihapus dari SISWA
+- [ ] Setelah lulus, `getNilai({ id_siswa })` untuk siswa tersebut masih mengembalikan data lengkap dari tahun-tahun sebelumnya
+- [ ] Tidak ada pemanggilan `_generateId` di jalur kode `luluskanSiswa`
+
+---
+
+### 36. `TP_KKTP` SENGAJA Ikut Diarsipkan+Direset Saat Tahun Ajaran Baru — Bukan Bug ⚠️
+
+**Konteks:** `resetTahunAjaranBaru()` mengarsipkan lalu mengosongkan beberapa sheet transaksional termasuk `TP_KKTP`. Ini adalah keputusan desain eksplisit dari pemilik sistem, bukan oversight.
+
+**Alasan:** Meskipun kurikulum (Mapel, Kelas, Fase) relatif stabil antar tahun ajaran, Tujuan Pembelajaran (TP) dan KKTP-nya sering disesuaikan oleh guru setelah evaluasi akhir tahun ajaran — baik karena perubahan target kompetensi, revisi deskripsi level, atau penyesuaian bobot SLM/SAS. Mempertahankan TP_KKTP lama secara otomatis di sheet aktif berisiko guru lupa memperbarui dan memakai TP yang sudah tidak relevan untuk tahun ajaran baru.
+
+**Konsekuensi teknis:** Karena `NILAI` mereferensikan `id_tp` dari `TP_KKTP`, mengosongkan `TP_KKTP` dari sheet aktif **mengharuskan** `NILAI` juga diarsipkan+dikosongkan di waktu yang sama — keduanya tidak bisa direset secara independen tanpa meninggalkan data nilai yang mereferensikan TP yang sudah tidak ada di sheet aktif.
+
+**⚠️ PENTING (v56):** "Direset" di sini berarti dikosongkan dari SHEET AKTIF setelah diarsipkan ke tab `TP_KKTP_<tahun>` — bukan dihapus permanen. Lihat §37 untuk mekanisme arsipnya.
+
+**Jika ada permintaan untuk "mempertahankan TP_KKTP saat reset" di masa depan:** Ini bukan tweak kecil — perlu didiskusikan ulang secara eksplisit dengan pemilik sistem karena bertentangan dengan keputusan desain yang sudah dikonfirmasi sebelumnya.
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `assets/js/sheets.js` | `'TP_KKTP'` ada di array `sheetsToReset` dalam `resetTahunAjaranBaru()` |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §36/§37` di deklarasi `resetTahunAjaranBaru` |
+
+---
+
+### 37. Reset Tahun Ajaran WAJIB Arsip-Dulu-Kosongkan — TIDAK BOLEH Hapus Langsung ⚠️ KRITIS
+
+**Konteks:** Pemilik sistem secara eksplisit menegaskan: data tahun ajaran lama harus tetap dapat diakses kapan saja dari dalam sistem, dan tidak boleh hilang hanya karena admin memulai tahun ajaran baru.
+
+**Akar masalah (v55, dikoreksi di v56):** Rancangan awal `resetTahunAjaranBaru()` memanggil `clearRange()` langsung ke sheet aktif tanpa membuat salinan apa pun. Begitu dijalankan, data `NILAI`, `TP_KKTP`, dkk. untuk tahun ajaran lama **hilang permanen** dari spreadsheet — satu-satunya jejak adalah file backup `.json` manual (yang belum tentu dibuat admin, dan kalaupun ada, proses restore-nya akan menimpa data tahun berjalan).
+
+**Pola WAJIB sejak v56 — arsip dulu, baru kosongkan:**
+
+```javascript
+// ✅ BENAR
+for (const nama of sheetsToReset) {
+  const dup = await duplicateSheetAs(nama, `${nama}_${tahunLama}`);
+  if (dup.status === 'error') {
+    continue;  // ⚠️ JANGAN clearRange jika duplicate gagal — fail-safe
+  }
+  await clearRange(`${nama}!A3:...`);  // baru kosongkan SETELAH arsip aman
+}
+
+// ❌ SALAH — JANGAN PERNAH lakukan ini lagi
+await clearRange(`${nama}!A3:...`);  // tanpa duplicateSheetAs dulu = data lama hilang permanen
+```
+
+**Invariant yang harus selalu dijaga:** Untuk setiap sheet yang masuk siklus reset tahun ajaran, HARUS ada tab arsip `<SHEET>_<tahun>` yang berhasil dibuat SEBELUM `clearRange()` dipanggil pada sheet yang sama. Jika `duplicateSheetAs()` mengembalikan `status: 'error'`, sheet tersebut harus dilewati (skip), bukan tetap dikosongkan.
+
+**Data yang TIDAK PERNAH masuk siklus reset sama sekali (selalu dipertahankan apa adanya):**
+
+| Sheet | Alasan |
+|-------|--------|
+| `USERS` | Data guru & admin — tidak terikat tahun ajaran |
+| `SISWA` | Siswa aktif — hanya berpindah kelas, tidak dihapus (kecuali kelas 6 lulus → ke ALUMNI, lihat §35) |
+| `KELAS` | Struktur kelas |
+| `MAPEL` | Daftar mata pelajaran |
+| `EKSKUL`, `DPL` | Master jenis ekskul/kokurikuler (bukan nilai siswa) |
+| `CONFIG` | Profil sekolah (hanya field `tahun_pelajaran` yang diupdate, bukan dikosongkan) |
+| `MUTASI`, `SYNC_LOG` | Riwayat administratif sepanjang masa |
+| `ALUMNI` | Arsip permanen siswa lulus |
+
+**Cara mengakses data arsip dari dalam sistem:**
+```javascript
+const tahunTersedia = await SHEETS.getTahunArsipTersedia();
+// → ['2025-2026', '2024-2025', ...] terbaru lebih dulu
+const dataLama = await SHEETS.readArsip('NILAI', '2025-2026');
+// → raw rows, dipetakan dengan skema kolom yang SAMA seperti getNilai()
+```
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `assets/js/sheets.js` | `resetTahunAjaranBaru()`: `duplicateSheetAs()` dipanggil dan hasilnya dicek SEBELUM `clearRange()` untuk sheet yang sama |
+| `assets/js/sheets.js` | `continue` (skip) jika `dup.status === 'error'` — TIDAK lanjut ke `clearRange` |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §37` di deklarasi `resetTahunAjaranBaru` dan `duplicateSheetAs` |
+| `assets/js/sheets.js` | `duplicateSheetAs()` mengembalikan `status: 'sudah_ada'` (tidak overwrite) jika tab arsip dengan nama sama sudah ada |
+
+**Checklist wajib sebelum mengubah `resetTahunAjaranBaru()` atau `duplicateSheetAs()`:**
+- [ ] Tidak ada jalur kode yang memanggil `clearRange()` pada sheet transaksional tanpa `duplicateSheetAs()` berhasil terlebih dahulu untuk sheet yang sama
+- [ ] Jika arsip gagal dibuat untuk satu sheet, sheet itu TIDAK dikosongkan, sheet lain tetap diproses (tidak saling blocking)
+- [ ] Setelah reset, `getTahunArsipTersedia()` mengembalikan tahun yang baru diarsipkan
+- [ ] Data di tab arsip bisa dibaca penuh via `readArsip()` dan jumlah barisnya sama dengan sebelum reset
+- [ ] `USERS` dan `SISWA` tidak pernah disentuh oleh `resetTahunAjaranBaru()` dalam bentuk apa pun
+
+---
+
+### 38. Cetak Rapor — Bagian D (Ketidakhadiran/Catatan Wali), Keputusan, dan TTD WAJIB Tidak Terpotong Halaman ⚠️ KRITIS
+
+**Konteks:** Beberapa guru melaporkan hasil cetak PDF rapor sering terpotong tepat di tengah kotak Catatan Wali, di tengah bagian Ketidakhadiran, atau di tengah blok tanda tangan — sehingga separuh konten ada di halaman sebelumnya dan separuh lagi di halaman berikutnya.
+
+**Akar masalah (ditemukan saat audit, perbaikan diberi label v-berikutnya setelah v56):** Ada CSS rule `.abs-catatan-grid{page-break-inside:avoid}` yang terlihat seperti perlindungan, tapi **tidak pernah benar-benar berlaku** — HTML aktual untuk bagian D memakai `<div style="display:flex;...">` inline, bukan class `.abs-catatan-grid`. CSS itu adalah dead code yang menipu pembaca kode seolah sudah terlindungi. Selain itu, `.rpr-keputusan` dan `.rpr-ttd` hanya melindungi div bagian DALAM, sementara pembungkus LUARNYA (yang juga berisi judul/baris tanggal) tidak ikut dilindungi — garis potong tetap bisa jatuh di antara judul dan kontennya.
+
+**Pola wajib sejak perbaikan ini:**
+
+1. Setiap blok yang harus utuh dalam satu halaman cetak **harus** dibungkus div dengan class CSS yang benar-benar dipakai di HTML — JANGAN menulis CSS untuk class yang "kelihatannya" relevan tapi tidak pernah dirender dengan class itu di JS pembangun HTML.
+2. `page-break-inside: avoid` harus ditempatkan pada **pembungkus terluar** dari unit visual yang ingin dilindungi, bukan hanya elemen di dalamnya.
+3. Untuk grup section yang selalu berurutan tanpa konten lain di antaranya (Bagian D → Keputusan → TTD) dan totalnya tidak mendekati satu halaman penuh, gunakan **satu pembungkus gabungan** (`.rpr-footer-group`) di samping proteksi per-bagian — pertahanan berlapis mencegah garis potong masuk di sela-sela antar bagian.
+
+**Struktur final (lihat `rapor/preview.html`, fungsi pembangun `printHTML`):**
+```
+<div class="rpr-footer-group">          ← proteksi gabungan, lihat §38
+  <div class="rpr-section rpr-bagian-d">  ← Ketidakhadiran + Catatan Wali + Tanggapan
+    ...tabel absensi... ...Catatan Wali... ...tanggapan-box...
+  </div>
+  <div class="rpr-keputusan-wrap">        ← hanya muncul di semester 2
+    <div class="rpr-keputusan">...</div>
+  </div>
+  <div class="rpr-ttd-wrap">
+    ...tanggal kota...
+    <div class="rpr-ttd">...3 kolom TTD...</div>
+  </div>
+</div>
+```
+
+**CSS wajib (di dalam `printHTML` template, bukan CSS screen):**
+```css
+.rpr-bagian-d{page-break-inside:avoid;break-inside:avoid}
+.rpr-keputusan-wrap{page-break-inside:avoid;break-inside:avoid}
+.rpr-keputusan{page-break-inside:avoid;break-inside:avoid}
+.rpr-ttd-wrap{page-break-inside:avoid;break-inside:avoid}
+.rpr-ttd{page-break-inside:avoid;break-inside:avoid}
+.rpr-footer-group{page-break-inside:avoid;break-inside:avoid}
+```
+
+**Mengapa aman dari risiko "blok terlalu besar dipaksa pindah halaman, menyisakan ruang kosong besar":** Total tinggi gabungan ketiga bagian ini (~250–300pt) jauh di bawah tinggi halaman A4 setelah margin (~737pt dengan margin 1.5cm). `page-break-inside: avoid` hanya berisiko menimbulkan ruang kosong berlebih jika blok yang dilindungi mendekati atau melebihi satu halaman penuh — itu tidak terjadi di sini.
+
+**Penanda kode wajib:**
+
+| File | Penanda |
+|------|---------|
+| `rapor/preview.html` | HTML pembangun bagian D memakai class `rpr-bagian-d` (bukan `abs-catatan-grid`) |
+| `rapor/preview.html` | Pembungkus Keputusan memakai class `rpr-keputusan-wrap` (bukan inline style polos) |
+| `rapor/preview.html` | Pembungkus TTD+tanggal memakai class `rpr-ttd-wrap` (bukan inline style polos) |
+| `rapor/preview.html` | Ada pembungkus terluar `rpr-footer-group` yang menyatukan ketiga bagian |
+| `rapor/preview.html` | CSS print punya keenam rule `page-break-inside:avoid` di atas, semuanya menyasar class yang BENAR-BENAR dipakai di HTML |
+| `rapor/preview.html` | Komentar `// ⚠️ ANTIREGRESI §38` di lokasi pembangunan HTML bagian D/Keputusan/TTD |
+
+**Checklist wajib sebelum mengubah struktur bagian D/Keputusan/TTD:**
+- [ ] Setiap class CSS untuk `page-break-inside:avoid` dicek ulang: apakah class itu BENAR-BENAR muncul di HTML yang dihasilkan, atau cuma "terlihat relevan"?
+- [ ] Cetak rapor uji dengan kasus konten panjang (misal Catatan Wali dengan teks 2-3 baris penuh) — pastikan tidak terpotong dan tidak menimbulkan halaman kosong besar
+- [ ] Cetak rapor uji untuk semester 1 (tanpa blok Keputusan) dan semester 2 (dengan blok Keputusan) — keduanya harus utuh
+- [ ] Jika menambah bagian baru ke grup footer, perbarui estimasi tinggi total agar tetap jauh dari satu halaman penuh sebelum menambahkannya ke `.rpr-footer-group`
+
+---
+
 ## 📌 Penanda Kode Kumulatif (Semua Versi)
 
 Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus** tanpa alasan yang jelas.
@@ -1775,6 +1952,19 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/leger-guru-mapel.html` | Dropdown kelas dari `kelasList` (E+K, §30) untuk `guru_mapel` — bukan hanya kolom E | v53 | Wajib. Guru mapel yang mengajar di kelas tambahan (kolom K) harus bisa memilihnya. |
 | `dashboard/guru-mapel.html` | Seksi "Laporan" di sidebar dengan link `leger-guru-mapel.html` | v53 | Penanda wajib agar guru mapel bisa menemukan halaman ini dari dashboard. |
 | `dashboard/guru-kelas.html` | `navLegerMapel` (`display:none`) + JS kondisional `kelasMapelList.length > 0 && mapelBidStudi.length > 0` | v54 | **Wajib.** Menu hanya muncul untuk guru kelas yang benar-benar merangkap guru mapel. Lihat §34. |
+| `assets/js/sheets.js` | `luluskanSiswa()` memakai `s.id` langsung sebagai `id_siswa` di ALUMNI — tidak ada `_generateId` di jalur ini | v55 | **Wajib.** Generate ID baru akan memutus seluruh riwayat nilai alumni secara permanen. Lihat §35. |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §35` di deklarasi `luluskanSiswa` | v55 | Penanda wajib agar pola ID tidak diubah saat refactor. |
+| `assets/js/sheets.js` | `'TP_KKTP!A3:W10000'` ada di array `sheetsToReset` dalam `resetTahunAjaranBaru()` | v55 | **Wajib (by design).** TP_KKTP disengaja ikut direset — guru menyusun ulang tiap tahun ajaran. Lihat §36. |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §36` di deklarasi `resetTahunAjaranBaru` | v55 | Penanda wajib agar TP_KKTP tidak dipindah ke daftar "dipertahankan" tanpa konfirmasi ulang. |
+| `assets/js/sheets.js` | `resetTahunAjaranBaru()`: `duplicateSheetAs()` dipanggil dan hasilnya dicek SEBELUM `clearRange()` untuk sheet yang sama | v56 | **KRITIS.** Tanpa ini, data tahun lama hilang permanen — bertentangan dengan kebutuhan eksplisit pemilik sistem. Lihat §37. |
+| `assets/js/sheets.js` | `continue` (skip) jika `dup.status === 'error'` sebelum `clearRange` dipanggil | v56 | **KRITIS.** Fail-safe — lebih baik data ganda sementara daripada data hilang. Lihat §37. |
+| `assets/js/sheets.js` | `duplicateSheetAs()` mengembalikan `status: 'sudah_ada'` jika tab arsip sudah ada — tidak overwrite | v56 | Wajib. Mencegah arsip tahun yang sama tertimpa jika reset dijalankan dua kali. |
+| `assets/js/sheets.js` | Komentar `// ⚠️ ANTIREGRESI §37` di deklarasi `resetTahunAjaranBaru` dan `duplicateSheetAs` | v56 | Penanda wajib agar pola arsip-dulu tidak dihapus saat refactor. |
+| `assets/js/sheets.js` | `getTahunArsipTersedia()` dan `readArsip()` tersedia dan diekspor | v56 | Wajib. Tanpa ini data arsip tidak bisa diakses dari dalam sistem — bertentangan dengan tujuan fitur. |
+| `rapor/preview.html` | Bagian D memakai class `rpr-bagian-d` (bukan `abs-catatan-grid` yang dead code) | v57 | **KRITIS.** Tanpa class yang benar-benar dipakai di HTML, CSS page-break tidak pernah berlaku. Lihat §38. |
+| `rapor/preview.html` | Pembungkus Keputusan memakai class `rpr-keputusan-wrap`; pembungkus TTD+tanggal memakai `rpr-ttd-wrap` | v57 | **KRITIS.** Melindungi pembungkus luar, bukan hanya div di dalamnya. Lihat §38. |
+| `rapor/preview.html` | Ada pembungkus gabungan `rpr-footer-group` yang menyatukan Bagian D + Keputusan + TTD | v57 | Wajib. Pertahanan berlapis mencegah garis potong di sela antar bagian. Lihat §38. |
+| `rapor/preview.html` | CSS print: `rpr-bagian-d`, `rpr-keputusan-wrap`, `rpr-keputusan`, `rpr-ttd-wrap`, `rpr-ttd`, `rpr-footer-group` semuanya `page-break-inside:avoid;break-inside:avoid` | v57 | Wajib. Semua enam class harus konsisten ada, tidak boleh sebagian dihapus saat refactor. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 15 Juni 2026 (v54). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 18 Juni 2026 (v57). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
