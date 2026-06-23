@@ -1966,5 +1966,21 @@ Tabel ini merangkum semua penanda kode yang wajib ada dan **tidak boleh dihapus*
 | `rapor/preview.html` | Ada pembungkus gabungan `rpr-footer-group` yang menyatukan Bagian D + Keputusan + TTD | v57 | Wajib. Pertahanan berlapis mencegah garis potong di sela antar bagian. Lihat §38. |
 | `rapor/preview.html` | CSS print: `rpr-bagian-d`, `rpr-keputusan-wrap`, `rpr-keputusan`, `rpr-ttd-wrap`, `rpr-ttd`, `rpr-footer-group` semuanya `page-break-inside:avoid;break-inside:avoid` | v57 | Wajib. Semua enam class harus konsisten ada, tidak boleh sebagian dihapus saat refactor. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 18 Juni 2026 (v57). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+---
+
+### §39 — Nomor Seri Syahadah ISMUBA Per-Siswa (v58)
+
+Nomor seri syahadah ISMUBA bersifat **per-siswa**, disimpan di kolom Q sheet SISWA (field `no_seri_syahadah`). Jangan dikembalikan ke skema prefix global.
+
+| File | Yang HARUS ada | Sejak | Alasan |
+|------|---------------|-------|--------|
+| `assets/js/sheets.js` | `read('SISWA!A:Q')` di `getSiswa()` — bukan `A:P` | v58 | Wajib. Tanpa ini kolom Q (`no_seri_syahadah`) tidak terbaca. |
+| `assets/js/sheets.js` | `no_seri_syahadah: r[16]` di return object `getSiswa()` | v58 | Wajib. Sinkron dengan range read A:Q. |
+| `assets/js/sheets.js` | `siswa.no_seri_syahadah \|\| ''` sebagai elemen ke-17 di `row` di `addSiswa()` | v58 | Wajib. Tanpa ini kolom Q selalu kosong saat tambah siswa baru. |
+| `ujian-sekolah/preview-ismuba.html` | `const noSertif = siswa.no_seri_syahadah \|\| ''` — bukan `noSertifPfx + noPeserta` | v58 | **KRITIS.** Nomor seri adalah data unik per-siswa; prefix global tidak bisa menghasilkan nomor yang benar. |
+| `ujian-sekolah/preview-ismuba.html` | `<div class="shd-no-sertif">No. ${noSertif}</div>` ada di pg1 dan pg2, dibungkus kondisi `noSertif ?` | v58 | Wajib. Nomor harus muncul di kedua halaman; kondisi mencegah div kosong jika data belum diisi. |
+| `ujian-sekolah/preview-ismuba.html` | CSS `.shd-no-sertif{text-align:right;font-size:11pt;margin-bottom:4pt}` | v58 | Wajib. Tanpa ini nomor tampil tanpa posisi rata kanan yang sesuai juknis. |
+| `ujian-sekolah/config-skl.html` | Field `ismuba_no_sertif_prefix` **tidak boleh ada** di form dan `CONFIG_KEYS` | v58 | Wajib. Field ini sudah dihapus — mengembalikannya akan menimbulkan kebingungan skema lama vs baru. |
+
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 24 Juni 2026 (v58). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*

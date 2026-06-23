@@ -1,3 +1,36 @@
+## [2026-06-24] — v58 · Nomor Seri Syahadah ISMUBA Per-Siswa
+
+### ✨ Fitur Baru
+
+| # | File | Deskripsi |
+|---|------|-----------|
+| 1 | `assets/js/sheets.js` | Tambah field `no_seri_syahadah` (kolom Q sheet SISWA). Range baca `getSiswa()` diperluas dari `A:P` → `A:Q`. Field juga ditambahkan di `addSiswa()` agar siswa baru bisa menyimpan nomor ini. |
+| 2 | `ujian-sekolah/preview-ismuba.html` | Render nomor seri syahadah di pojok kanan atas **halaman 1** (Syahadah) dan **halaman 2** (Daftar Nilai), sesuai format juknis resmi Dikdasmen PWM Jawa Barat 2026. Elemen hanya tampil jika data tersedia (tidak menampilkan teks kosong). |
+| 3 | `ujian-sekolah/config-skl.html` | Hapus field `ismuba_no_sertif_prefix` dari form dan `CONFIG_KEYS`. Nomor seri kini bersifat per-siswa (disimpan di sheet SISWA kolom Q), bukan prefix global. |
+
+### 🔄 Perubahan Skema
+
+Nomor sertifikat Syahadah ISMUBA **tidak lagi menggunakan prefix global** (`ismuba_no_sertif_prefix` + `no_peserta`). Berdasarkan data resmi (`nopes_ijazah_dan_syahadah_2026.xlsx`), setiap siswa memiliki nomor seri unik (contoh: `01/SD/01/24/2026`) yang diisi ke kolom Q sheet SISWA secara manual atau via import.
+
+### 📋 File yang Diubah (v58)
+
+| File | Status |
+|------|--------|
+| `assets/js/sheets.js` | **Diubah** — range `getSiswa()` jadi `A:Q`; tambah `no_seri_syahadah: r[16]`; tambah `siswa.no_seri_syahadah` di `addSiswa()` |
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — hapus `noSertifPfx`; `noSertif` kini dari `siswa.no_seri_syahadah`; tambah CSS `.shd-no-sertif`; tambah render `<div class="shd-no-sertif">` di pg1 dan pg2 |
+| `ujian-sekolah/config-skl.html` | **Diubah** — hapus form field `ismuba_no_sertif_prefix` dan hapus dari `CONFIG_KEYS` |
+| `ANTIREGRESI.md` | **Diubah** — tambah §39, update penanda kode kumulatif v58 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v58 ini |
+
+### 📐 Yang TIDAK berubah
+
+- Logika kalkulasi nilai ISMUBA (PAI, Kemuhammadiyahan, Arab) — tidak disentuh
+- Struktur halaman cetak (layout, tabel, tanda tangan) — tidak disentuh
+- Field `no_peserta_ismuba` (kolom P) — tetap ada, hanya ditampilkan di header preview screen, tidak di halaman cetak
+- Semua config ISMUBA lainnya di `config-skl.html` — tidak disentuh
+
+---
+
 ## [2026-06-18] — v57 · Perbaikan Cetak Rapor Terpotong: Catatan Wali, Ketidakhadiran, TTD
 
 ### 🐛 Perbaikan
