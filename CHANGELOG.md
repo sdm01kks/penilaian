@@ -1,3 +1,21 @@
+## [2026-06-24] — v60 · Perbaikan Layout Halaman 2 Syahadah ISMUBA
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/preview-ismuba.html` | Jarak antara tabel nilai dan baris tanggal (Bandung, …) terlalu sempit — terlihat mepet. | Tambah `margin-top:16pt` pada div tanggal di halaman 2. |
+| 2 | `ujian-sekolah/preview-ismuba.html` | Nama Ketua Majelis (kiri) dan nama Kepala Sekolah (kanan) tidak sejajar — nama kepala sekolah muncul jauh lebih tinggi karena kolom kiri memiliki lebih banyak konten (3 baris teks + QR code). | Ubah `.dnilai-sign` dari `align-items:flex-start` → `align-items:flex-end` agar kedua kolom sejajar dari bawah. Kolom kanan juga diberi `display:flex;flex-direction:column;justify-content:flex-end` agar nama dan NBM selalu menempel di baris terbawah, lurus dengan kolom kiri. |
+
+### 📋 File yang Diubah (v60)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — CSS `.dnilai-sign`: `align-items` jadi `flex-end`; div tanggal: tambah `margin-top:16pt`; kolom kanan sign: tambah `display:flex;flex-direction:column;justify-content:flex-end` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v60 ini |
+
+---
+
 ## [2026-06-24] — v59 · Koreksi: Nomor Seri Syahadah Hanya di Halaman 1
 
 ### 🐛 Perbaikan
