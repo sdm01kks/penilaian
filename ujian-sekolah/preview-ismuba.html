@@ -101,6 +101,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   .cert-logos img{height:72px;width:auto;object-fit:contain}
 
   /* Syahadah page 1 */
+  /* FIX v58: Nomor sertifikat pojok kanan atas — hadir di halaman 1 dan halaman 2 */
+  .shd-no-sertif{text-align:right;font-size:11pt;margin-bottom:4pt}
   .shd-org{text-align:center;font-weight:bold;font-size:11pt;text-transform:uppercase;line-height:1.5;margin-bottom:4pt}
   .shd-title{text-align:center;font-family:'Amiri',serif;font-size:28pt;font-weight:bold;color:#C8A340;letter-spacing:4px;margin-bottom:4pt}
   .shd-basmalah{text-align:center;margin-bottom:6pt}
@@ -420,8 +422,6 @@ function buildCard(siswa,rapRows,usRows){
   const tglSelesai  = cfg['ismuba_tgl_selesai']    || '…';
   const tglHijri    = cfg['ismuba_tgl_ttd_hijri']  || '7 Dzulhijjah 1447 H';
   const tglMasehi   = cfg['ismuba_tgl_ttd_masehi'] || '2 Juni 2026 M';
-  const noSertifPfx = cfg['ismuba_no_sertif_prefix'] || '';
-
   // Siswa fields
   const nama      = siswa.nama || '—';
   const ttl       = (siswa.tempat_lahir||'—')+', '+(fmtTgl(siswa.tgl_lahir)||'—');
@@ -430,7 +430,9 @@ function buildCard(siswa,rapRows,usRows){
   const nisn      = siswa.nisn || '—';
   const namaOrtu  = siswa.nama_wali || siswa.nama_ayah || '—';
   const noPeserta = siswa.no_peserta_ismuba || '…';
-  const noSertif  = noSertifPfx ? (noSertifPfx+noPeserta) : '';
+  // FIX v58: Nomor seri syahadah per-siswa dari kolom Q sheet SISWA
+  // (tidak lagi menggunakan prefix global dari CONFIG)
+  const noSertif  = siswa.no_seri_syahadah || '';
 
   // Nilai
   const pai  = getNilaiISMUBA(rapRows,usRows,'ismuba_pai');
@@ -487,6 +489,7 @@ function buildCard(siswa,rapRows,usRows){
   const pg1=document.createElement('div');
   pg1.className='cert-page';
   pg1.innerHTML=`
+    ${noSertif ? `<div class="shd-no-sertif">No. ${noSertif}</div>` : ''}
     <div class="cert-logos">
       <img src="${LOGO_MUH}" alt="Logo Muhammadiyah" style="height:55pt;">
     </div>
@@ -552,6 +555,7 @@ function buildCard(siswa,rapRows,usRows){
   const pg2=document.createElement('div');
   pg2.className='cert-page';
   pg2.innerHTML=`
+    ${noSertif ? `<div class="shd-no-sertif">No. ${noSertif}</div>` : ''}
     <div class="dnilai-title">
       DAFTAR NILAI<br>
       TES KEMAMPUAN AKADEMIK<br>
