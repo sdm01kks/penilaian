@@ -1,3 +1,20 @@
+## [2026-06-24] — v59 · Koreksi: Nomor Seri Syahadah Hanya di Halaman 1
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/preview-ismuba.html` | Nomor seri syahadah (v58) ikut muncul di halaman 2 (Daftar Nilai), padahal sesuai juknis hanya diperlukan di halaman 1 (Syahadah). | Hapus render `${noSertif ? ...}` dari `pg2.innerHTML`. CSS `.shd-no-sertif` tetap ada karena masih dipakai pg1. |
+
+### 📋 File yang Diubah (v59)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — hapus baris render `shd-no-sertif` dari `pg2` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v59 ini |
+
+---
+
 ## [2026-06-24] — v58 · Nomor Seri Syahadah ISMUBA Per-Siswa
 
 ### ✨ Fitur Baru
