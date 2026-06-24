@@ -543,11 +543,12 @@ function buildCard(siswa,rapRows,usRows){
       <div class="shd-sign-col mid">
         <div class="pas-foto-box">Pas Foto<br>3&times;4</div>
       </div>
-      <div class="shd-sign-col">
+      <div class="shd-sign-col" style="display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;text-align:left;">
         <div>Kepala Sekolah / Madrasah,</div>
-        <div class="shd-sign-gap"></div>
-        <div class="shd-sign-name">${kepsNama}</div>
-        <div>NBM. ${kepsNBM}</div>
+        <div>
+          <div class="shd-sign-name">${kepsNama}</div>
+          <div>NBM. ${kepsNBM}</div>
+        </div>
       </div>
     </div>`;
 
