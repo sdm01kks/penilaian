@@ -1,3 +1,20 @@
+## [2026-06-24] — v62 · Koreksi Rata Kiri Kolom Kepala Sekolah Halaman 2
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/preview-ismuba.html` | Teks "Kepala Sekolah / Madrasah,", nama, dan NBM di kolom kanan halaman 2 tampil di tengah (center) — seharusnya rata kiri sesuai tampilan dokumen resmi. | Tambah `text-align:left` pada inline style kolom kanan di `dnilai-sign`. |
+
+### 📋 File yang Diubah (v62)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — kolom kanan `.dnilai-sign`: tambah `text-align:left` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v62 ini |
+
+---
+
 ## [2026-06-24] — v61 · Koreksi Layout TTD Halaman 2: Jabatan Lurus Atas, Nama Lurus Bawah
 
 ### 🐛 Perbaikan
