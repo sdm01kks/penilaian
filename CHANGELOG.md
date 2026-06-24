@@ -1,3 +1,20 @@
+## [2026-06-24] — v63 · Koreksi Layout TTD Halaman 1: Rata Kiri + Nama Lurus
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/preview-ismuba.html` | Halaman 1 (Syahadah): teks "Kepala Sekolah / Madrasah,", nama, dan NBM di kolom kanan tampil rata tengah dan nama tidak lurus dengan nama Ketua Majelis. Pola masalah identik dengan yang sudah diperbaiki di halaman 2 (v61–v62). | Terapkan pola yang sama: kolom kanan diberi `display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;text-align:left` — jabatan menempel di atas (lurus kolom kiri), nama+NBM menempel di bawah (lurus dengan nama kolom kiri), semua rata kiri. |
+
+### 📋 File yang Diubah (v63)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — kolom kanan `shd-sign` halaman 1: ganti struktur `shd-sign-gap` menjadi flex `space-between`, tambah `text-align:left`, bungkus nama+NBM dalam `<div>` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v63 ini |
+
+---
+
 ## [2026-06-24] — v62 · Koreksi Rata Kiri Kolom Kepala Sekolah Halaman 2
 
 ### 🐛 Perbaikan
