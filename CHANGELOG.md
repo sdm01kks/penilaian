@@ -1,3 +1,20 @@
+## [2026-06-24] — v61 · Koreksi Layout TTD Halaman 2: Jabatan Lurus Atas, Nama Lurus Bawah
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/preview-ismuba.html` | Fix v60 membuat nama+NBM lurus tapi memindahkan "Kepala Sekolah / Madrasah," ikut turun — seharusnya jabatan ini lurus dengan "Ketua Majelis Dikdasmen & PNF" di atas. | `.dnilai-sign` dikembalikan ke `align-items:flex-start`. Kolom kanan diberi `display:flex;flex-direction:column;justify-content:space-between;align-self:stretch` — jabatan menempel di atas (lurus dengan kolom kiri), nama+NBM menempel di bawah (lurus dengan nama kolom kiri) karena tinggi kolom dipaksa sama via `align-self:stretch`. |
+
+### 📋 File yang Diubah (v61)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — CSS `.dnilai-sign`: `align-items` kembali ke `flex-start`; kolom kanan: `justify-content:space-between` + `align-self:stretch`; nama+NBM dibungkus `<div>` agar jadi satu unit di bawah |
+| `CHANGELOG.md` | **Diubah** — tambah entri v61 ini |
+
+---
+
 ## [2026-06-24] — v60 · Perbaikan Layout Halaman 2 Syahadah ISMUBA
 
 ### 🐛 Perbaikan
