@@ -88,11 +88,16 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
     width:100%;font-family:'Times New Roman',serif;font-size:12pt;
     display:flex;flex-direction:column;
     page-break-after:always;break-after:always;
+    page-break-inside:avoid;break-inside:avoid;
     position:relative;
     /* ANTIREGRESI v26: tidak ada border/frame pada halaman Syahadah */
     border:none;box-shadow:none;
     padding:10mm 14mm 10mm;
-    min-height:0;
+    /* FIX v64: kunci tinggi tepat satu halaman A4 (297mm - margin atas+bawah 15mm×2 = 267mm)
+       agar konten siswa berikutnya tidak meluber ke halaman sebelumnya saat cetak batch */
+    height:267mm;
+    box-sizing:border-box;
+    overflow:hidden;
   }
   .cert-page:last-of-type{page-break-after:auto;break-after:auto}
 
