@@ -1,3 +1,25 @@
+## [2026-06-24] — v64 · Perbaikan Cetak Batch: Nomor Surat Siswa Berikutnya Tidak Lagi Meluber ke Halaman Sebelumnya
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/preview-ismuba.html` | Saat mencetak syahadah lebih dari satu siswa sekaligus (batch), nomor surat siswa ke-2 (pg1 siswa berikutnya) muncul di pojok kanan bawah halaman 2 siswa sebelumnya (pg2). Ini menyebabkan harus cetak satu per satu, tidak efektif untuk 57 siswa. Root cause: `.cert-page` tidak memiliki tinggi yang dikunci (`min-height:0` + tidak ada `height`), sehingga browser tidak bisa menjamin setiap `.cert-page` terkurung persis satu halaman A4 saat render print. | Tambah `height:267mm` (= 297mm A4 − 15mm margin atas − 15mm margin bawah), `box-sizing:border-box`, dan `overflow:hidden` pada `.cert-page`. Tambah juga `page-break-inside:avoid;break-inside:avoid` sebagai lapisan tambahan. Kini setiap halaman terkunci ke satu A4 dan cetak batch berjalan benar. |
+
+### 📐 Catatan Kalkulasi
+
+`@page` menetapkan `margin:15mm`. Tinggi A4 = 297mm. Tinggi konten = 297 − 15 − 15 = **267mm**. Padding dalam `.cert-page` (`10mm 14mm 10mm`) sudah termasuk dalam 267mm karena `box-sizing:border-box`.
+
+### 📋 File yang Diubah (v64)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-ismuba.html` | **Diubah** — `.cert-page`: ganti `min-height:0` → `height:267mm;box-sizing:border-box;overflow:hidden`; tambah `page-break-inside:avoid;break-inside:avoid` |
+| `CHANGELOG.md` | **Diubah** — tambah entri v64 ini |
+| `ANTIREGRESI.md` | **Diubah** — tambah §40 |
+
+---
+
 ## [2026-06-24] — v63 · Koreksi Layout TTD Halaman 1: Rata Kiri + Nama Lurus
 
 ### 🐛 Perbaikan

@@ -1982,5 +1982,17 @@ Nomor seri syahadah ISMUBA bersifat **per-siswa**, disimpan di kolom Q sheet SIS
 | `ujian-sekolah/preview-ismuba.html` | CSS `.shd-no-sertif{text-align:right;font-size:11pt;margin-bottom:4pt}` | v58 | Wajib. Tanpa ini nomor tampil tanpa posisi rata kanan yang sesuai juknis. |
 | `ujian-sekolah/config-skl.html` | Field `ismuba_no_sertif_prefix` **tidak boleh ada** di form dan `CONFIG_KEYS` | v58 | Wajib. Field ini sudah dihapus — mengembalikannya akan menimbulkan kebingungan skema lama vs baru. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 24 Juni 2026 (v58). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+---
+
+### §40 — Tinggi cert-page Harus Dikunci ke Satu Halaman A4 (v64)
+
+`.cert-page` WAJIB memiliki `height:267mm` (bukan `min-height`, bukan tanpa height). Jangan dikembalikan ke `min-height:0` atau dihapus.
+
+| File | Yang HARUS ada | Sejak | Alasan |
+|------|---------------|-------|--------|
+| `ujian-sekolah/preview-ismuba.html` | `.cert-page` memiliki `height:267mm` | v64 | **KRITIS.** Tanpa ini, saat cetak batch, konten pg1 siswa berikutnya (termasuk nomor surat) meluber ke bawah pg2 siswa sebelumnya. Angka 267mm = 297mm (A4) − 15mm (margin atas) − 15mm (margin bawah) sesuai `@page{margin:15mm}`. Jika margin `@page` diubah, angka ini HARUS diperbarui. |
+| `ujian-sekolah/preview-ismuba.html` | `.cert-page` memiliki `box-sizing:border-box` | v64 | Wajib agar padding dalam (10mm atas/bawah) tidak menambah di luar 267mm. |
+| `ujian-sekolah/preview-ismuba.html` | `.cert-page` memiliki `overflow:hidden` | v64 | Wajib agar konten yang melebihi tinggi tidak meluber ke halaman berikutnya. |
+
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 24 Juni 2026 (v64). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
