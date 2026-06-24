@@ -132,7 +132,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   .dnilai-tbl th{border:1px solid #000;padding:3mm;text-align:center;font-weight:bold}
   .dnilai-tbl td{border:1px solid #000;padding:3mm;vertical-align:middle}
   .dnilai-tbl td.ctr{text-align:center}
-  .dnilai-sign{display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:6mm;gap:4mm}
+  .dnilai-sign{display:flex;justify-content:space-between;align-items:flex-start;margin-top:auto;padding-top:6mm;gap:4mm}
   .dnilai-sign-col{text-align:center;font-size:11pt;flex:1}
   .dnilai-sign-gap{height:14mm}
   .dnilai-sign-name{font-weight:bold;text-decoration:underline}
@@ -628,11 +628,12 @@ function buildCard(siswa,rapRows,usRows){
         <div>NBM. 555.835</div>
       </div>
       <div class="dnilai-sign-col" style="flex:0 0 6mm;"></div>
-      <div class="dnilai-sign-col" style="display:flex;flex-direction:column;justify-content:flex-end;">
+      <div class="dnilai-sign-col" style="display:flex;flex-direction:column;justify-content:space-between;align-self:stretch;">
         <div>Kepala Sekolah / Madrasah,</div>
-        <div class="dnilai-sign-gap"></div>
-        <div class="dnilai-sign-name">${kepsNama}</div>
-        <div>NBM. ${kepsNBM}</div>
+        <div>
+          <div class="dnilai-sign-name">${kepsNama}</div>
+          <div>NBM. ${kepsNBM}</div>
+        </div>
       </div>
     </div>`;
 
