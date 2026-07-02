@@ -1,3 +1,23 @@
+## [2026-07-02] — v65 · Perbaikan Simpan Konfigurasi SKL & Nilai Ujian Sekolah Hilang
+
+### 🐛 Perbaikan
+
+| # | File | Masalah | Solusi |
+|---|------|---------|--------|
+| 1 | `ujian-sekolah/config-skl.html` | `simpanConfig()` menyimpan 46 key konfigurasi SKL dengan memanggil `SHEETS.setConfig()` satu per satu di dalam loop `for...await`. Setiap `SHEETS.setConfig()` melakukan `read('CONFIG!A:B')` penuh + `write`/`append` sendiri, sehingga satu klik "Simpan Konfigurasi" memicu ±92 API call berurutan ke Google Sheets. Akibatnya penyimpanan sangat lambat dan sering gagal/timeout — termasuk field tanggal seperti Tanggal Selesai TKA (`ismuba_tgl_selesai`), yang tampak "tidak bisa disimpan" padahal sebenarnya seluruh form config gagal tersimpan, bukan field tanggal itu sendiri yang bermasalah. Pola per-row API call ini persis yang sudah diperingatkan di ANTIREGRESI §9 dan §20 untuk halaman lain, namun belum diterapkan di `config-skl.html`. | `simpanConfig()` kini membaca `CONFIG!A:B` satu kali, membangun peta key ke nomor baris, lalu mengelompokkan key menjadi `toUpdate` (key yang sudah ada, ditulis lewat satu `SHEETS.valuesBatchWrite()`) dan `toAppend` (key baru, ditulis lewat satu `SHEETS.append()`). Total API call turun dari sekitar 92 menjadi maksimal 3. |
+| 2 | `assets/js/sheets.js` | `saveNilaiUS()` dan `saveNilaiUSBatch()` memanggil `append('NILAI_US', ...)` **tanpa anchor `!A1`** — pola yang sudah diperingatkan sebagai risiko belum-diperbaiki di ANTIREGRESI §3. Tanpa anchor, Google Sheets API mencari batas tabel terakhir di seluruh sheet; jika sheet `NILAI_US` pernah memiliki sisa data di kolom jauh, baris nilai baru bisa ditulis di luar jangkauan `NILAI_US!A:G` — tersimpan tanpa error, tapi tidak pernah terbaca oleh `getNilaiUS()`, sehingga nilai ujian sekolah sejumlah siswa (baik mode per siswa maupun per mata pelajaran) tampak kosong meski sudah pernah diinput dengan benar. | Tambahkan anchor `!A1` pada kedua pemanggilan: `append('NILAI_US!A1', ...)`, mengikuti pola yang sudah dipakai di `SISWA!A1` dan `SETORAN_TT!A1`. |
+
+### File yang Diubah (v65)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/config-skl.html` | **Diubah** — `simpanConfig()`: ganti loop per-key `SHEETS.setConfig()` dengan satu `read` + batch `valuesBatchWrite`/`append`, mengikuti pola wajib ANTIREGRESI Section 9 dan Section 20 |
+| `assets/js/sheets.js` | **Diubah** — `saveNilaiUS()` dan `saveNilaiUSBatch()`: tambah anchor `!A1` pada `append('NILAI_US', ...)`, menutup risiko yang sudah diperingatkan di ANTIREGRESI §3 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v65 |
+| `ANTIREGRESI.md` | **Diubah** — §3: tandai `NILAI_US!A1` sebagai sudah diperbaiki di v65 |
+
+---
+
 ## [2026-06-24] — v64 · Perbaikan Cetak Batch: Nomor Surat Siswa Berikutnya Tidak Lagi Meluber ke Halaman Sebelumnya
 
 ### 🐛 Perbaikan

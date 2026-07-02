@@ -126,9 +126,10 @@ await append('NILAI_US', [row]);
 |------|---------|
 | `sheets.js` | `append('SETORAN_TT!A1', [row])` |
 | `sheets.js` | `append('SISWA!A1', [row])` — FIX v37, sebelumnya `append('SISWA', [row])` tanpa anchor |
-| `sheets.js` | `append('NILAI_US'` — **TIDAK boleh ada** (harus pakai `NILAI_US!A1` atau via `toAppend` batch) |
+| `sheets.js` | `append('NILAI_US!A1'` — FIX v65, sebelumnya `append('NILAI_US', ...)` tanpa anchor di `saveNilaiUS()` dan `saveNilaiUSBatch()`. Ini adalah akar penyebab nilai US sejumlah siswa hilang tanpa error (tersimpan tapi di luar jangkauan baca `NILAI_US!A:G`) |
+| `sheets.js` | `append('NILAI_US'` (tanpa `!A1`) — **TIDAK boleh ada lagi** |
 
-> Catatan: fungsi `saveNilaiUSBatch` menggunakan `append('NILAI_US', toAppend)` (tanpa anchor) karena merupakan batch append — ini masih berisiko jika sheet pernah memiliki data di kolom jauh. Pertimbangkan mengganti ke `append('NILAI_US!A1', toAppend)` di masa depan.
+> ~~Catatan: fungsi `saveNilaiUSBatch` menggunakan `append('NILAI_US', toAppend)` (tanpa anchor)~~ — **Sudah diperbaiki di v65.** Risiko ini sempat dibiarkan "untuk dipertimbangkan di masa depan" dan akhirnya benar-benar menyebabkan regresi nyata: nilai ujian sekolah sejumlah siswa hilang dari tampilan (per_siswa maupun per_mapel) meski sudah pernah tersimpan dengan benar sebelumnya. Baris baru yang di-append kemungkinan mendarat di luar jangkauan `NILAI_US!A:G` karena Sheets API mencari batas tabel di seluruh sheet tanpa anchor `!A1`. Jangan hilangkan anchor ini lagi.
 
 ---
 
