@@ -1112,7 +1112,8 @@ const SHEETS = (() => {
       return existingId;
     } else {
       const id = 'NU' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-      await append('NILAI_US', [buildRow(id)]);
+      // FIX (ANTIREGRESI §3): anchor !A1 wajib, lihat catatan di saveNilaiUSBatch.
+      await append('NILAI_US!A1', [buildRow(id)]);
       return id;
     }
   }
@@ -1162,7 +1163,11 @@ const SHEETS = (() => {
       if (onProgress) onProgress(done, items.length);
     }
     if (toAppend.length) {
-      await append('NILAI_US', toAppend);
+      // FIX (ANTIREGRESI §3): anchor !A1 wajib agar Sheets API tidak mencari batas
+      // tabel di seluruh sheet. Tanpa anchor, jika ada sisa data di kolom jauh,
+      // baris nilai baru bisa ditulis di luar jangkauan NILAI_US!A:G — tersimpan
+      // tanpa error, tapi tidak pernah terbaca oleh getNilaiUS()/leger-us.html.
+      await append('NILAI_US!A1', toAppend);
     }
     if (onProgress) onProgress(items.length, items.length);
   }
