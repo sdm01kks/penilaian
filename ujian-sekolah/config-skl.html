@@ -444,10 +444,37 @@ async function simpanConfig() {
 
   showLoading('Menyimpan konfigurasi…');
   try {
+    // FIX: simpan semua config sekaligus — SATU baca, batch write.
+    // Sebelumnya loop ini memanggil SHEETS.setConfig() satu per satu untuk tiap
+    // key (46 key), dan setiap setConfig() melakukan read('CONFIG!A:B') + write/append
+    // sendiri → ~92 API call berurutan dalam satu klik Simpan. Ini persis pola
+    // per-row API call yang sudah diperingatkan di ANTIREGRESI §9/§20, hanya saja
+    // belum diterapkan di halaman ini. Akibatnya penyimpanan lambat dan sering
+    // gagal/timeout — termasuk field tanggal (mis. Tanggal Selesai TKA) yang
+    // tampak "tidak bisa disimpan" padahal sebenarnya seluruh form gagal tersimpan.
+    const rows = await SHEETS.read('CONFIG!A:B');
+    const rowIndexByKey = {};
+    for (let i = 2; i < rows.length; i++) {
+      if (rows[i][0]) rowIndexByKey[rows[i][0]] = i + 1; // +1 = nomor baris Excel (1-based)
+    }
+
+    const toUpdate = [];
+    const toAppend = [];
     for (const k of SKL_KEYS) {
       const el = document.getElementById(k);
-      if (el) await SHEETS.setConfig(k, el.value.trim());
+      if (!el) continue;
+      const value  = el.value.trim();
+      const rowNum = rowIndexByKey[k];
+      if (rowNum) {
+        toUpdate.push([`CONFIG!B${rowNum}`, [[value]]]);
+      } else {
+        toAppend.push([k, value]);
+      }
     }
+
+    if (toUpdate.length) await SHEETS.valuesBatchWrite(toUpdate);
+    if (toAppend.length) await SHEETS.append('CONFIG', toAppend);
+
     showAlert('success','✅ Tersimpan','Konfigurasi SKL berhasil disimpan.');
     hideLoading();
   } catch(e) { showAlert('error','⛔',e.message); hideLoading(); }
