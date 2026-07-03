@@ -260,7 +260,12 @@ const SHEETS = (() => {
   async function getSiswa(kelas = null) {
     // FIX v37: Baca hingga kolom P (bukan A:O) agar no_peserta_ismuba (kolom P) ikut terbaca
     // FIX v58: Baca hingga kolom Q agar no_seri_syahadah (kolom Q) ikut terbaca
-    const rows = await read('SISWA!A:Q');
+    // FIX vTRANSKRIP: Baca hingga kolom R agar no_ijazah (kolom R) ikut terbaca —
+    // dipakai oleh ujian-sekolah/preview-transkrip.html. Kolom ini diisi & disimpan
+    // langsung dari halaman Transkrip (lihat saveNoIjazah() di file tsb), BUKAN dari
+    // form Data Siswa. setup/data-siswa.html menulis dengan range tetap SISWA!A:P
+    // sehingga kolom Q dan R tidak pernah tertimpa oleh halaman itu — aman.
+    const rows = await read('SISWA!A:R');
     let siswa  = rows.slice(2).filter(r => r[0] && r[1] && r[0] !== 'id_siswa');
 
     if (kelas) {
@@ -297,6 +302,7 @@ const SHEETS = (() => {
       nama_wali:           r[14] || '',
       no_peserta_ismuba:   r[15] || '',  // kolom P — FIX v37
       no_seri_syahadah:    r[16] || '',  // kolom Q — FIX v58
+      no_ijazah:           r[17] || '',  // kolom R — FIX vTRANSKRIP
     }));
   }
 
