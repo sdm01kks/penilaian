@@ -93,6 +93,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
   <a class="nav-item" href="input-rata-rapor.html"><span class="nav-icon">📊</span> Nilai Rata-Rata Rapor</a>
   <a class="nav-item" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
   <a class="nav-item" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview &amp; Cetak SKL</a>
+  <a class="nav-item" href="preview-transkrip.html"><span class="nav-icon">📃</span> Preview &amp; Cetak Transkrip</a>
   <a class="nav-item" href="preview-tka.html"><span class="nav-icon">📜</span> Preview &amp; Cetak TKA</a>
   <a class="nav-item" href="preview-ismuba.html"><span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA</a>
   <a class="nav-item" href="generate-skl.html"><span class="nav-icon">📄</span> Generate Dokumen SKL</a>
@@ -137,6 +138,40 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
       <div class="form-group full">
         <label>Contoh nomor surat siswa pertama:</label>
         <div class="preview-box" id="previewNoSurat">400.3.11.1/095.01/SKet-UPTDSDM01KKS/VI/2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nomor Surat Transkrip Nilai -->
+  <div class="card">
+    <div class="section-title">⬡ Nomor Surat Transkrip Nilai</div>
+    <p style="font-size:12px;color:var(--ink-muted);margin-bottom:14px;">
+      Nomor Transkrip berbeda formatnya dari Nomor SKL. Nomor urut naik 1 angka penuh untuk setiap siswa (bukan format sub-urut seperti SKL).
+    </p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nomor Urut Awal <span class="hint">naik 1 per siswa: 133, 134, 135, …</span></label>
+        <input type="number" id="transkrip_no_urut_awal" value="133" min="1">
+      </div>
+      <div class="form-group">
+        <label>Kode Jenis Surat <span class="hint">bagian ke-2</span></label>
+        <input type="text" id="transkrip_no_kode2" value="KET" placeholder="KET">
+      </div>
+      <div class="form-group">
+        <label>Kode Klasifikasi <span class="hint">bagian ke-3</span></label>
+        <input type="text" id="transkrip_no_kode3" value="III.4.AU" placeholder="III.4.AU">
+      </div>
+      <div class="form-group">
+        <label>Kode Tambahan <span class="hint">bagian ke-4</span></label>
+        <input type="text" id="transkrip_no_kode4" value="A" placeholder="A">
+      </div>
+      <div class="form-group">
+        <label>Tahun Surat <span class="hint">bagian ke-5</span></label>
+        <input type="text" id="transkrip_tahun" value="2025" placeholder="2025">
+      </div>
+      <div class="form-group full">
+        <label>Contoh nomor Transkrip siswa pertama:</label>
+        <div class="preview-box" id="previewNoTranskrip">133/KET/III.4.AU/A/2025</div>
       </div>
     </div>
   </div>
@@ -198,6 +233,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green-light);box-shad
     <p style="font-size:12px;color:var(--ink-muted);margin-bottom:14px;">
       Isikan <strong>nama mapel persis</strong> seperti yang ada di database (sheet MAPEL). Kosongkan jika mapel tersebut tidak ada di sekolah ini.
       Nilai yang ditampilkan di lampiran adalah <strong>nilai ijazah yang sudah dibulatkan</strong>.
+      Catatan: 8 mapel pertama (PAI s.d. Bahasa Sunda) dipakai di Lampiran SKL. Bahasa Inggris, TIK, dan KKA <strong>tidak</strong> tampil di SKL, tapi dipakai di halaman <em>Preview &amp; Cetak Transkrip Nilai</em>.
     </p>
     <div class="form-grid">
       <div class="form-group">
@@ -382,9 +418,14 @@ const SKL_KEYS = [
   'skl_tgl_rapat','skl_tgl_penetapan',
   'skl_kepsek_nama','skl_kepsek_nip','skl_kepsek_nbm',
   'skl_no_sk','skl_kota',
-  // 8 mapel SKL (bing/tik/kka dihapus per §21)
+  // 8 mapel SKL (bing/tik/kka dihapus dari LAMPIRAN SKL per §21, TAPI field ini
+  // tetap disimpan di CONFIG karena dipakai oleh ujian-sekolah/preview-transkrip.html
+  // (fitur Transkrip Nilai) — lihat CHANGELOG entri Transkrip Nilai.
   'map_pai','map_pp','map_bind','map_mtk','map_ipas','map_sb','map_pjok','map_bsund',
+  'map_bing','map_tik','map_kka',
   'skl_bobot_rapor','skl_bobot_us','skl_bobot_us_tertulis','skl_bobot_us_praktik',
+  // Nomor Surat Transkrip Nilai (fitur baru — lihat preview-transkrip.html)
+  'transkrip_no_urut_awal','transkrip_no_kode2','transkrip_no_kode3','transkrip_no_kode4','transkrip_tahun',
   // ISMUBA
   'ismuba_no_se','ismuba_tahun_ajaran','ismuba_no_sk_pwm','ismuba_tgl_sk',
   'ismuba_tgl_penetapan','ismuba_kota','ismuba_npsn','ismuba_kepsek_nama','ismuba_kepsek_nbm',
@@ -410,6 +451,7 @@ window.addEventListener('load', async () => {
       if (el && existing[k] !== undefined) el.value = existing[k];
     });
     updatePreview();
+    updatePreviewTranskrip();
     hideLoading();
   } catch(e) { showAlert('error','⛔ Gagal memuat',e.message); hideLoading(); }
 });
@@ -428,6 +470,22 @@ function updatePreview() {
   const tahun = document.getElementById('skl_tahun_skl')?.value        || '2026';
   document.getElementById('previewNoSurat').textContent =
     `${klas}/${base}.01/${inst}/${bulan}/${tahun}`;
+}
+
+// Listener untuk komponen Nomor Transkrip — fitur Transkrip Nilai
+['transkrip_no_urut_awal','transkrip_no_kode2','transkrip_no_kode3','transkrip_no_kode4','transkrip_tahun'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updatePreviewTranskrip);
+});
+
+function updatePreviewTranskrip() {
+  const urut = document.getElementById('transkrip_no_urut_awal')?.value || '133';
+  const k2   = document.getElementById('transkrip_no_kode2')?.value     || 'KET';
+  const k3   = document.getElementById('transkrip_no_kode3')?.value     || 'III.4.AU';
+  const k4   = document.getElementById('transkrip_no_kode4')?.value     || 'A';
+  const th   = document.getElementById('transkrip_tahun')?.value        || '2025';
+  document.getElementById('previewNoTranskrip').textContent =
+    `${urut}/${k2}/${k3}/${k4}/${th}`;
 }
 
 async function simpanConfig() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preview & Cetak SKL — SDM01KKS</title>
+<title>Preview & Cetak Transkrip Nilai — SDM01KKS</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -134,9 +134,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   .kop-ids{font-size:8pt;color:#000;margin-top:2px;display:flex;justify-content:space-between;width:100%;padding:0}
   .kop-sep{border-top:4px solid #000;margin-top:3px;width:100%}
 
-  /* Title */
-  .doc-title{text-align:center;font-size:12pt;font-weight:bold;text-transform:uppercase;margin:18pt 0 1px;letter-spacing:.5px}
-  .doc-nomor{text-align:center;font-size:11pt;margin-bottom:18pt}
+  /* Title — margin lebih kecil dari SKL karena tabel Transkrip lebih panjang (15 baris) */
+  .doc-title{text-align:center;font-size:13pt;font-weight:bold;text-transform:uppercase;margin:10pt 0 1px;letter-spacing:.5px}
+  .doc-nomor{text-align:center;font-size:11pt;margin-bottom:10pt}
 
   /* Body */
   .body-text{font-size:11pt;line-height:1.5;text-align:justify;margin-bottom:2px}
@@ -164,6 +164,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   .lamp-tbl td{border:1px solid #000;padding:.7mm 2mm;vertical-align:middle;font-size:10pt}
   .lamp-tbl td.ctr{text-align:center}
   .lamp-tbl .grp-lbl td{font-size:8.5pt;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;background:#fff}
+  .lamp-tbl td.sub-label{padding-left:6mm}
 
   /* Hide screen-only */
   .screen-only{display:none!important}
@@ -190,7 +191,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
     <div><div class="brand-name">SD Muhammadiyah 01 Kukusan</div><div class="brand-sub">Sistem Penilaian Kurikulum Merdeka</div></div>
   </a>
   <div class="topbar-divider"></div>
-  <div class="topbar-title">Preview &amp; Cetak SKL</div>
+  <div class="topbar-title">Preview &amp; Cetak Transkrip Nilai</div>
   <div class="topbar-right">
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="user-avatar" id="userAvatar">G</div>
@@ -204,8 +205,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
   <div class="sidebar-section-label">Ujian Sekolah / SAJ</div>
   <a class="nav-item" href="input-rata-rapor.html"><span class="nav-icon">📊</span> Nilai Rata-Rata Rapor</a>
   <a class="nav-item" href="input-nilai-us.html"><span class="nav-icon">✏️</span> Nilai Ujian Sekolah</a>
-  <a class="nav-item active" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview &amp; Cetak SKL</a>
-  <a class="nav-item" href="preview-transkrip.html"><span class="nav-icon">📃</span> Preview &amp; Cetak Transkrip</a>
+  <a class="nav-item" href="preview-skl.html"><span class="nav-icon">🎓</span> Preview &amp; Cetak SKL</a>
+  <a class="nav-item active" href="preview-transkrip.html"><span class="nav-icon">📃</span> Preview &amp; Cetak Transkrip</a>
   <a class="nav-item" href="preview-tka.html"><span class="nav-icon">📜</span> Preview &amp; Cetak TKA</a>
   <a class="nav-item" href="preview-ismuba.html"><span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA</a>
   <a class="nav-item" href="generate-skl.html"><span class="nav-icon">📄</span> Generate Dokumen SKL</a>
@@ -216,8 +217,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
 
 <main class="main">
   <div class="page-header no-print">
-    <h1>Preview &amp; Cetak SKL</h1>
-    <p>Pratinjau Surat Keterangan Lulus sebelum dicetak. Format mengikuti format baku yang telah ditetapkan.</p>
+    <h1>Preview &amp; Cetak Transkrip Nilai</h1>
+    <p>Pratinjau Transkrip Nilai (lampiran Ijazah) sebelum dicetak. Format mengikuti format baku yang telah ditetapkan.</p>
   </div>
 
   <div class="control-panel no-print card">
@@ -236,16 +237,16 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f6f4;color:var(--i
       <label style="font-size:11.5px;font-weight:700;color:var(--ink-mid);">Siswa</label>
       <select class="sel" id="selSiswa" disabled><option value="">-- Semua Siswa --</option></select>
       <button class="btn btn-primary" id="btnLoad" onclick="loadPreview()" disabled>🔍 Tampilkan</button>
-      <button class="btn btn-gold" id="btnPrint" onclick="cetakSKL()" disabled>🖨️ Cetak / PDF</button>
+      <button class="btn btn-gold" id="btnPrint" onclick="cetakTranskrip()" disabled>🖨️ Cetak / PDF</button>
     </div>
   </div>
 
   <div id="alertArea"></div>
   <div id="sklDocs"></div>
   <div id="emptyState" style="text-align:center;padding:60px;color:var(--ink-muted);">
-    <div style="font-size:48px;margin-bottom:14px;">🎓</div>
+    <div style="font-size:48px;margin-bottom:14px;">📃</div>
     <div style="font-size:14px;font-weight:600;">Pilih kelas lalu klik Tampilkan</div>
-    <div style="font-size:12px;margin-top:6px;">Format SKL akan tampil di sini sebelum dicetak</div>
+    <div style="font-size:12px;margin-top:6px;">Format Transkrip Nilai akan tampil di sini sebelum dicetak</div>
   </div>
 </main>
 
@@ -261,19 +262,30 @@ function isISMUBA(m){ const n=(m.nama||'').toLowerCase(); return ISMUBA_KW.some(
 function isTahsin(m){ const n=(m.nama||'').toLowerCase(); return TAHSIN_KW.some(k=>n.includes(k)); }
 function isForIjazah(m){ return !isISMUBA(m) && !isTahsin(m); }
 
-// ANTIREGRESI §21 — 8 mapel sesuai template SKL 2025/2026.
-// Tanpa grp (tidak ada Kelompok A/B). Urutan dan label harus persis sesuai template.
-// Jangan tambah mapel bing/tik/kka — sudah dihapus dari SKL per aturan baru.
-const LAMP_DEF = [
-  { key:'pai',   label:'Pendidikan Agama dan Budi Pekerti' },
-  { key:'pp',    label:'Pendidikan Pancasila' },
-  { key:'bind',  label:'Bahasa Indonesia' },
-  { key:'mtk',   label:'Matematika' },
-  { key:'ipas',  label:'Ilmu Pengetahuan Alam Sosial' },
-  { key:'sb',    label:'Seni Budaya dan Prakarya' },
-  { key:'pjok',  label:'Pendidikan Jasmani, Olahraga dan Kesehatan' },
-  { key:'bsund', label:'Bahasa Sunda' },
+// Transkrip Nilai — struktur Kelompok A / Kelompok B + Muatan Lokal, sesuai format
+// baku Transkrip Nilai (lampiran Ijazah). Berbeda dari LAMP_DEF di preview-skl.html
+// (yang sejak §21 hanya 8 mapel tanpa Kelompok A/B) — Transkrip TETAP memakai
+// struktur Kelompok A/B dan memuat Bahasa Inggris, Bahasa Sunda, TIK, dan KKA.
+const TRS_KEL_A = [
+  { key:'pai',  label:'Pendidikan Agama dan Budi Pekerti' },
+  { key:'pp',   label:'Pendidikan Pancasila' },
+  { key:'bind', label:'Bahasa Indonesia' },
+  { key:'mtk',  label:'Matematika' },
+  { key:'ipas', label:'Ilmu Pengetahuan Alam dan Sosial' },
 ];
+const TRS_KEL_B = [
+  { key:'sb',   label:'Seni Budaya' },
+  { key:'pjok', label:'Pendidikan Jasmani, Olahraga dan Kesehatan' },
+];
+// Muatan Lokal — sub-item berhuruf (a, b, c, d) di bawah "Muatan Lokal" pada Kelompok B.
+// Item d (KKA) adalah penambahan baru — diletakkan di bawah TIK/Informatika sesuai permintaan.
+const TRS_MULOK = [
+  { key:'bing',  label:'Bahasa Inggris' },
+  { key:'bsund', label:'Bahasa dan Sastra Sunda' },
+  { key:'tik',   label:'Teknologi Informasi dan Komunikasi' },
+  { key:'kka',   label:'Koding dan Kecerdasan Artifisial' },
+];
+const HURUF = ['a','b','c','d','e','f'];
 
 const BULAN=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 function fmtTgl(raw){
@@ -389,20 +401,19 @@ async function loadPreview(){
     const[allRapor,allUS]=await Promise.all([SHEETS.getNilaiRaporRerata({kelas:activeKelas}),SHEETS.getNilaiUS({kelas:activeKelas})]);
     document.getElementById('sklDocs').innerHTML='';
     document.getElementById('emptyState').style.display='none';
-    // ANTIREGRESI §21 — nomor surat format Perwal Depok No.79/2019:
-    // (1)/(2)-(3)/(4)/(5) → kode_klas / no_urut.seq / kode_instansi / bulan_rom / tahun
-    const noKlas  = cfg['skl_no_kode_klas']      || '400.3.11.1';
-    const noBase  = String(parseInt(cfg['skl_no_urut_awal'] || '95')).padStart(3,'0');
-    const noInst  = cfg['skl_no_kode_instansi']  || 'SKet-UPTDSDM01KKS';
-    const noBulan = cfg['skl_no_bulan']           || 'VI';
-    const noTahun = cfg['skl_tahun_skl']          || '2026';
+    // Nomor Transkrip: format 5-bagian terpisah dari Nomor SKL — lihat Konfigurasi SKL.
+    // Berbeda dari SKL, urut NAIK PENUH per siswa (133,134,135,...), bukan format sub-urut ".01".
+    const trsUrutAwal = parseInt(cfg['transkrip_no_urut_awal'] || '133');
+    const trsKode2     = cfg['transkrip_no_kode2'] || 'KET';
+    const trsKode3     = cfg['transkrip_no_kode3'] || 'III.4.AU';
+    const trsKode4     = cfg['transkrip_no_kode4'] || 'A';
+    const trsTahun     = cfg['transkrip_tahun']    || cfg['skl_tahun_skl'] || '2025';
     daftar.forEach((siswa,idx)=>{
-      // ANTIREGRESI §21: seq HARUS dari posisi absolut di allSiswa (sudah terurut),
-      // bukan dari idx dalam daftar filter. Jika preview satu siswa, idx selalu 0
-      // sehingga seq selalu '01' — SALAH. allSiswa.findIndex memberi posisi yang benar.
-      const posisi  = allSiswa.findIndex(s => s.id === siswa.id);
-      const seq     = String((posisi >= 0 ? posisi : idx) + 1).padStart(2,'0');
-      const noSurat = `${noKlas}/${noBase}.${seq}/${noInst}/${noBulan}/${noTahun}`;
+      // posisi absolut di allSiswa (sudah terurut) — sama seperti pola SKL, agar preview
+      // satu siswa tetap mendapat nomor urut yang benar sesuai posisinya di kelas.
+      const posisi   = allSiswa.findIndex(s => s.id === siswa.id);
+      const urut     = trsUrutAwal + (posisi >= 0 ? posisi : idx);
+      const noSurat  = `${urut}/${trsKode2}/${trsKode3}/${trsKode4}/${trsTahun}`;
       document.getElementById('sklDocs').appendChild(
         buildCard(siswa,allRapor.filter(r=>r.id_siswa===siswa.id),allUS.filter(r=>r.id_siswa===siswa.id),br,bu,noSurat)
       );
@@ -412,19 +423,45 @@ async function loadPreview(){
   }catch(e){showAlert('error','\u26d4',e.message);hideLoading();}
 }
 
-function cetakSKL(){
+function cetakTranskrip(){
   // Set title to include student name for PDF filename
   const sid=document.getElementById('selSiswa').value;
   const siswa=sid?allSiswa.find(s=>s.id===sid):null;
   const oldTitle=document.title;
   if(siswa){
-    document.title='SKL_'+siswa.nama.replace(/\s+/g,'_')+'_'+activeKelas;
+    document.title='Transkrip_'+siswa.nama.replace(/\s+/g,'_')+'_'+activeKelas;
   } else if(activeKelas){
-    document.title='SKL_Kelas_'+activeKelas;
+    document.title='Transkrip_Kelas_'+activeKelas;
   }
   window.print();
   // Restore title after print dialog
   setTimeout(()=>{document.title=oldTitle;},2000);
+}
+
+/* ─── Simpan Nomor Ijazah per siswa (langsung dari halaman ini) ─────────── */
+async function saveNoIjazah(idSiswa){
+  const inp = document.getElementById('inpNoIjazah_'+idSiswa);
+  const btn = document.getElementById('btnNoIjazah_'+idSiswa);
+  if(!inp) return;
+  const val = inp.value.trim();
+  const oldLabel = btn ? btn.textContent : '';
+  if(btn){ btn.disabled=true; btn.textContent='\u23f3'; }
+  try{
+    // Kolom R (no_ijazah) — baca ulang SISWA!A:R agar dapat nomor baris Excel yang tepat.
+    const rows = await SHEETS.read('SISWA!A:R');
+    const idx  = rows.findIndex(r => r[0] === idSiswa);
+    if(idx < 0) throw new Error('Data siswa tidak ditemukan di database.');
+    await SHEETS.write(`SISWA!R${idx+1}`, [[val]]);
+    const s = allSiswa.find(s => s.id === idSiswa);
+    if(s) s.no_ijazah = val;
+    const printCell = document.getElementById('printNoIjazah_'+idSiswa);
+    if(printCell) printCell.textContent = val || '\u2014';
+    showAlert('success','\u2705 Tersimpan','Nomor Ijazah berhasil disimpan.');
+  }catch(e){
+    showAlert('error','\u26d4 Gagal menyimpan',e.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=oldLabel||'\ud83d\udcbe Simpan'; }
+  }
 }
 
 /* ─── Build kop surat HTML ─────────────────────────── */
@@ -447,19 +484,15 @@ function buildKop(tahunajar){
 
 function buildCard(siswa,raporRows,usRows,br,bu,noSurat){
   const{bt,bp}=getBobot();
-  const noSK=cfg['skl_no_sk']||'';
-  const tglRapat=cfg['skl_tgl_rapat']||'\u2026';
-  const tglPen=cfg['skl_tgl_penetapan']||'\u2026';
+  const tglPen=cfg['skl_tgl_penetapan']||'\u2026';  // dipakai juga sebagai Tanggal Kelulusan
   const tahunajar=cfg['skl_tahun_ajaran']||'';
-  const tahunslash=cfg['skl_tahun_ajaran_slash']||tahunajar;
   const kepsNama=cfg['skl_kepsek_nama']||'';
-  const kepsNBM=cfg['skl_kepsek_nbm']||'';
   const kepsNIP=cfg['skl_kepsek_nip']||'-';  // NIP biasanya kosong, tampil sebagai "-"
   const kota=cfg['skl_kota']||'Depok';
   const nama=siswa.nama.toUpperCase();
   const ttl=(siswa.tempat_lahir||'\u2014')+', '+(fmtTgl(siswa.tgl_lahir)||'\u2014');
-  const wali=siswa.nama_wali||siswa.nama_ayah||'\u2014';
-  const nis=siswa.nis||'\u2014'; const nisn=siswa.nisn||'\u2014';
+  const nisn=siswa.nisn||'\u2014';
+  const noIjazahAwal=siswa.no_ijazah||'';
 
   function nilaiByKey(fk){
     const mn=cfg['map_'+fk]||''; if(!mn)return null;
@@ -469,14 +502,16 @@ function buildCard(siswa,raporRows,usRows,br,bu,noSurat){
     const nUS=us?hitungNilaiUS(us.nilai_tertulis,us.nilai_praktik,bt,bp):null;
     return hitungIjazah(rata,nUS,br,bu);
   }
+  function fmtNilai(v){ return v!==null?v.toFixed(2).replace('.',','):null; }
 
-  const semua=LAMP_DEF.map(ml=>nilaiByKey(ml.key)).filter(v=>v!==null);
-  const rerata=semua.length?(semua.reduce((a,b)=>a+b,0)/semua.length).toFixed(2).replace('.',','):'\u2014';
+  const semuaKey=[...TRS_KEL_A,...TRS_KEL_B,...TRS_MULOK].map(m=>m.key);
+  const semuaVal=semuaKey.map(k=>nilaiByKey(k)).filter(v=>v!==null);
+  const rerata=semuaVal.length?(semuaVal.reduce((a,b)=>a+b,0)/semuaVal.length).toFixed(2).replace('.',','):'\u2014';
 
   // Warnings (screen only)
   const warnItems=[];
   if(!siswa.tempat_lahir||!siswa.tgl_lahir)warnItems.push('TTL belum diisi');
-  if(!siswa.nama_wali&&!siswa.nama_ayah)warnItems.push('Nama wali belum diisi');
+  if(!noIjazahAwal)warnItems.push('Nomor Ijazah belum diisi');
 
   /* ── Screen card ── */
   const card=document.createElement('div');
@@ -486,7 +521,7 @@ function buildCard(siswa,raporRows,usRows,br,bu,noSurat){
   hdr.className='preview-header-bar no-print';
   hdr.innerHTML=`<div><div class="nama-siswa">\U0001f464 ${nama}</div>
     <div class="meta">NISN: ${nisn} &middot; No. ${noSurat} &middot; Kelas ${activeKelas}</div></div>
-    <div style="font-size:11.5px;color:rgba(255,255,255,.7);">Rerata Ijazah: <strong>${rerata}</strong></div>`;
+    <div style="font-size:11.5px;color:rgba(255,255,255,.7);">Rerata: <strong>${rerata}</strong></div>`;
   card.appendChild(hdr);
 
   const body=document.createElement('div');
@@ -499,73 +534,84 @@ function buildCard(siswa,raporRows,usRows,br,bu,noSurat){
     body.appendChild(w);
   }
 
-  // ANTIREGRESI §21 — Screen preview: tanpa Kelompok A/B, nilai 2 desimal, rata-rata di dalam tabel
+  // Nomor Ijazah — field editable & tombol simpan (screen only). Nilai disimpan
+  // langsung ke sheet SISWA kolom R via saveNoIjazah(), tidak lewat halaman Data Siswa.
+  const ijzDiv=document.createElement('div');
+  ijzDiv.className='no-print';
+  ijzDiv.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--green-ghost);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;';
+  ijzDiv.innerHTML=`<label style="font-size:12px;font-weight:700;color:var(--ink-mid);">Nomor Ijazah</label>
+    <input type="text" id="inpNoIjazah_${siswa.id}" class="sel" style="min-width:220px;" value="${noIjazahAwal.replace(/"/g,'&quot;')}" placeholder="Ketik nomor ijazah…">
+    <button class="btn btn-primary" id="btnNoIjazah_${siswa.id}" onclick="saveNoIjazah('${siswa.id}')">\ud83d\udcbe Simpan</button>
+    <span style="font-size:11px;color:var(--ink-muted);">Tersimpan permanen di data siswa, tidak perlu diketik ulang lain kali.</span>`;
+  body.appendChild(ijzDiv);
+
+  // Screen preview: tabel dengan Kelompok A / Kelompok B + Muatan Lokal
   const scrDiv=document.createElement('div');
   scrDiv.className='no-print';
   let scrHtml=`<table class="tbl-screen"><thead><tr>
     <th style="width:36px;text-align:center;">No.</th><th>Mata Pelajaran</th><th style="width:90px;text-align:center;">Nilai</th>
   </tr></thead><tbody>`;
-  let no=1;
-  LAMP_DEF.forEach(ml=>{
+  function scrValCell(v,key){
+    const dispVal=fmtNilai(v);
+    return dispVal!==null?`<strong>${dispVal}</strong>`:(cfg['map_'+key]?'<span class="chip-warn">!</span>':'<span style="color:var(--ink-muted)">—</span>');
+  }
+  scrHtml+=`<tr class="grp-row"><td colspan="3">Kelompok A</td></tr>`;
+  let noA=1;
+  TRS_KEL_A.forEach(ml=>{
     const v=nilaiByKey(ml.key);
-    const dispVal=v!==null?v.toFixed(2).replace('.',','):null;
-    const disp=dispVal!==null?`<strong>${dispVal}</strong>`:(cfg['map_'+ml.key]?'<span class="chip-warn">!</span>':'<span style="color:var(--ink-muted)">—</span>');
-    scrHtml+=`<tr><td class="num">${no++}.</td><td>${ml.label}</td><td class="num">${disp}</td></tr>`;
+    scrHtml+=`<tr><td class="num">${noA++}.</td><td>${ml.label}</td><td class="num">${scrValCell(v,ml.key)}</td></tr>`;
   });
-  scrHtml+=`<tr style="background:var(--green-pale);font-weight:700;"><td colspan="2" style="padding:6px 10px;text-align:right;">Rata-rata</td><td class="num">${rerata}</td></tr>`;
+  scrHtml+=`<tr class="grp-row"><td colspan="3">Kelompok B</td></tr>`;
+  let noB=1;
+  TRS_KEL_B.forEach(ml=>{
+    const v=nilaiByKey(ml.key);
+    scrHtml+=`<tr><td class="num">${noB++}.</td><td>${ml.label}</td><td class="num">${scrValCell(v,ml.key)}</td></tr>`;
+  });
+  scrHtml+=`<tr><td class="num">${noB++}.</td><td>Muatan Lokal</td><td class="num"></td></tr>`;
+  TRS_MULOK.forEach((ml,i)=>{
+    const v=nilaiByKey(ml.key);
+    scrHtml+=`<tr><td class="num">${HURUF[i]}.</td><td style="padding-left:22px;">${ml.label}</td><td class="num">${scrValCell(v,ml.key)}</td></tr>`;
+  });
   scrHtml+=`</tbody></table>`;
   scrDiv.innerHTML=scrHtml;
   body.appendChild(scrDiv);
 
-  // ANTIREGRESI §21 — Halaman 1 (SKK) DIHAPUS per aturan baru 2025/2026.
-  // Hanya ada 1 halaman: Surat Keterangan Lulus (SKL).
-  // Jangan kembalikan pg1 — lihat changelog v28.
-
-  /* ── PRINT: Satu halaman — Surat Keterangan Lulus (format Perwal Depok 2025) ── */
-  // ANTIREGRESI §21:
-  // - 4 kriteria (bukan 3): kriteria ke-4 = SK Kepala Sekolah
-  // - Tidak ada kelompok A/B di tabel nilai
-  // - Nilai 2 angka di belakang koma, separator koma Indonesia
-  // - Baris rata-rata DALAM tabel (baris terakhir), header kolom = "Nilai"
-  // - TTD: "Kota Depok, tgl" / "Kepala Sekolah," / NIP (bukan NBM)
-  let lampRows='',no2=1;
-  LAMP_DEF.forEach(ml=>{
-    const v=nilaiByKey(ml.key);
-    // Nilai 2 desimal dengan koma (contoh: 86,90) — ANTIREGRESI §21
-    const disp=v!==null?v.toFixed(2).replace('.',','):'';
-    lampRows+=`<tr><td class="ctr">${no2++}.</td><td>${ml.label}</td><td class="ctr"><strong>${disp}</strong></td></tr>`;
-  });
-  // Baris rata-rata di dalam tabel — wajib sesuai template 2025
-  lampRows+=`<tr><td class="ctr"></td><td style="font-weight:bold;">Rata-rata</td><td class="ctr"><strong>${rerata}</strong></td></tr>`;
+  /* ── PRINT: Satu halaman — Transkrip Nilai ── */
+  function printRow(no,label,v,subLabel){
+    const disp=fmtNilai(v);
+    const dispHtml=disp!==null?`<strong>${disp}</strong>`:'';
+    const labelCls=subLabel?' class="sub-label"':'';
+    return `<tr><td class="ctr">${no}</td><td${labelCls}>${label}</td><td class="ctr">${dispHtml}</td></tr>`;
+  }
+  let lampRows='';
+  lampRows+=`<tr class="grp-lbl"><td colspan="3">Kelompok A</td></tr>`;
+  TRS_KEL_A.forEach((ml,i)=>{ lampRows+=printRow((i+1)+'.',ml.label,nilaiByKey(ml.key)); });
+  lampRows+=`<tr class="grp-lbl"><td colspan="3">Kelompok B</td></tr>`;
+  TRS_KEL_B.forEach((ml,i)=>{ lampRows+=printRow((i+1)+'.',ml.label,nilaiByKey(ml.key)); });
+  lampRows+=`<tr><td class="ctr">${TRS_KEL_B.length+1}.</td><td>Muatan Lokal</td><td class="ctr"></td></tr>`;
+  TRS_MULOK.forEach((ml,i)=>{ lampRows+=printRow(HURUF[i]+'.',ml.label,nilaiByKey(ml.key),true); });
 
   const pg2=document.createElement('div');
   pg2.className='skl-page';
   pg2.innerHTML=buildKop(tahunajar)+`
-    <div class="doc-title">Surat Keterangan Lulus</div>
-    <div class="doc-nomor">Nomor: ${noSurat}</div>
-    <p class="body-text">Kepala Sekolah Dasar Muhammadiyah 01 Kukusan Kecamatan Beji Kota Depok selaku Ketua Penyelenggara Penilaian Sumatif Akhir Jenjang Tahun Pelajaran ${tahunslash} berdasarkan:</p>
-    <p class="body-indent">1. Ketuntasan dari seluruh program pembelajaran pada kurikulum satuan pendidikan;</p>
-    <p class="body-indent">2. Kriteria kelulusan dari satuan pendidikan sesuai dengan peraturan perundang&#x2011;undangan;</p>
-    <p class="body-indent">3. Rapat Dewan Guru tentang Kelulusan pada tanggal ${tglRapat}</p>
-    <p class="body-indent">4. Keputusan Kepala Sekolah SD Muhammadiyah 01 Kukusan Nomor: ${noSK} Tanggal ${tglPen}</p>
-    <p class="body-text" style="margin-top:4px;">menerangkan bahwa:</p>
+    <div class="doc-title">Transkrip Nilai</div>
+    <div class="doc-nomor">Nomor : ${noSurat}</div>
     <table class="biodata-tbl">
-      <tr><td class="col-label">Nama</td><td class="col-sep">:</td><td><strong>${nama}</strong></td></tr>
-      <tr><td class="col-label">Tempat dan Tanggal Lahir</td><td class="col-sep">:</td><td>${ttl}</td></tr>
-      <tr><td class="col-label">Nama Orang Tua</td><td class="col-sep">:</td><td>${wali}</td></tr>
-      <tr><td class="col-label">Nomor Induk Siswa</td><td class="col-sep">:</td><td>${nis}</td></tr>
+      <tr><td class="col-label">Satuan Pendidikan</td><td class="col-sep">:</td><td>SD MUHAMMADIYAH 01 KUKUSAN</td></tr>
+      <tr><td class="col-label">Nomor Pokok Sekolah Nasional</td><td class="col-sep">:</td><td>20228835</td></tr>
+      <tr><td class="col-label">Nama Lengkap</td><td class="col-sep">:</td><td><strong>${nama}</strong></td></tr>
+      <tr><td class="col-label">Tempat, Tanggal Lahir</td><td class="col-sep">:</td><td>${ttl}</td></tr>
       <tr><td class="col-label">Nomor Induk Siswa Nasional</td><td class="col-sep">:</td><td>${nisn}</td></tr>
+      <tr><td class="col-label">Nomor Ijazah</td><td class="col-sep">:</td><td id="printNoIjazah_${siswa.id}">${noIjazahAwal||'\u2014'}</td></tr>
+      <tr><td class="col-label">Tanggal Kelulusan</td><td class="col-sep">:</td><td>${tglPen}</td></tr>
     </table>
-    <p class="body-text" style="margin-top:4px;">Dinyatakan &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>LULUS</strong></p>
-    <p class="body-text" style="margin-top:2px;">dengan nilai sebagai berikut:</p>
-    <table class="lamp-tbl">
+    <table class="lamp-tbl" style="margin-top:4mm;">
       <thead><tr><th style="width:10mm;">No.</th><th>Mata Pelajaran</th><th style="width:28mm;">Nilai</th></tr></thead>
       <tbody>${lampRows}</tbody>
     </table>
-    <p class="body-text" style="margin-top:6px;">Demikian surat keterangan kelulusan ini dibuat, agar dapat dipergunakan sebagaimana mestinya.</p>
     <div class="sign-area">
       <div class="sign-box">
-        <div>Kota ${kota}, ${tglPen}</div>
+        <div>${kota}, ${tglPen}</div>
         <div style="margin-top:1mm;">Kepala Sekolah,</div>
         <div class="sign-gap"></div>
         <div class="sign-name">${kepsNama}</div>
