@@ -463,8 +463,21 @@ window.addEventListener('load', async () => {
   document.getElementById('userName').textContent  = user.nama;
   document.getElementById('userAvatar').textContent = user.nama?.charAt(0)?.toUpperCase() || 'A';
 
+  hideLoading();
   await muatDaftarBackup();
 });
+
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg || 'Memuat…';
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
 
 /* ── Muat Daftar Backup ──────────────────────────────── */
 async function muatDaftarBackup() {
