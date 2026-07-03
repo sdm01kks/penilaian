@@ -134,6 +134,33 @@ const SHEETS = (() => {
   }
 
   /**
+   * Kosongkan beberapa range sekaligus (values:batchClear) — tidak menghapus
+   * sheet/format, hanya isi selnya. Dipakai sebelum menulis ulang data hasil
+   * restore backup, supaya baris lama yang lebih panjang dari data backup
+   * tidak tersisa (data "hantu").
+   * @param {string[]} ranges
+   */
+  async function valuesBatchClear(ranges) {
+    if (!ranges || !ranges.length) return;
+    const id    = AUTH.getSpreadsheetId();
+    const token = AUTH.getToken();
+    if (!token) throw new Error('Tidak ada token. Silakan login ulang.');
+
+    const url = `${BASE_URL}/${id}/values:batchClear`;
+    const res = await fetch(url, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ranges }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) { AUTH.logout(false); }
+      throw new Error(`Sheets valuesBatchClear error ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /**
    * Tambah baris baru di akhir range (append).
    * @param {string} range  - Sheet name, misal: 'SISWA'
    * @param {Array}  values - Array of arrays
@@ -198,6 +225,55 @@ const SHEETS = (() => {
 
     if (!res.ok) throw new Error(`Sheets deleteRow error ${res.status}`);
     return res.json();
+  }
+
+  /* ══════════════════════════════════════════════════════
+     FUNGSI LINTAS SPREADSHEET — untuk baca file backup (ID berbeda
+     dari spreadsheet database aktif). Semua fungsi lain di atas selalu
+     memakai AUTH.getSpreadsheetId(); fungsi-fungsi ini menerima
+     spreadsheetId secara eksplisit sebagai parameter.
+  ══════════════════════════════════════════════════════ */
+
+  /**
+   * Ambil daftar nama sheet/tab dari sebuah spreadsheet (apapun ID-nya).
+   * @param {string} spreadsheetId
+   * @returns {string[]} nama-nama sheet
+   */
+  async function getSheetNames(spreadsheetId) {
+    const token = AUTH.getToken();
+    const url   = `${BASE_URL}/${spreadsheetId}?fields=sheets.properties.title`;
+    const res   = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+
+    if (!res.ok) {
+      if (res.status === 401) { AUTH.logout(false); }
+      throw new Error(`Sheets getSheetNames error ${res.status}`);
+    }
+    const data = await res.json();
+    return (data.sheets || []).map(s => s.properties.title);
+  }
+
+  /**
+   * Baca semua sheet dari sebuah spreadsheet (apapun ID-nya) sekaligus.
+   * @param {string} spreadsheetId
+   * @returns {Object} { namaSheet: rows[] }
+   */
+  async function readAllSheetsFrom(spreadsheetId) {
+    const names = await getSheetNames(spreadsheetId);
+    if (!names.length) return {};
+
+    const token  = AUTH.getToken();
+    const params = names.map(n => `ranges=${encodeURIComponent(n)}`).join('&');
+    const url    = `${BASE_URL}/${spreadsheetId}/values:batchGet?${params}`;
+    const res    = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+
+    if (!res.ok) {
+      if (res.status === 401) { AUTH.logout(false); }
+      throw new Error(`Sheets readAllSheetsFrom error ${res.status}`);
+    }
+    const data   = await res.json();
+    const result = {};
+    (data.valueRanges || []).forEach((vr, i) => { result[names[i]] = vr.values || []; });
+    return result;
   }
 
   /* ══════════════════════════════════════════════════════
@@ -640,6 +716,96 @@ const SHEETS = (() => {
       catatan_wali:      r[8]  || '',
       keputusan:         r[9]  || '',
     }));
+  }
+
+  /* ══════════════════════════════════════════════════════
+     FUNGSI BACKUP & RESTORE
+     Backup dibuat otomatis oleh Google Apps Script terpisah
+     (lihat backup/BackupPenilaian.gs) — mingguan tiap Jumat, disimpan
+     3 bulan. Fungsi di sini hanya untuk MEMBACA daftar & MELAKUKAN
+     restore dari dalam aplikasi (khusus admin).
+  ══════════════════════════════════════════════════════ */
+
+  const BACKUP_NAME_PREFIX = 'BACKUP_penilaian_';
+
+  /**
+   * Ambil daftar backup yang tersedia di Drive (dibuat oleh
+   * BackupPenilaian.gs), diurutkan dari yang terbaru.
+   * @returns {Array} [{ id, name, createdTime, label }]
+   */
+  async function listBackups() {
+    const token = AUTH.getToken();
+    if (!token) throw new Error('Tidak ada token. Silakan login ulang.');
+
+    const q = [
+      `name contains '${BACKUP_NAME_PREFIX}'`,
+      `mimeType = 'application/vnd.google-apps.spreadsheet'`,
+      `trashed = false`,
+    ].join(' and ');
+
+    const url = `https://www.googleapis.com/drive/v3/files`
+      + `?q=${encodeURIComponent(q)}`
+      + `&fields=${encodeURIComponent('files(id,name,createdTime)')}`
+      + `&orderBy=${encodeURIComponent('createdTime desc')}`
+      + `&pageSize=100`;
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+
+    if (!res.ok) {
+      if (res.status === 401) { AUTH.logout(false); }
+      throw new Error(`Drive listBackups error ${res.status}`);
+    }
+
+    const data = await res.json();
+    return (data.files || []).map(f => ({
+      id:          f.id,
+      name:        f.name,
+      createdTime: f.createdTime,
+      label: new Date(f.createdTime).toLocaleString('id-ID', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta',
+      }) + ' WIB',
+    }));
+  }
+
+  /**
+   * Pulihkan seluruh data dari sebuah titik backup ke spreadsheet aktif.
+   * MENIMPA seluruh isi sheet yang namanya cocok antara backup & spreadsheet
+   * aktif (hanya isi sel, bukan format/rumus/tab lain di luar itu).
+   * Hanya dipanggil dari halaman yang sudah dijaga AUTH.requireLogin('admin').
+   *
+   * @param {string} backupSpreadsheetId
+   * @param {function} [onProgress] - dipanggil dengan (tahap: string)
+   * @returns {Object} { restored: string[], dilewati: string[] }
+   */
+  async function restoreFromBackup(backupSpreadsheetId, onProgress = () => {}) {
+    onProgress('Membaca isi backup…');
+    const backupData   = await readAllSheetsFrom(backupSpreadsheetId);
+    const backupSheets = Object.keys(backupData);
+
+    onProgress('Membandingkan dengan sheet aktif…');
+    const liveSheets = await getSheetNames(AUTH.getSpreadsheetId());
+    const liveSet     = new Set(liveSheets);
+
+    const restored = backupSheets.filter(n => liveSet.has(n));
+    const dilewati  = backupSheets.filter(n => !liveSet.has(n));
+
+    if (!restored.length) {
+      throw new Error('Tidak ada sheet yang cocok antara backup dan spreadsheet aktif.');
+    }
+
+    onProgress('Mengosongkan sheet lama…');
+    await valuesBatchClear(restored);
+
+    onProgress('Menulis data dari backup…');
+    const pairs = restored.map(name => ({
+      range:  `${name}!A1`,
+      values: backupData[name].length ? backupData[name] : [['']],
+    }));
+    await valuesBatchWrite(pairs);
+
+    onProgress('Selesai.');
+    return { restored, dilewati };
   }
 
   /* ══════════════════════════════════════════════════════
@@ -1186,6 +1352,15 @@ const SHEETS = (() => {
     write,
     append,
     deleteRow,
+    valuesBatchClear,
+
+    // Lintas spreadsheet (backup)
+    getSheetNames,
+    readAllSheetsFrom,
+
+    // Backup & restore
+    listBackups,
+    restoreFromBackup,
 
     // Data spesifik
     getConfig,
