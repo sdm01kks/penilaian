@@ -1,3 +1,48 @@
+## [2026-07-03] — v66 · Fitur Baru: Preview & Cetak Transkrip Nilai
+
+### ✨ Fitur Baru
+
+| # | File | Deskripsi |
+|---|------|-----------|
+| 1 | `ujian-sekolah/preview-transkrip.html` **(baru)** | Halaman Preview & Cetak Transkrip Nilai — dokumen lampiran Ijazah terpisah dari SKL, format **Kelompok A / Kelompok B + Muatan Lokal** (bukan format 8-mapel datar seperti SKL). Kelompok A: PAI, Pendidikan Pancasila, Bahasa Indonesia, Matematika, IPAS. Kelompok B: Seni Budaya, PJOK, dan Muatan Lokal (a. Bahasa Inggris, b. Bahasa dan Sastra Sunda, c. Teknologi Informasi dan Komunikasi, **d. Koding dan Kecerdasan Artifisial — item baru**). Satu halaman A4, tanpa baris rata-rata (berbeda dari SKL). Nilai dihitung dengan rumus yang identik dengan SKL (Rata Rapor × bobot + Nilai US × bobot), termasuk untuk KKA. |
+| 2 | `assets/js/sheets.js` | Tambah field `no_ijazah` (kolom R sheet SISWA). Range baca `getSiswa()` diperluas dari `A:Q` → `A:R`. Field ini **tidak** diisi lewat form Data Siswa — diisi & disimpan langsung dari halaman Transkrip (tombol "💾 Simpan" di setiap kartu siswa), karena Nomor Ijazah nasional biasanya diterima satu per satu dari Dinas Pendidikan setelah proses kelulusan. |
+| 3 | `ujian-sekolah/config-skl.html` | Field `map_bing`, `map_tik`, `map_kka` (sudah ada di form sejak sebelumnya tapi tidak tersimpan sejak §21) diaktifkan kembali di `SKL_KEYS` — dipakai oleh Transkrip, TIDAK dipakai oleh Lampiran SKL. Tambah kartu baru "Nomor Surat Transkrip Nilai" dengan 5 komponen konfigurasi (`transkrip_no_urut_awal`, `transkrip_no_kode2`, `transkrip_no_kode3`, `transkrip_no_kode4`, `transkrip_tahun`) — terpisah total dari Nomor Surat SKL karena formatnya berbeda (urut naik penuh per siswa, bukan sub-urut `.01`). |
+| 4 | `ujian-sekolah/*.html`, `dashboard/admin.html`, `dashboard/guru-kelas.html` | Tambah link sidebar "Preview & Cetak Transkrip" di semua halaman modul Ujian Sekolah/SAJ serta dashboard Admin dan Guru Kelas (kondisional `hasKelas6`, sama seperti menu SKL/ISMUBA/TKA lainnya). |
+
+### 🔄 Perubahan Skema
+
+Sheet **SISWA** bertambah **1 kolom baru: R (`no_ijazah`)**. Header kolom R **harus ditambahkan manual** di Google Sheets sebelum fitur ini dipakai (lihat catatan penerapan di bawah). Kolom ini kosong secara default untuk semua siswa lama — diisi satu per satu dari halaman Transkrip saat Nomor Ijazah resmi sudah diterima dari Dinas Pendidikan.
+
+Sheet **CONFIG** bertambah key baru (tidak perlu perubahan skema kolom, karena CONFIG berbasis key-value): `map_bing`, `map_tik`, `map_kka` (diaktifkan kembali), `transkrip_no_urut_awal`, `transkrip_no_kode2`, `transkrip_no_kode3`, `transkrip_no_kode4`, `transkrip_tahun`.
+
+### ⚠️ Langkah Wajib Sebelum Dipakai
+
+1. Buka Google Sheets aplikasi → sheet **SISWA** → tambahkan header `no_ijazah` di **kolom R baris 1** (sejajar header `no_seri_syahadah` di kolom Q).
+2. Buka **Konfigurasi SKL** (`config-skl.html`) → isi ulang mapping "Bahasa Inggris", "TIK/Informatika", dan "Koding dan Kecerdasan Artifisial (KKA)" dengan nama mapel **persis** seperti di sheet MAPEL → isi kartu "Nomor Surat Transkrip Nilai" sesuai format resmi sekolah → Simpan.
+3. Buka **Preview & Cetak Transkrip Nilai** → pilih kelas 6 → isi Nomor Ijazah tiap siswa (tersimpan otomatis ke kolom R) → cetak.
+
+### 📋 File yang Diubah (v66)
+
+| File | Status |
+|------|--------|
+| `ujian-sekolah/preview-transkrip.html` | **Baru** — halaman Preview & Cetak Transkrip Nilai lengkap (kop, biodata, tabel Kelompok A/B + Muatan Lokal termasuk KKA, TTD, kalkulasi nilai identik SKL, input+simpan Nomor Ijazah per siswa) |
+| `assets/js/sheets.js` | **Diubah** — range `getSiswa()` jadi `A:R`; tambah `no_ijazah: r[17]` |
+| `ujian-sekolah/config-skl.html` | **Diubah** — `map_bing`/`map_tik`/`map_kka` kembali masuk `SKL_KEYS`; tambah kartu "Nomor Surat Transkrip Nilai" + `updatePreviewTranskrip()`; tambah link sidebar Transkrip |
+| `ujian-sekolah/preview-skl.html`, `preview-tka.html`, `preview-ismuba.html`, `generate-skl.html`, `input-rata-rapor.html`, `input-nilai-us.html`, `leger-us.html` | **Diubah** — tambah link sidebar "Preview & Cetak Transkrip" |
+| `dashboard/admin.html` | **Diubah** — tambah link sidebar "Preview & Cetak Transkrip" |
+| `dashboard/guru-kelas.html` | **Diubah** — tambah `navTranskrip` (nav-item + masuk array toggle `hasKelas6`) |
+| `ANTIREGRESI.md` | **Diubah** — tambah §41 |
+| `CHANGELOG.md` | **Diubah** — tambah entri v66 ini |
+
+### 📐 Yang TIDAK berubah
+
+- Logika kalkulasi Nilai Ijazah (`hitungRataRapor`, `hitungNilaiUS`, `hitungIjazah`) dan bobot rapor/US — dipakai ulang persis sama dengan SKL, tidak dimodifikasi.
+- Format dan isi Lampiran SKL (`preview-skl.html`) — 8 mapel, tanpa Kelompok A/B — tidak disentuh sama sekali. Transkrip adalah dokumen terpisah dengan struktur berbeda (Kelompok A/B + Muatan Lokal).
+- Field `no_peserta_ismuba` dan `no_seri_syahadah` (kolom P, Q) — tidak disentuh.
+- `setup/data-siswa.html` — tidak diubah; menulis tetap dengan range tetap `SISWA!A:P` sehingga tidak pernah menimpa kolom Q/R.
+
+---
+
 ## [2026-07-02] — v65 · Perbaikan Simpan Konfigurasi SKL & Nilai Ujian Sekolah Hilang
 
 ### 🐛 Perbaikan

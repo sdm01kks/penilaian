@@ -1995,5 +1995,24 @@ Nomor seri syahadah ISMUBA bersifat **per-siswa**, disimpan di kolom Q sheet SIS
 | `ujian-sekolah/preview-ismuba.html` | `.cert-page` memiliki `box-sizing:border-box` | v64 | Wajib agar padding dalam (10mm atas/bawah) tidak menambah di luar 267mm. |
 | `ujian-sekolah/preview-ismuba.html` | `.cert-page` memiliki `overflow:hidden` | v64 | Wajib agar konten yang melebihi tinggi tidak meluber ke halaman berikutnya. |
 
-*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 24 Juni 2026 (v64). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
+### §41 — Nomor Ijazah Per-Siswa & Struktur Kelompok A/B Transkrip Nilai (v66)
+
+Transkrip Nilai adalah dokumen **terpisah** dari SKL (Surat Keterangan Lulus), dengan struktur berbeda (Kelompok A/B + Muatan Lokal, termasuk Bahasa Inggris/Bahasa Sunda/TIK/KKA) dan Nomor Surat sendiri. Jangan digabung dengan `preview-skl.html` atau disamakan formatnya.
+
+Nomor Ijazah bersifat **per-siswa**, disimpan di kolom R sheet SISWA (field `no_ijazah`), diisi & disimpan **langsung dari halaman Transkrip** — bukan dari form Data Siswa. Jangan dikembalikan ke skema field global atau dipindah ke `setup/data-siswa.html` tanpa memastikan `data-siswa.html` tetap menulis dengan range tetap `SISWA!A:P` (agar tidak menimpa kolom Q/R).
+
+| File | Yang HARUS ada | Sejak | Alasan |
+|------|---------------|-------|--------|
+| `assets/js/sheets.js` | `read('SISWA!A:R')` di `getSiswa()` — bukan `A:Q` | v66 | Wajib. Tanpa ini kolom R (`no_ijazah`) tidak terbaca. |
+| `assets/js/sheets.js` | `no_ijazah: r[17]` di return object `getSiswa()` | v66 | Wajib. Sinkron dengan range read A:R. |
+| `setup/data-siswa.html` | `updateSiswa()` tetap menulis dengan range tetap `SISWA!A${idx+1}:P${idx+1}` — TIDAK diperluas ke Q/R | v66 | **KRITIS.** Jika range diperluas tanpa membawa nilai `no_seri_syahadah`/`no_ijazah` yang sudah ada, data akan tertimpa kosong setiap kali admin edit data siswa dari halaman itu. |
+| `ujian-sekolah/preview-transkrip.html` | `saveNoIjazah()` membaca ulang `SISWA!A:R` untuk menemukan nomor baris sebelum `write('SISWA!R${idx+1}', ...)` — bukan memakai index dari `allSiswa` yang sudah difilter/di-sort ulang | v66 | **KRITIS.** Nomor baris di sheet harus dicari fresh; memakai index array lokal (yang sudah disortir/difilter untuk tampilan) akan menulis ke baris siswa yang salah. |
+| `ujian-sekolah/preview-transkrip.html` | Konstanta `TRS_KEL_A`, `TRS_KEL_B`, `TRS_MULOK` terpisah dari `LAMP_DEF` di `preview-skl.html` — TIDAK saling dipakai ulang | v66 | Wajib. Struktur Transkrip (Kelompok A/B + Muatan Lokal a–d) berbeda total dari struktur SKL (8 mapel datar, §21). Menyatukan definisi akan merusak salah satu format saat salah satu diubah. |
+| `ujian-sekolah/preview-transkrip.html` | Item `d. Koding dan Kecerdasan Artifisial` (`key:'kka'`) ada di `TRS_MULOK`, urutan **setelah** `c. Teknologi Informasi dan Komunikasi` | v66 | Wajib. Permintaan eksplisit — KKA harus tampil tepat di bawah TIK/Informatika. |
+| `ujian-sekolah/config-skl.html` | `map_bing`, `map_tik`, `map_kka` ada di `SKL_KEYS` (aktif kembali sejak v66) | v66 | **Wajib.** Field ini sempat dihapus dari `SKL_KEYS` di §21 karena SKL tidak lagi memakainya — tapi Transkrip Nilai butuh ketiganya. Jangan hapus lagi tanpa memeriksa dulu apakah `preview-transkrip.html` masih ada. |
+| `ujian-sekolah/config-skl.html` | Field `transkrip_no_urut_awal`, `transkrip_no_kode2`, `transkrip_no_kode3`, `transkrip_no_kode4`, `transkrip_tahun` — terpisah dari `skl_no_*` | v66 | Wajib. Format Nomor Transkrip berbeda dari Nomor SKL (urut naik penuh per siswa: 133,134,135,…, bukan sub-urut `.01` per siswa dari basis yang sama). Jangan disatukan. |
+
+---
+
+*Dokumen ini dibuat 07 Mei 2026 — terakhir diperbarui 03 Juli 2026 (v66). Wajib diperbarui setiap kali ditemukan pola regresi baru.*
 *Sistem: SD Muhammadiyah 01 Kukusan — Aplikasi Penilaian*
