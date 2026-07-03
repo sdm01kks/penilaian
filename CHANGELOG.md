@@ -1761,4 +1761,35 @@ Semua perubahan hanya pada `ujian-sekolah/preview-ismuba.html`.
 
 ---
 
+## [2026-07-03] — v16 · Autobackup Database + Restore In-App (Admin)
+
+### ✨ Fitur Baru
+
+| # | Fitur | Detail |
+|---|-------|--------|
+| 1 | Autobackup mingguan spreadsheet database | Google Apps Script terpisah (bukan bagian aplikasi web), berjalan otomatis tiap **Jumat jam 23:00 WIB**, menyalin seluruh spreadsheet ke folder Drive "Backup Penilaian SDM01KKS" |
+| 2 | Rotasi backup 3 bulan | Menyimpan backup hingga **90 hari (≈3 bulan)** ke belakang; backup lebih tua otomatis dihapus |
+| 3 | Permission otomatis | File backup otomatis mewarisi daftar editor/viewer dari spreadsheet asli, jadi siap dipakai langsung saat restore |
+| 4 | **Restore dari dalam aplikasi** | Halaman baru `setup/restore-backup.html` — admin memilih titik backup dari daftar, konfirmasi (wajib ketik "PULIHKAN"), lalu sistem otomatis menimpa seluruh sheet yang cocok dengan data dari backup terpilih |
+| 5 | Snapshot pengaman otomatis | Sebelum restore dieksekusi, sistem otomatis mengunduh salinan JSON data aktif ke perangkat admin |
+| 6 | Audit trail restore | Setiap aksi restore dicatat ke sheet `SYNC_LOG` (siapa, kapan, titik backup mana) |
+
+> **Catatan:** Backup dibuat oleh infrastruktur di luar kode `penilaian`
+> (Apps Script). Fitur restore ada di dalam aplikasi web dan menambah fungsi
+> baru di `assets/js/sheets.js` (lihat ANTIREGRESI.md §26 untuk detail &
+> batasan penting sebelum mengubah fungsi-fungsi ini).
+
+### 📋 File yang Diubah/Ditambahkan (v16)
+
+| File | Status |
+|------|--------|
+| `backup/BackupPenilaian.gs` | **Baru** — script Apps Script, dipasang manual di spreadsheet (bukan di-deploy lewat repo) |
+| `backup/PANDUAN_BACKUP.md` | **Baru** — panduan setup & restore manual |
+| `assets/js/sheets.js` | **Diubah** — tambah `valuesBatchClear()`, `getSheetNames()`, `readAllSheetsFrom()`, `listBackups()`, `restoreFromBackup()`. Tidak ada fungsi lama yang diubah/dihapus |
+| `setup/restore-backup.html` | **Baru** — halaman restore, admin-only (`AUTH.requireLogin('admin')`) |
+| `dashboard/admin.html` | **Diubah** — tambah link sidebar "Restore Backup" |
+| `setup/profil-sekolah.html`, `data-siswa.html`, `kelola-guru.html`, `mapel-tp.html`, `kokurikuler.html`, `ekskul.html`, `tahsin-tahfizh.html` | **Diubah** — tambah link sidebar "Restore Backup" |
+
+---
+
 *Dibuat: 7 Mei 2026 (v14) | Sistem: SD Muhammadiyah 01 Kukusan — Penilaian*

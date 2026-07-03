@@ -35,6 +35,50 @@
 
 ---
 
+## 🟢 Infrastruktur Pendukung
+
+### 26. Autobackup Database (Google Apps Script) + Restore In-App
+
+Sejak 3 Juli 2026, spreadsheet database di-backup otomatis setiap **Jumat
+jam 23:00 WIB** ke folder Drive terpisah, menyimpan backup hingga **3 bulan
+(90 hari)** ke belakang. Script **tidak** ada di kode aplikasi
+(`auth.js`/`sheets.js`) — dipasang langsung di spreadsheet lewat Extensions
+→ Apps Script.
+
+- Kode script: `backup/BackupPenilaian.gs`
+- Panduan setup & restore manual: `backup/PANDUAN_BACKUP.md`
+- Jika `SPREADSHEET_ID` di `auth.js` pernah diganti (misal setelah restore
+  skenario B di panduan), **ingat pasang ulang trigger di spreadsheet ID
+  yang baru** — trigger Apps Script menempel ke spreadsheet lama, tidak ikut
+  pindah otomatis.
+
+**Restore dari dalam aplikasi (baru, admin-only):**
+Halaman `setup/restore-backup.html` memungkinkan admin memilih titik backup
+dan memulihkan seluruh data langsung dari browser, tanpa perlu masuk ke
+Apps Script/Drive manual.
+
+- Ditulis dengan fungsi baru di `sheets.js`: `listBackups()` (baca daftar
+  file dari Drive via `drive.readonly`, scope OAuth **tidak berubah**),
+  `getSheetNames()`, `readAllSheetsFrom()` (baca spreadsheet lain by ID —
+  dipakai untuk baca isi backup), `valuesBatchClear()`, dan
+  `restoreFromBackup()` (orkestrasi: clear semua sheet yang cocok namanya →
+  tulis ulang data dari backup, masing-masing 1 API call batch).
+- ⚠️ **Jangan ubah fungsi-fungsi ini menjadi per-sheet API call** — pola yang
+  sama dengan §9/§20: harus tetap `valuesBatchClear()` + `valuesBatchWrite()`
+  (2 request total), bukan loop `clear()`/`write()` per sheet.
+- Sebelum eksekusi restore, halaman otomatis mengunduh snapshot JSON data
+  aktif ke perangkat admin (jaring pengaman lokal, tidak menyentuh Drive —
+  makanya tidak perlu scope `drive.file`).
+- Konfirmasi wajib mengetik "PULIHKAN" sebelum tombol restore aktif —
+  jangan hapus guard ini, restore bersifat destruktif & tidak ada tombol undo.
+- Aksi restore dicatat ke `SYNC_LOG` untuk audit trail (siapa, kapan, titik
+  backup mana yang dipulihkan).
+- Sidebar link ke halaman ini sudah ditambahkan di semua halaman `setup/*`
+  dan `dashboard/admin.html`. Jika menambah halaman admin baru, sertakan
+  juga link ini agar konsisten.
+
+---
+
 ## 🟡 Zona Risiko Tinggi
 
 ### 1. Blok `return { … }` di `assets/js/sheets.js`
