@@ -295,6 +295,9 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f4f6f4; color:
   <a class="nav-item" id="navSKL" href="../ujian-sekolah/preview-skl.html" style="display:none;">
     <span class="nav-icon">🎓</span> Preview &amp; Cetak SKL
   </a>
+  <a class="nav-item" id="navTranskrip" href="../ujian-sekolah/preview-transkrip.html" style="display:none;">
+    <span class="nav-icon">📃</span> Preview &amp; Cetak Transkrip
+  </a>
   <a class="nav-item" id="navISMUBA" href="../ujian-sekolah/preview-ismuba.html" style="display:none;">
     <span class="nav-icon">☄️</span> Preview &amp; Cetak ISMUBA
   </a>
@@ -474,7 +477,7 @@ window.addEventListener('load', async () => {
   const kelasList = currentUser.kelasList || (currentUser.kelas ? currentUser.kelas.split(',').map(s=>s.trim()) : []);
   const hasKelas6 = kelasList.some(k => String(k).startsWith('6'));
   if (hasKelas6) {
-    ['navSAJLabel','navConfigSKL','navRataRapor','navNilaiUS','navSKL','navISMUBA','navTKA','navGenerateSKL','navLegerUS','cardSAJ'].forEach(id => {
+    ['navSAJLabel','navConfigSKL','navRataRapor','navNilaiUS','navSKL','navTranskrip','navISMUBA','navTKA','navGenerateSKL','navLegerUS','cardSAJ'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = '';
     });
