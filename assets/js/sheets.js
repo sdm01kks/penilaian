@@ -254,6 +254,12 @@ const SHEETS = (() => {
 
   /**
    * Baca semua sheet dari sebuah spreadsheet (apapun ID-nya) sekaligus.
+   * Sengaja pakai valueRenderOption=UNFORMATTED_VALUE & dateTimeRenderOption=
+   * SERIAL_NUMBER (bukan default FORMATTED_VALUE) — supaya angka & tanggal
+   * terbaca sebagai nilai mentah persis apa adanya, bukan string yang sudah
+   * diformat sesuai locale. Ini KRUSIAL untuk backup/restore: kalau baca
+   * pakai FORMATTED_VALUE lalu tulis ulang, angka desimal & tanggal berisiko
+   * salah parse kalau locale spreadsheet berubah/tidak konsisten.
    * @param {string} spreadsheetId
    * @returns {Object} { namaSheet: rows[] }
    */
@@ -262,7 +268,8 @@ const SHEETS = (() => {
     if (!names.length) return {};
 
     const token  = AUTH.getToken();
-    const params = names.map(n => `ranges=${encodeURIComponent(n)}`).join('&');
+    const params = names.map(n => `ranges=${encodeURIComponent(n)}`).join('&')
+      + `&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`;
     const url    = `${BASE_URL}/${spreadsheetId}/values:batchGet?${params}`;
     const res    = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
 
@@ -729,6 +736,40 @@ const SHEETS = (() => {
   const BACKUP_NAME_PREFIX = 'BACKUP_penilaian_';
 
   /**
+   * Ubah nomor kolom (1-indexed) jadi huruf kolom Sheets, misal 1→A, 27→AA.
+   */
+  function _colToLetter(n) {
+    let s = '';
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      s = String.fromCharCode(65 + rem) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s || 'A';
+  }
+
+  /**
+   * Ambil ukuran grid (jumlah baris & kolom) tiap sheet dari sebuah
+   * spreadsheet. Dipakai restore untuk tahu area "sisa" yang perlu
+   * dibersihkan setelah data backup ditulis.
+   */
+  async function getSheetGridSize(spreadsheetId) {
+    const token = AUTH.getToken();
+    const url = `${BASE_URL}/${spreadsheetId}`
+      + `?fields=${encodeURIComponent('sheets.properties(title,gridProperties(rowCount,columnCount))')}`;
+    const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+
+    if (!res.ok) {
+      if (res.status === 401) { AUTH.logout(false); }
+      throw new Error(`Sheets getSheetGridSize error ${res.status}`);
+    }
+    const data = await res.json();
+    const map  = {};
+    (data.sheets || []).forEach(s => { map[s.properties.title] = s.properties.gridProperties || {}; });
+    return map;
+  }
+
+  /**
    * Ambil daftar backup yang tersedia di Drive (dibuat oleh
    * BackupPenilaian.gs), diurutkan dari yang terbaru.
    * @returns {Array} [{ id, name, createdTime, label }]
@@ -774,14 +815,27 @@ const SHEETS = (() => {
    * aktif (hanya isi sel, bukan format/rumus/tab lain di luar itu).
    * Hanya dipanggil dari halaman yang sudah dijaga AUTH.requireLogin('admin').
    *
+   * URUTAN SENGAJA: TULIS DULU, BARU BERSIHKAN SISA.
+   * Kalau urutannya dibalik (kosongkan dulu baru tulis), dan proses gagal
+   * di tengah jalan (token kedaluwarsa, koneksi putus, tab ditutup), hasilnya
+   * sheet akan KOSONG TOTAL tanpa data lama maupun baru — kehilangan data
+   * permanen. Dengan menulis dulu, begitu langkah pertama selesai, data
+   * sudah benar; langkah pembersihan sisa cuma kosmetik (kalau gagal,
+   * paling buruk ada baris/kolom sisa lama yang perlu dibersihkan manual,
+   * BUKAN kehilangan data).
+   *
    * @param {string} backupSpreadsheetId
    * @param {function} [onProgress] - dipanggil dengan (tahap: string)
-   * @returns {Object} { restored: string[], dilewati: string[] }
+   * @returns {Object} { restored: string[], dilewati: string[], pembersihanGagal: boolean }
    */
   async function restoreFromBackup(backupSpreadsheetId, onProgress = () => {}) {
     onProgress('Membaca isi backup…');
     const backupData   = await readAllSheetsFrom(backupSpreadsheetId);
     const backupSheets = Object.keys(backupData);
+
+    if (!backupSheets.length) {
+      throw new Error('File backup ini kosong atau tidak bisa dibaca — restore dibatalkan, tidak ada perubahan dilakukan.');
+    }
 
     onProgress('Membandingkan dengan sheet aktif…');
     const liveSheets = await getSheetNames(AUTH.getSpreadsheetId());
@@ -791,12 +845,13 @@ const SHEETS = (() => {
     const dilewati  = backupSheets.filter(n => !liveSet.has(n));
 
     if (!restored.length) {
-      throw new Error('Tidak ada sheet yang cocok antara backup dan spreadsheet aktif.');
+      throw new Error('Tidak ada sheet yang cocok antara backup dan spreadsheet aktif — restore dibatalkan, tidak ada perubahan dilakukan.');
     }
 
-    onProgress('Mengosongkan sheet lama…');
-    await valuesBatchClear(restored);
+    onProgress('Memeriksa ukuran sheet aktif…');
+    const gridSizes = await getSheetGridSize(AUTH.getSpreadsheetId());
 
+    // 1) TULIS DULU — titik aman: begitu ini selesai, data sudah benar.
     onProgress('Menulis data dari backup…');
     const pairs = restored.map(name => ({
       range:  `${name}!A1`,
@@ -804,8 +859,38 @@ const SHEETS = (() => {
     }));
     await valuesBatchWrite(pairs);
 
+    // 2) BARU bersihkan sisa data lama di luar area yang baru ditulis
+    //    (kalau sheet lama lebih panjang/lebar dari data backup).
+    //    Kegagalan di sini TIDAK dianggap fatal — data utama sudah aman.
+    onProgress('Membersihkan sisa data lama…');
+    let pembersihanGagal = false;
+    try {
+      const tailRanges = [];
+      restored.forEach(name => {
+        const rows = backupData[name];
+        const newRows = rows.length;
+        const newCols = newRows ? Math.max(...rows.map(r => r.length)) : 0;
+        const grid    = gridSizes[name] || {};
+        const oldRows = grid.rowCount    || 0;
+        const oldCols = grid.columnCount || 0;
+
+        if (oldRows > newRows) {
+          tailRanges.push(`${name}!A${newRows + 1}:${_colToLetter(Math.max(oldCols, 1))}${oldRows}`);
+        }
+        if (oldCols > newCols && newRows > 0) {
+          tailRanges.push(`${name}!${_colToLetter(newCols + 1)}1:${_colToLetter(oldCols)}${newRows}`);
+        }
+      });
+      if (tailRanges.length) {
+        await valuesBatchClear(tailRanges);
+      }
+    } catch (e) {
+      pembersihanGagal = true;
+      console.warn('Restore: gagal membersihkan sisa data lama (data utama tetap aman/benar):', e);
+    }
+
     onProgress('Selesai.');
-    return { restored, dilewati };
+    return { restored, dilewati, pembersihanGagal };
   }
 
   /* ══════════════════════════════════════════════════════
