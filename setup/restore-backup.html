@@ -548,6 +548,12 @@ async function jalankanRestore() {
 
   const setProgress = (txt) => { document.getElementById('progressText').textContent = txt; };
 
+  // Cegah tab ditutup/direfresh secara tidak sengaja selagi restore berjalan
+  const cegahTutupTab = (e) => { e.preventDefault(); e.returnValue = ''; };
+  window.addEventListener('beforeunload', cegahTutupTab);
+
+  const user = AUTH.getUser();
+
   try {
     // 1) Unduh snapshot JSON data saat ini sebagai jaring pengaman lokal
     setProgress('Menyiapkan cadangan lokal…');
@@ -556,32 +562,40 @@ async function jalankanRestore() {
     // 2) Jalankan restore
     const hasil = await SHEETS.restoreFromBackup(backupTerpilih.id, setProgress);
 
-    const user = AUTH.getUser();
-    await catatRestoreKeLog(user, backupTerpilih.label);
+    await catatRestoreKeLog(user, backupTerpilih.label, 'BERHASIL');
 
     document.getElementById('restoreResultArea').innerHTML = `
       <div class="restore-result ok">
         ✅ <b>Restore berhasil.</b><br>
         Sheet dipulihkan: ${hasil.restored.join(', ')}
         ${hasil.dilewati.length ? `<br>Dilewati (tidak ditemukan di spreadsheet aktif): ${hasil.dilewati.join(', ')}` : ''}
+        ${hasil.pembersihanGagal ? `<br><br>⚠️ <b>Data sudah benar-benar ter-restore</b>, tapi pembersihan sisa baris/kolom lama sempat gagal. Sebaiknya buka spreadsheet secara manual dan periksa apakah ada baris/kolom sisa data lama di bagian bawah/kanan sheet, lalu hapus manual jika ada.` : ''}
       </div>`;
     document.getElementById('modalFooter').style.display = 'flex';
     document.getElementById('modalFooter').innerHTML = `<button class="btn btn-primary" onclick="location.reload()">Selesai</button>`;
 
   } catch (e) {
     console.error(e);
+    await catatRestoreKeLog(user, backupTerpilih.label, `GAGAL: ${e.message}`);
     document.getElementById('restoreResultArea').innerHTML = `
-      <div class="restore-result err">⛔ Restore gagal: ${e.message}</div>`;
+      <div class="restore-result err">
+        ⛔ <b>Restore gagal:</b> ${e.message}<br><br>
+        Jika proses sempat berjalan sebagian, data pada sheet yang disebutkan di pesan error
+        di atas mungkin sudah berubah — silakan cek langsung ke spreadsheet. Snapshot data
+        Anda sebelum restore sudah terunduh ke perangkat ini (file
+        <code>snapshot-sebelum-restore-...json</code>) sebagai referensi pemulihan manual jika perlu.
+      </div>`;
     document.getElementById('modalFooter').style.display = 'flex';
     document.getElementById('modalFooter').innerHTML = `<button class="btn btn-secondary" onclick="tutupModal()">Tutup</button>`;
+  } finally {
+    window.removeEventListener('beforeunload', cegahTutupTab);
   }
 }
 
 /* ── Unduh snapshot data aktif sebelum restore (jaring pengaman lokal) ── */
 async function unduhSnapshotSaatIni() {
   try {
-    const namaSheet = await SHEETS.getSheetNames(AUTH.getSpreadsheetId());
-    const semua     = await SHEETS.readAllSheetsFrom(AUTH.getSpreadsheetId());
+    const semua = await SHEETS.readAllSheetsFrom(AUTH.getSpreadsheetId());
     const blob = new Blob([JSON.stringify({ dibuat: new Date().toISOString(), data: semua }, null, 2)],
       { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -597,19 +611,20 @@ async function unduhSnapshotSaatIni() {
   }
 }
 
-/* ── Catat aksi restore ke SYNC_LOG untuk audit trail ── */
-async function catatRestoreKeLog(user, labelBackup) {
+/* ── Catat aksi restore ke SYNC_LOG untuk audit trail (berhasil maupun gagal) ── */
+async function catatRestoreKeLog(user, labelBackup, status) {
   try {
     const now   = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
     const logId = `LOG-${Date.now()}`;
     await SHEETS.append('SYNC_LOG!A1', [[
-      logId, user.id_user, user.nama, '-', now, `RESTORE dari backup: ${labelBackup}`
+      logId, user.id_user, user.nama, '-', now, `RESTORE dari backup [${status}]: ${labelBackup}`
     ]]);
   } catch (e) {
-    console.warn('Gagal mencatat log restore (restore tetap berhasil):', e);
+    console.warn('Gagal mencatat log restore ke SYNC_LOG:', e);
   }
 }
 </script>
+
 
 </body>
 </html>
